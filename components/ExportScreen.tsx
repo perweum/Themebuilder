@@ -252,6 +252,14 @@ export const ExportScreen: React.FC<{
 
                 {/* Body */}
                 <div style={{ flex: 1, overflowY: 'auto', padding: '1rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }} className="no-scrollbar">
+                    {activeTab === 'semantic' && (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(160px, 1fr) 1fr 1fr auto', gap: '0.75rem', padding: '0 0.75rem 0.5rem', borderBottom: `1px solid ${isDarkMode ? '#334155' : '#e2e8f0'}`, marginBottom: '-0.75rem', alignItems: 'end' }}>
+                            <div style={{ fontSize: '0.75rem', fontWeight: 600, color: isDarkMode ? '#94a3b8' : '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Token Name</div>
+                            <div style={{ fontSize: '0.75rem', fontWeight: 600, color: isDarkMode ? '#94a3b8' : '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Light Mode</div>
+                            <div style={{ fontSize: '0.75rem', fontWeight: 600, color: isDarkMode ? '#94a3b8' : '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Dark Mode</div>
+                            <div style={{ fontSize: '0.75rem', fontWeight: 600, color: isDarkMode ? '#94a3b8' : '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', justifySelf: 'center' }}>Export</div>
+                        </div>
+                    )}
                     {activeTab === 'semantic' && Object.entries(tokenCategories).map(([category, paths]) => (
                         <div key={category}>
                             <div style={{
@@ -382,63 +390,53 @@ export const ExportScreen: React.FC<{
                                             </div>
 
                                             {/* Light Mode Picker */}
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                    <span style={{ fontSize: '0.75rem', fontWeight: 600, color: isDarkMode ? '#94a3b8' : '#64748b' }}>Light Mode</span>
-                                                    {isLightOverridden && (
-                                                        <button onClick={() => updateThemeSemanticOverride(activeTheme.id, lightPath, undefined)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '0.25rem' }} title="Revert to Default">
-                                                            <RotateCcw size={12} /> <span style={{ fontSize: '0.7rem' }}>Revert</span>
-                                                        </button>
-                                                    )}
-                                                </div>
-                                                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                                                    <div style={{ width: '24px', height: '24px', borderRadius: '4px', backgroundColor: lightHex || 'transparent', border: '1px solid #ccc', flexShrink: 0 }} />
-                                                    <select
-                                                        value={currentLightVal || ''}
-                                                        onChange={(e) => updateThemeSemanticOverride(activeTheme.id, lightPath, e.target.value)}
-                                                        style={{
-                                                            flex: 1,
-                                                            padding: '0.5rem',
-                                                            borderRadius: '4px',
-                                                            border: `1px solid ${isLightOverridden ? '#3b82f6' : (isDarkMode ? '#334155' : '#e2e8f0')}`,
-                                                            background: isDarkMode ? '#0f172a' : '#fff',
-                                                            color: 'inherit',
-                                                            fontSize: '0.875rem'
-                                                        }}
-                                                    >
-                                                        {renderSelectOptions()}
-                                                    </select>
-                                                </div>
+                                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', position: 'relative' }}>
+                                                {isLightOverridden && (
+                                                    <button onClick={() => updateThemeSemanticOverride(activeTheme.id, lightPath, undefined)} style={{ position: 'absolute', top: '-18px', right: 0, background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '0.25rem' }} title="Revert to Default">
+                                                        <RotateCcw size={12} /> <span style={{ fontSize: '0.7rem' }}>Revert</span>
+                                                    </button>
+                                                )}
+                                                <div style={{ width: '24px', height: '24px', borderRadius: '4px', backgroundColor: lightHex || 'transparent', border: '1px solid #ccc', flexShrink: 0 }} />
+                                                <select
+                                                    value={currentLightVal || ''}
+                                                    onChange={(e) => updateThemeSemanticOverride(activeTheme.id, lightPath, e.target.value)}
+                                                    style={{
+                                                        flex: 1,
+                                                        padding: '0.5rem',
+                                                        borderRadius: '4px',
+                                                        border: `1px solid ${isLightOverridden ? '#3b82f6' : (isDarkMode ? '#334155' : '#e2e8f0')}`,
+                                                        background: isDarkMode ? '#0f172a' : '#fff',
+                                                        color: 'inherit',
+                                                        fontSize: '0.875rem'
+                                                    }}
+                                                >
+                                                    {renderSelectOptions()}
+                                                </select>
                                             </div>
 
                                             {/* Dark Mode Picker */}
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                    <span style={{ fontSize: '0.75rem', fontWeight: 600, color: isDarkMode ? '#94a3b8' : '#64748b' }}>Dark Mode</span>
-                                                    {isDarkOverridden && (
-                                                        <button onClick={() => updateThemeSemanticOverride(activeTheme.id, darkPath, undefined)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '0.25rem' }} title="Revert to Default">
-                                                            <RotateCcw size={12} /> <span style={{ fontSize: '0.7rem' }}>Revert</span>
-                                                        </button>
-                                                    )}
-                                                </div>
-                                                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                                                    <div style={{ width: '24px', height: '24px', borderRadius: '4px', backgroundColor: darkHex || 'transparent', border: '1px solid #ccc', flexShrink: 0 }} />
-                                                    <select
-                                                        value={currentDarkVal || ''}
-                                                        onChange={(e) => updateThemeSemanticOverride(activeTheme.id, darkPath, e.target.value)}
-                                                        style={{
-                                                            flex: 1,
-                                                            padding: '0.5rem',
-                                                            borderRadius: '4px',
-                                                            border: `1px solid ${isDarkOverridden ? '#3b82f6' : (isDarkMode ? '#334155' : '#e2e8f0')}`,
-                                                            background: isDarkMode ? '#0f172a' : '#fff',
-                                                            color: 'inherit',
-                                                            fontSize: '0.875rem'
-                                                        }}
-                                                    >
-                                                        {renderSelectOptions()}
-                                                    </select>
-                                                </div>
+                                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', position: 'relative' }}>
+                                                {isDarkOverridden && (
+                                                    <button onClick={() => updateThemeSemanticOverride(activeTheme.id, darkPath, undefined)} style={{ position: 'absolute', top: '-18px', right: 0, background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '0.25rem' }} title="Revert to Default">
+                                                        <RotateCcw size={12} /> <span style={{ fontSize: '0.7rem' }}>Revert</span>
+                                                    </button>
+                                                )}
+                                                <div style={{ width: '24px', height: '24px', borderRadius: '4px', backgroundColor: darkHex || 'transparent', border: '1px solid #ccc', flexShrink: 0 }} />
+                                                <select
+                                                    value={currentDarkVal || ''}
+                                                    onChange={(e) => updateThemeSemanticOverride(activeTheme.id, darkPath, e.target.value)}
+                                                    style={{
+                                                        flex: 1,
+                                                        padding: '0.5rem',
+                                                        borderRadius: '4px',
+                                                        border: `1px solid ${isDarkOverridden ? '#3b82f6' : (isDarkMode ? '#334155' : '#e2e8f0')}`,
+                                                        background: isDarkMode ? '#0f172a' : '#fff',
+                                                        color: 'inherit',
+                                                        fontSize: '0.875rem'
+                                                    }}
+                                                >
+                                                    {renderSelectOptions()}
+                                                </select>
                                             </div>
                                             <input
                                                 type="checkbox"
