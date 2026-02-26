@@ -34,6 +34,7 @@ export const ExportScreen: React.FC<{
     const [activeTab, setActiveTab] = useState<'semantic' | 'primitive' | 'geometry'>('semantic');
     const [excludedPalettes, setExcludedPalettes] = useState<Set<string>>(new Set());
     const [excludedSemanticCategories, setExcludedSemanticCategories] = useState<Set<string>>(new Set());
+    const [excludedSemanticTokens, setExcludedSemanticTokens] = useState<Set<string>>(new Set());
     const [excludedGeometry, setExcludedGeometry] = useState<Set<string>>(new Set());
 
     // Generate defaults on the fly to show what they are
@@ -121,6 +122,21 @@ export const ExportScreen: React.FC<{
             }
             if (exportPayload.darkTheme && exportPayload.darkTheme[category]) {
                 delete exportPayload.darkTheme[category];
+            }
+        });
+
+        // Strip individually excluded semantic tokens
+        excludedSemanticTokens.forEach(path => {
+            // path is "category.item" (e.g. "background.default")
+            const parts = path.split('.');
+            if (parts.length === 2) {
+                const [category, item] = parts;
+                if (exportPayload.theme && exportPayload.theme[category]) {
+                    delete exportPayload.theme[category][item];
+                }
+                if (exportPayload.darkTheme && exportPayload.darkTheme[category]) {
+                    delete exportPayload.darkTheme[category][item];
+                }
             }
         });
 
@@ -349,7 +365,31 @@ export const ExportScreen: React.FC<{
                                     };
 
                                     return (
-                                        <div key={path} style={{ display: 'grid', gridTemplateColumns: 'minmax(180px, 1fr) 1fr 1fr', gap: '0.75rem', padding: '0.75rem', background: isDarkMode ? '#1e293b' : '#f8fafc', borderRadius: '6px', border: 'none', alignItems: 'center' }}>
+                                        <div key={path} style={{
+                                            display: 'grid',
+                                            gridTemplateColumns: 'auto minmax(160px, 1fr) 1fr 1fr',
+                                            gap: '0.75rem',
+                                            padding: '0.75rem',
+                                            background: isDarkMode ? '#1e293b' : '#f8fafc',
+                                            borderRadius: '6px',
+                                            border: 'none',
+                                            alignItems: 'center',
+                                            opacity: excludedSemanticTokens.has(path) ? 0.3 : 1
+                                        }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={!excludedSemanticTokens.has(path)}
+                                                onChange={(e) => {
+                                                    const newSet = new Set(excludedSemanticTokens);
+                                                    if (e.target.checked) {
+                                                        newSet.delete(path);
+                                                    } else {
+                                                        newSet.add(path);
+                                                    }
+                                                    setExcludedSemanticTokens(newSet);
+                                                }}
+                                                style={{ accentColor: isDarkMode ? '#C3E835' : '#0142FE', cursor: 'pointer', width: '16px', height: '16px', alignSelf: 'start', marginTop: '0.2rem' }}
+                                            />
                                             <div>
                                                 <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>{formatPathLabel(path)}</div>
                                                 <div style={{ fontSize: '0.75rem', color: isDarkMode ? '#94a3b8' : '#64748b' }}>{path}</div>
