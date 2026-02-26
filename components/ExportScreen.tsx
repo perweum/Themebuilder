@@ -367,7 +367,7 @@ export const ExportScreen: React.FC<{
                                     return (
                                         <div key={path} style={{
                                             display: 'grid',
-                                            gridTemplateColumns: 'auto minmax(160px, 1fr) 1fr 1fr',
+                                            gridTemplateColumns: 'minmax(160px, 1fr) 1fr 1fr auto',
                                             gap: '0.75rem',
                                             padding: '0.75rem',
                                             background: isDarkMode ? '#1e293b' : '#f8fafc',
@@ -376,20 +376,6 @@ export const ExportScreen: React.FC<{
                                             alignItems: 'center',
                                             opacity: excludedSemanticTokens.has(path) ? 0.3 : 1
                                         }}>
-                                            <input
-                                                type="checkbox"
-                                                checked={!excludedSemanticTokens.has(path)}
-                                                onChange={(e) => {
-                                                    const newSet = new Set(excludedSemanticTokens);
-                                                    if (e.target.checked) {
-                                                        newSet.delete(path);
-                                                    } else {
-                                                        newSet.add(path);
-                                                    }
-                                                    setExcludedSemanticTokens(newSet);
-                                                }}
-                                                style={{ accentColor: isDarkMode ? '#C3E835' : '#0142FE', cursor: 'pointer', width: '16px', height: '16px', alignSelf: 'start', marginTop: '0.2rem' }}
-                                            />
                                             <div>
                                                 <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>{formatPathLabel(path)}</div>
                                                 <div style={{ fontSize: '0.75rem', color: isDarkMode ? '#94a3b8' : '#64748b' }}>{path}</div>
@@ -454,6 +440,20 @@ export const ExportScreen: React.FC<{
                                                     </select>
                                                 </div>
                                             </div>
+                                            <input
+                                                type="checkbox"
+                                                checked={!excludedSemanticTokens.has(path)}
+                                                onChange={(e) => {
+                                                    const newSet = new Set(excludedSemanticTokens);
+                                                    if (e.target.checked) {
+                                                        newSet.delete(path);
+                                                    } else {
+                                                        newSet.add(path);
+                                                    }
+                                                    setExcludedSemanticTokens(newSet);
+                                                }}
+                                                style={{ accentColor: isDarkMode ? '#C3E835' : '#0142FE', cursor: 'pointer', width: '16px', height: '16px', alignSelf: 'center' }}
+                                            />
                                         </div>
                                     );
                                 })}
