@@ -31,8 +31,10 @@ export const ExportScreen: React.FC<{
     );
 
     const [exportFormat, setExportFormat] = useState<'figma' | 'json'>('json');
-    const [activeTab, setActiveTab] = useState<'semantic' | 'primitive'>('semantic');
+    const [activeTab, setActiveTab] = useState<'semantic' | 'primitive' | 'geometry'>('semantic');
     const [excludedPalettes, setExcludedPalettes] = useState<Set<string>>(new Set());
+    const [excludedSemanticCategories, setExcludedSemanticCategories] = useState<Set<string>>(new Set());
+    const [excludedGeometry, setExcludedGeometry] = useState<Set<string>>(new Set());
 
     // Generate defaults on the fly to show what they are
     const defaultTheme = useMemo(() => {
@@ -109,6 +111,23 @@ export const ExportScreen: React.FC<{
         excludedPalettes.forEach(paletteName => {
             if (exportPayload.color && exportPayload.color[paletteName]) {
                 delete exportPayload.color[paletteName];
+            }
+        });
+
+        // Strip excluded semantic categories
+        excludedSemanticCategories.forEach(category => {
+            if (exportPayload.theme && exportPayload.theme[category]) {
+                delete exportPayload.theme[category];
+            }
+            if (exportPayload.darkTheme && exportPayload.darkTheme[category]) {
+                delete exportPayload.darkTheme[category];
+            }
+        });
+
+        // Strip excluded geometry categories
+        excludedGeometry.forEach(category => {
+            if (exportPayload.geometry && exportPayload.geometry[category]) {
+                delete exportPayload.geometry[category];
             }
         });
 
@@ -195,6 +214,23 @@ export const ExportScreen: React.FC<{
                         >
                             Primitive Tokens (Read-Only)
                         </button>
+                        <button
+                            onClick={() => setActiveTab('geometry')}
+                            style={{
+                                background: 'transparent',
+                                border: 'none',
+                                color: activeTab === 'geometry' ? (isDarkMode ? '#C3E835' : '#0142FE') : (isDarkMode ? '#94a3b8' : '#64748b'),
+                                borderBottom: activeTab === 'geometry' ? `2px solid ${isDarkMode ? '#C3E835' : '#0142FE'}` : '2px solid transparent',
+                                padding: '0.75rem 0.25rem',
+                                fontSize: '0.875rem',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                transition: 'all 0.2s',
+                                marginBottom: '-1px'
+                            }}
+                        >
+                            Geometry Tokens (Read-Only)
+                        </button>
                     </div>
                 </div>
 
@@ -202,17 +238,45 @@ export const ExportScreen: React.FC<{
                 <div style={{ flex: 1, overflowY: 'auto', padding: '1rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }} className="no-scrollbar">
                     {activeTab === 'semantic' && Object.entries(tokenCategories).map(([category, paths]) => (
                         <div key={category}>
-                            <h3 style={{
-                                textTransform: 'capitalize',
-                                fontSize: '1.125rem',
+                            <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.75rem',
                                 borderBottom: `1px solid ${isDarkMode ? '#334155' : '#e2e8f0'}`,
                                 paddingBottom: '0.5rem',
-                                marginBottom: '1rem',
-                                color: isDarkMode ? '#f8fafc' : '#0f172a'
+                                marginBottom: '0.75rem',
                             }}>
-                                {category} Tokens
-                            </h3>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                <input
+                                    type="checkbox"
+                                    checked={!excludedSemanticCategories.has(category)}
+                                    onChange={(e) => {
+                                        const newSet = new Set(excludedSemanticCategories);
+                                        if (e.target.checked) {
+                                            newSet.delete(category);
+                                        } else {
+                                            newSet.add(category);
+                                        }
+                                        setExcludedSemanticCategories(newSet);
+                                    }}
+                                    style={{ accentColor: isDarkMode ? '#C3E835' : '#0142FE', cursor: 'pointer', width: '16px', height: '16px' }}
+                                />
+                                <h3 style={{
+                                    textTransform: 'capitalize',
+                                    fontSize: '1rem',
+                                    margin: 0,
+                                    color: isDarkMode ? '#f8fafc' : '#0f172a',
+                                    opacity: excludedSemanticCategories.has(category) ? 0.5 : 1
+                                }}>
+                                    {category} Tokens
+                                </h3>
+                            </div>
+                            <div style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '0.5rem',
+                                opacity: excludedSemanticCategories.has(category) ? 0.3 : 1,
+                                pointerEvents: excludedSemanticCategories.has(category) ? 'none' : 'auto'
+                            }}>
                                 {paths.map(path => {
                                     const lightPath = `theme.${path}`;
                                     const darkPath = `darkTheme.${path}`;
@@ -285,7 +349,7 @@ export const ExportScreen: React.FC<{
                                     };
 
                                     return (
-                                        <div key={path} style={{ display: 'grid', gridTemplateColumns: 'minmax(200px, 1fr) 1fr 1fr', gap: '1rem', padding: '1rem', background: isDarkMode ? '#1e293b' : '#f8fafc', borderRadius: '8px', border: 'none', alignItems: 'center' }}>
+                                        <div key={path} style={{ display: 'grid', gridTemplateColumns: 'minmax(180px, 1fr) 1fr 1fr', gap: '0.75rem', padding: '0.75rem', background: isDarkMode ? '#1e293b' : '#f8fafc', borderRadius: '6px', border: 'none', alignItems: 'center' }}>
                                             <div>
                                                 <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>{formatPathLabel(path)}</div>
                                                 <div style={{ fontSize: '0.75rem', color: isDarkMode ? '#94a3b8' : '#64748b' }}>{path}</div>
@@ -444,6 +508,97 @@ export const ExportScreen: React.FC<{
                                 </div>
                             </div>
                         ));
+                    })()}
+
+                    {activeTab === 'geometry' && (() => {
+                        const geometry = activeThemePayloadWithOptions.geometry;
+                        if (!geometry) return null;
+
+                        const geoCategories = ['radius', 'borderWidth'];
+
+                        return geoCategories.map((category) => {
+                            if (!geometry[category]) return null;
+                            const steps = geometry[category];
+
+                            return (
+                                <div key={category}>
+                                    <div style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.75rem',
+                                        borderBottom: `1px solid ${isDarkMode ? '#334155' : '#e2e8f0'}`,
+                                        paddingBottom: '0.5rem',
+                                        marginBottom: '0.75rem',
+                                    }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={!excludedGeometry.has(category)}
+                                            onChange={(e) => {
+                                                const newSet = new Set(excludedGeometry);
+                                                if (e.target.checked) {
+                                                    newSet.delete(category);
+                                                } else {
+                                                    newSet.add(category);
+                                                }
+                                                setExcludedGeometry(newSet);
+                                            }}
+                                            style={{ accentColor: isDarkMode ? '#C3E835' : '#0142FE', cursor: 'pointer', width: '16px', height: '16px' }}
+                                        />
+                                        <h3 style={{
+                                            textTransform: 'capitalize',
+                                            fontSize: '1rem',
+                                            margin: 0,
+                                            color: isDarkMode ? '#f8fafc' : '#0f172a',
+                                            opacity: excludedGeometry.has(category) ? 0.5 : 1
+                                        }}>
+                                            {category === 'radius' ? 'Border Radius' : 'Border Width'}
+                                        </h3>
+                                    </div>
+                                    <div style={{
+                                        display: 'grid',
+                                        gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))',
+                                        gap: '0.5rem',
+                                        opacity: excludedGeometry.has(category) ? 0.3 : 1,
+                                        pointerEvents: excludedGeometry.has(category) ? 'none' : 'auto'
+                                    }}>
+                                        {Object.entries(steps).map(([stepKey, valObj]: [string, any]) => {
+                                            const isAlias = valObj.$value.startsWith('{');
+
+                                            return (
+                                                <div key={stepKey} style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', padding: '0.5rem', background: isDarkMode ? '#1e293b' : '#f8fafc', borderRadius: '4px' }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '0.25rem' }}>
+                                                        <span style={{ fontWeight: 600 }}>{stepKey}</span>
+                                                        <span style={{ color: isDarkMode ? '#94a3b8' : '#64748b' }}>{valObj.$value}</span>
+                                                    </div>
+                                                    {!isAlias && category === 'radius' && (
+                                                        <div style={{
+                                                            height: '24px',
+                                                            backgroundColor: isDarkMode ? '#334155' : '#e2e8f0',
+                                                            borderRadius: valObj.$value,
+                                                            border: `1px solid ${isDarkMode ? '#475569' : '#cbd5e1'}`
+                                                        }} />
+                                                    )}
+                                                    {!isAlias && category === 'borderWidth' && (
+                                                        <div style={{
+                                                            height: '24px',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            backgroundColor: isDarkMode ? '#0f172a' : '#fff',
+                                                        }}>
+                                                            <div style={{
+                                                                width: '100%',
+                                                                borderTop: `${valObj.$value} solid ${isDarkMode ? '#94a3b8' : '#64748b'}`
+                                                            }} />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            );
+                        });
                     })()}
                 </div>
 
