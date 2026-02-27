@@ -361,6 +361,79 @@ export function mapTheme(
         };
     });
 
+    // Automatically generate severity-level semantic tokens for ANY global color the user has
+    // that wasn't already mapped as an interactive Theme Color (or core success/error).
+    globalColors.forEach((gc) => {
+        const safeName = gc.name.toLowerCase().replace(/\s+/g, '-');
+
+        // Skip if this is a reserved core color, or if the interactive theme loop above already seeded it.
+        if (['white', 'black', 'neutral', 'success', 'error', 'critical'].includes(safeName) || theme.surface[safeName]) {
+            return;
+        }
+
+        const gen = gc.gen;
+        const aliasName = safeName; // We guaranteed global colors map their aliases accurately earlier
+
+        // Use generic step offsets for severity semantic mapping
+        const rest = gen.closestStep;
+
+        // --- LIGHT THEME TOKENS ---
+        theme.surface[safeName] = {
+            default: { $value: `{color.${aliasName}.50}`, $type: "color" },
+            hover: { $value: `{color.${aliasName}.100}`, $type: "color" },
+            active: { $value: `{color.${aliasName}.200}`, $type: "color" },
+        };
+
+        theme.border[safeName] = {
+            default: { $value: `{color.${aliasName}.300}`, $type: "color" },
+            hover: { $value: `{color.${aliasName}.400}`, $type: "color" },
+        };
+
+        theme.base[safeName] = {
+            default: { $value: `{color.${aliasName}.500}`, $type: "color" },
+            hover: { $value: `{color.${aliasName}.600}`, $type: "color" },
+            active: { $value: `{color.${aliasName}.700}`, $type: "color" },
+        };
+
+        theme.text[safeName] = {
+            default: { $value: `{color.${aliasName}.600}`, $type: "color" },
+            contrast: { $value: `{color.${aliasName}.${getAccessibleForeground(gen.ramp, gen.ramp[600])}}`, $type: "color" },
+        };
+
+        theme.icon[safeName] = {
+            default: { $value: `{theme.text.${safeName}.default}`, $type: "color" },
+            contrast: { $value: `{theme.text.${safeName}.contrast}`, $type: "color" },
+        };
+
+        // --- DARK THEME TOKENS ---
+        darkTheme.surface[safeName] = {
+            default: { $value: `{color.${aliasName}.900}`, $type: "color" },
+            hover: { $value: `{color.${aliasName}.800}`, $type: "color" },
+            active: { $value: `{color.${aliasName}.700}`, $type: "color" },
+        };
+
+        darkTheme.border[safeName] = {
+            default: { $value: `{color.${aliasName}.500}`, $type: "color" },
+            hover: { $value: `{color.${aliasName}.400}`, $type: "color" },
+        };
+
+        darkTheme.base[safeName] = {
+            default: { $value: `{color.${aliasName}.300}`, $type: "color" },
+            hover: { $value: `{color.${aliasName}.200}`, $type: "color" },
+            active: { $value: `{color.${aliasName}.100}`, $type: "color" },
+        };
+
+        darkTheme.text[safeName] = {
+            default: { $value: `{color.${aliasName}.300}`, $type: "color" },
+            contrast: { $value: `{color.${aliasName}.${getAccessibleForeground(gen.ramp, gen.ramp[300])}}`, $type: "color" },
+        };
+
+        darkTheme.icon[safeName] = {
+            default: { $value: `{darkTheme.text.${safeName}.default}`, $type: "color" },
+            contrast: { $value: `{darkTheme.text.${safeName}.contrast}`, $type: "color" },
+        };
+    });
+
     // --- APPLY PRIMITIVE OVERRIDES ---
     if (primitiveOverrides) {
         for (const [path, overrideHex] of Object.entries(primitiveOverrides)) {
