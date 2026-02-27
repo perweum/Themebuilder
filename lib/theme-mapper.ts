@@ -1,4 +1,4 @@
-import { ColorStep, COLOR_STEPS, getAccessibleForeground, GeneratedRamp, getColorName, generateAlphaRamp, AlphaStep, getClosestLuminosityStep } from './palette-generator';
+import { ColorStep, COLOR_STEPS, getAccessibleForeground, GeneratedRamp, getColorName, generateAlphaRamp, AlphaStep, getClosestLuminosityStep, generateRamp } from './palette-generator';
 
 export interface Token<T = string> {
     $value: T;
@@ -58,13 +58,24 @@ export interface NamedColorRamp {
  */
 export function mapTheme(
     themeColors: NamedColorRamp[],
-    neutralGen: GeneratedRamp,
-    successGen: GeneratedRamp,
-    errorGen: GeneratedRamp,
+    globalColors: NamedColorRamp[],
     semanticOverrides?: Record<string, string>,
     primitiveOverrides?: Record<string, string>,
     geometryConfig?: { radiusBase: number; includeRadius: boolean; includeBorders: boolean; borderWidth: 'small' | 'medium' | 'large' }
 ): ThemeTokensPayload {
+
+    const neutralRamp = globalColors.find(c => c.name.toLowerCase() === 'neutral');
+    const successRamp = globalColors.find(c => c.name.toLowerCase() === 'success');
+    const errorRamp = globalColors.find(c => c.name.toLowerCase() === 'error' || c.name.toLowerCase() === 'critical');
+
+    // Extract default fallbacks if somehow missing
+    const fallbackNeutral = generateRamp('#64748b');
+    const fallbackSuccess = generateRamp('#22c55e');
+    const fallbackError = generateRamp('#ef4444');
+
+    const neutralGen = neutralRamp ? neutralRamp.gen : fallbackNeutral;
+    const successGen = successRamp ? successRamp.gen : fallbackSuccess;
+    const errorGen = errorRamp ? errorRamp.gen : fallbackError;
 
     const colors: Record<string, any> = {
         white: toAlphaTokenRamp(generateAlphaRamp('#ffffff')),
@@ -239,11 +250,31 @@ export function mapTheme(
         darkTheme.border.focus = { $value: `{color.neutral.400}`, $type: "color" };
     }
 
-    // Deduplication registry: prevents exporting identical primitive ramps (e.g. if 'brand' uses the 'neutral' seed).
+    // Deduplication registry: prevents exporting identical primitive ramps.
     const canonicalSeeds = new Map<string, string>();
-    canonicalSeeds.set(neutralGen.ramp[500].toLowerCase(), 'neutral');
-    canonicalSeeds.set(successGen.ramp[500].toLowerCase(), 'success');
-    canonicalSeeds.set(errorGen.ramp[500].toLowerCase(), 'error');
+
+    // First, register all explicit global colors as canonical 
+    // This allows "Water" to be used as a brand seed, and correctly alias to "water.X" 
+    // instead of exploding the css payload with "brand.X" copies.
+    globalColors.forEach(gc => {
+        const seedStr = gc.gen.ramp[500].toLowerCase();
+        const safeName = gc.name.toLowerCase().replace(/\s+/g, '-');
+
+        // Only insert if missing, global colors are considered canonical.
+        if (!canonicalSeeds.has(seedStr)) {
+            canonicalSeeds.set(seedStr, safeName);
+            // Non-core global colors aren't currently automatically exported to CSS globally, 
+            // but if a theme needs them, they will be referenced!
+            if (!['neutral', 'success', 'error', 'critical'].includes(safeName)) {
+                colors[safeName] = toTokenRamp(gc.gen.ramp);
+            }
+        }
+    });
+
+    // Ensure core colors are registered in case globalColors lacked them
+    if (!canonicalSeeds.has(neutralGen.ramp[500].toLowerCase())) canonicalSeeds.set(neutralGen.ramp[500].toLowerCase(), 'neutral');
+    if (!canonicalSeeds.has(successGen.ramp[500].toLowerCase())) canonicalSeeds.set(successGen.ramp[500].toLowerCase(), 'success');
+    if (!canonicalSeeds.has(errorGen.ramp[500].toLowerCase())) canonicalSeeds.set(errorGen.ramp[500].toLowerCase(), 'error');
 
     // Now map every single color the user defined dynamically!
     themeColors.forEach((config) => {

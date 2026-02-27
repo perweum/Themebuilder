@@ -112,20 +112,14 @@ export const ThemeScope: React.FC<ThemeScopeProps> = ({
                 gen: generateRamp(c.seed)
             }));
 
-            // Map global colors. Map specific ones that theme-mapper expects (neutral, success, error)
-            const neutralHex = globalColors.find(c => c.name.toLowerCase() === 'neutral')?.seed || '#64748b';
-            const successHex = globalColors.find(c => c.name.toLowerCase() === 'success')?.seed || '#22c55e';
-            const errorHex = globalColors.find(c => c.name.toLowerCase() === 'error' || c.name.toLowerCase() === 'critical')?.seed || '#ef4444';
-
-            const neutralGen = generateRamp(neutralHex);
-            const successGen = generateRamp(successHex);
-            const errorGen = generateRamp(errorHex);
+            const mappedGlobal = globalColors.map(c => ({
+                name: c.name.toLowerCase().replace(/\s+/g, '-'),
+                gen: generateRamp(c.seed)
+            }));
 
             const generatedTheme = mapTheme(
                 mappedColors, // Passes [brand, accent, master, etc...]
-                neutralGen,
-                successGen,
-                errorGen,
+                mappedGlobal,
                 themeConfig.semanticOverrides,
                 themeConfig.primitiveOverrides,
                 themeConfig.geometry

@@ -112,15 +112,12 @@ export const ThemeControls: React.FC<{
             gen: generateRamp(c.seed)
         }));
 
-        const neutralHex = globalColors.find(c => c.name.toLowerCase() === 'neutral')?.seed || '#64748b';
-        const successHex = globalColors.find(c => c.name.toLowerCase() === 'success')?.seed || '#22c55e';
-        const errorHex = globalColors.find(c => c.name.toLowerCase() === 'error' || c.name.toLowerCase() === 'critical')?.seed || '#ef4444';
+        const mappedGlobal = globalColors.map(c => ({
+            name: c.name.toLowerCase().replace(/\s+/g, '-'),
+            gen: generateRamp(c.seed)
+        }));
 
-        const neutralGen = generateRamp(neutralHex);
-        const successGen = generateRamp(successHex);
-        const errorGen = generateRamp(errorHex);
-
-        return mapTheme(mappedColors, neutralGen, successGen, errorGen);
+        return mapTheme(mappedColors, mappedGlobal);
     }, [activeTheme, globalColors]);
 
     const activeThemePayloadWithOptions = React.useMemo(() => {
@@ -130,15 +127,12 @@ export const ThemeControls: React.FC<{
             gen: generateRamp(c.seed)
         }));
 
-        const neutralHex = globalColors.find(c => c.name.toLowerCase() === 'neutral')?.seed || '#64748b';
-        const successHex = globalColors.find(c => c.name.toLowerCase() === 'success')?.seed || '#22c55e';
-        const errorHex = globalColors.find(c => c.name.toLowerCase() === 'error' || c.name.toLowerCase() === 'critical')?.seed || '#ef4444';
+        const mappedGlobal = globalColors.map(c => ({
+            name: c.name.toLowerCase().replace(/\s+/g, '-'),
+            gen: generateRamp(c.seed)
+        }));
 
-        const neutralGen = generateRamp(neutralHex);
-        const successGen = generateRamp(successHex);
-        const errorGen = generateRamp(errorHex);
-
-        return mapTheme(mappedColors, neutralGen, successGen, errorGen, activeTheme.semanticOverrides, activeTheme.primitiveOverrides);
+        return mapTheme(mappedColors, mappedGlobal, activeTheme.semanticOverrides, activeTheme.primitiveOverrides);
     }, [activeTheme, globalColors]);
 
     const tokenCategories = React.useMemo(() => {
@@ -613,43 +607,27 @@ export const ThemeControls: React.FC<{
                                         const darkHex = getHexVal(calculatedDarkVal);
 
                                         const renderSelectOptions = () => {
+                                            if (!activeThemePayloadWithOptions) return null;
+                                            const exportedPalettes = Object.keys(activeThemePayloadWithOptions.color);
+
                                             return (
                                                 <>
-                                                    {activeTheme.colors.map(c => {
-                                                        const safeName = c.name.toLowerCase().replace(/\s+/g, '-');
+                                                    {exportedPalettes.map(paletteName => {
+                                                        const isAlpha = paletteName === 'white' || paletteName === 'black';
+                                                        const steps = isAlpha ? ALPHA_STEPS : COLOR_STEPS;
+                                                        const labelSuffix = isAlpha ? ' (Alpha)' : ' Palette';
+                                                        const formattedName = paletteName.charAt(0).toUpperCase() + paletteName.slice(1);
+
                                                         return (
-                                                            <optgroup key={c.id} label={`${c.name} Palette`}>
-                                                                {COLOR_STEPS.map((step: any) => (
-                                                                    <option key={`${safeName}-${step}`} value={`{color.${safeName}.${step}}`}>{safeName}-{step}</option>
+                                                            <optgroup key={paletteName} label={`${formattedName}${labelSuffix}`}>
+                                                                {steps.map((step: any) => (
+                                                                    <option key={`${paletteName}-${step}`} value={`{color.${paletteName}.${step}}`}>
+                                                                        {paletteName}-{step}{isAlpha ? '%' : ''}
+                                                                    </option>
                                                                 ))}
                                                             </optgroup>
-                                                        )
+                                                        );
                                                     })}
-                                                    <optgroup label="Neutral">
-                                                        {COLOR_STEPS.map((step: any) => (
-                                                            <option key={`neutral-${step}`} value={`{color.neutral.${step}}`}>neutral-{step}</option>
-                                                        ))}
-                                                    </optgroup>
-                                                    <optgroup label="Success">
-                                                        {COLOR_STEPS.map((step: any) => (
-                                                            <option key={`success-${step}`} value={`{color.success.${step}}`}>success-{step}</option>
-                                                        ))}
-                                                    </optgroup>
-                                                    <optgroup label="Error">
-                                                        {COLOR_STEPS.map((step: any) => (
-                                                            <option key={`error-${step}`} value={`{color.error.${step}}`}>error-{step}</option>
-                                                        ))}
-                                                    </optgroup>
-                                                    <optgroup label="White (Alpha)">
-                                                        {ALPHA_STEPS.map((step: any) => (
-                                                            <option key={`white-${step}`} value={`{color.white.${step}}`}>white-{step}%</option>
-                                                        ))}
-                                                    </optgroup>
-                                                    <optgroup label="Black (Alpha)">
-                                                        {ALPHA_STEPS.map((step: any) => (
-                                                            <option key={`black-${step}`} value={`{color.black.${step}}`}>black-{step}%</option>
-                                                        ))}
-                                                    </optgroup>
                                                 </>
                                             );
                                         };

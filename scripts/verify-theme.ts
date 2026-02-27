@@ -36,7 +36,11 @@ try {
     const theme = mapTheme([
         { name: 'brand', gen: brandGen },
         { name: 'accent', gen: accentGen }
-    ], neutralGen, successGen, errorGen);
+    ], [
+        { name: 'neutral', gen: neutralGen },
+        { name: 'success', gen: successGen },
+        { name: 'error', gen: errorGen }
+    ]);
 
     console.log("Theme Structure:");
     // Update property access based on new schema
