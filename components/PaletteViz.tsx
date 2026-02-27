@@ -4,7 +4,7 @@ import { generateRamp, getColorName, getHueDistance } from '../lib/palette-gener
 import { PrimitiveColorPicker } from './PrimitiveColorPicker';
 import { RotateCcw } from 'lucide-react';
 
-const RampRow = ({ title, seed, cssPrefix, mappedName, isDarkMode, overrides, onOverride }: { title: string, seed: string, cssPrefix?: string, mappedName?: string, isDarkMode?: boolean, overrides?: Record<string, string>, onOverride?: (path: string, hex: string | undefined) => void }) => {
+const RampRow = ({ title, seed, cssPrefix, mappedName, isDarkMode, overrides, onOverride, isAliasedTo }: { title: string, seed: string, cssPrefix?: string, mappedName?: string, isDarkMode?: boolean, overrides?: Record<string, string>, onOverride?: (path: string, hex: string | undefined) => void, isAliasedTo?: string }) => {
     const gen = generateRamp(seed);
 
     let displayPrefix = cssPrefix;
@@ -19,10 +19,15 @@ const RampRow = ({ title, seed, cssPrefix, mappedName, isDarkMode, overrides, on
 
     return (
         <div style={{ marginBottom: '2rem' }}>
-            <h3 style={{ fontSize: '0.875rem', textTransform: 'uppercase', marginBottom: '0.5rem', color: isDarkMode ? '#aaa' : '#666' }}>
-                {title} <span style={{ fontWeight: 'normal', color: isDarkMode ? '#666' : '#999' }}>
-                    {mappedName ? `(color.${mappedName}.*)` : `(var(--${displayPrefix}-*))`} - Mapped to: {gen.closestStep}
+            <h3 style={{ fontSize: '0.875rem', textTransform: 'uppercase', marginBottom: '0.5rem', color: isDarkMode ? '#aaa' : '#666', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {title} <span style={{ fontWeight: 'normal', color: isDarkMode ? '#666' : '#999', fontSize: '11px', textTransform: 'none' }}>
+                    {mappedName ? `(color.${mappedName}.*)` : `(var(--${displayPrefix}-*))`}{!isAliasedTo && ` - Mapped to: ${gen.closestStep}`}
                 </span>
+                {isAliasedTo && (
+                    <span style={{ fontSize: '10px', background: isDarkMode ? '#333' : '#eee', color: isDarkMode ? '#aaa' : '#666', padding: '2px 6px', borderRadius: '4px', textTransform: 'none' }}>
+                        Aliased to <strong>{isAliasedTo}</strong>
+                    </span>
+                )}
             </h3>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '4px' }}>
                 {Object.entries(gen.ramp).map(([step, hex]) => {
@@ -98,6 +103,11 @@ export const PaletteViz: React.FC<{ isDarkMode?: boolean }> = ({ isDarkMode }) =
                     <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1.5rem', borderBottom: `1px solid ${isDarkMode ? '#333' : '#eee'}`, paddingBottom: '0.5rem', color: isDarkMode ? '#FFF' : '#000' }}>Core Palette Engine ({theme.id})</h2>
                     {theme.colors.map(color => {
                         const safeName = color.name.toLowerCase().replace(/\s+/g, '-');
+
+                        // Check if this seed is aliased to a global color
+                        const aliasedGlobal = globalColors.find(gc => gc.seed.toLowerCase() === color.seed.toLowerCase());
+                        const isAliasedTo = aliasedGlobal ? aliasedGlobal.name : undefined;
+
                         return (
                             <RampRow
                                 key={color.id}
@@ -108,6 +118,7 @@ export const PaletteViz: React.FC<{ isDarkMode?: boolean }> = ({ isDarkMode }) =
                                 isDarkMode={isDarkMode}
                                 overrides={theme.primitiveOverrides}
                                 onOverride={(path, hex) => updateThemePrimitiveOverride(theme.id, path, hex)}
+                                isAliasedTo={isAliasedTo}
                             />
                         );
                     })}
