@@ -1,8 +1,10 @@
 import React from 'react';
 import { useTheme } from '../theme-context';
 import { generateRamp, getColorName, getHueDistance } from '../lib/palette-generator';
+import { PrimitiveColorPicker } from './PrimitiveColorPicker';
+import { RotateCcw } from 'lucide-react';
 
-const RampRow = ({ title, seed, cssPrefix, mappedName, isDarkMode }: { title: string, seed: string, cssPrefix?: string, mappedName?: string, isDarkMode?: boolean }) => {
+const RampRow = ({ title, seed, cssPrefix, mappedName, isDarkMode, overrides, onOverride }: { title: string, seed: string, cssPrefix?: string, mappedName?: string, isDarkMode?: boolean, overrides?: Record<string, string>, onOverride?: (path: string, hex: string | undefined) => void }) => {
     const gen = generateRamp(seed);
 
     let displayPrefix = cssPrefix;
@@ -23,30 +25,69 @@ const RampRow = ({ title, seed, cssPrefix, mappedName, isDarkMode }: { title: st
                 </span>
             </h3>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '4px' }}>
-                {Object.entries(gen.ramp).map(([step, hex]) => (
-                    <div key={step} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', overflow: 'hidden' }}>
-                        <div
-                            style={{
-                                width: '100%',
-                                paddingTop: '100%', // square
-                                backgroundColor: hex,
-                                borderRadius: '4px',
-                                border: step === String(gen.closestStep) ? `2px solid ${isDarkMode ? '#FFF' : '#000'}` : `1px solid ${isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`
-                            }}
-                            title={`Step ${step}: var(--${displayPrefix}-${step})`}
-                        />
-                        <span style={{ fontSize: '10px', color: step === String(gen.closestStep) ? (isDarkMode ? '#FFF' : '#000') : (isDarkMode ? '#666' : '#999'), fontWeight: step === String(gen.closestStep) ? 'bold' : 'normal' }}>{step}</span>
-                        <span style={{ fontSize: '10px', color: isDarkMode ? '#aaa' : '#000' }}>{hex}</span>
-                        <span style={{ fontSize: '8px', color: isDarkMode ? '#666' : '#aaa', marginTop: '2px', whiteSpace: 'nowrap' }}>var(--{displayPrefix}-{step})</span>
-                    </div>
-                ))}
+                {Object.entries(gen.ramp).map(([step, hex]) => {
+                    const path = mappedName ? `${mappedName}.${step}` : `${title.toLowerCase()}.${step}`;
+                    const overrideHex = overrides?.[path];
+                    const displayHex = overrideHex || hex;
+
+                    return (
+                        <div key={step} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', overflow: 'hidden', position: 'relative' }}>
+                            {overrideHex && (
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); onOverride && onOverride(path, undefined); }}
+                                    style={{
+                                        background: 'none',
+                                        border: 'none',
+                                        color: '#ef4444',
+                                        cursor: 'pointer',
+                                        padding: '2px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        borderRadius: '4px',
+                                        position: 'absolute',
+                                        top: '-2px',
+                                        right: '-2px',
+                                        zIndex: 10
+                                    }}
+                                    title="Revert to generated color"
+                                >
+                                    <RotateCcw size={14} />
+                                </button>
+                            )}
+                            <PrimitiveColorPicker
+                                color={displayHex}
+                                onChange={(hex) => onOverride && onOverride(path, hex)}
+                                isDarkMode={isDarkMode}
+                            >
+                                <div
+                                    style={{
+                                        width: '100%',
+                                        aspectRatio: '1',
+                                        backgroundColor: displayHex,
+                                        borderRadius: '4px',
+                                        border: step === String(gen.closestStep) ? `2px solid ${isDarkMode ? '#FFF' : '#000'}` : `1px solid ${isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`
+                                    }}
+                                    title={`Step ${step}: var(--${displayPrefix}-${step})`}
+                                />
+                            </PrimitiveColorPicker>
+                            <span style={{ fontSize: '10px', color: step === String(gen.closestStep) ? (isDarkMode ? '#FFF' : '#000') : (isDarkMode ? '#666' : '#999'), fontWeight: step === String(gen.closestStep) ? 'bold' : 'normal', marginTop: '4px' }}>
+                                {step}{overrideHex ? '*' : ''}
+                            </span>
+                            <span style={{ fontSize: '10px', color: isDarkMode ? '#aaa' : '#000' }}>{displayHex}</span>
+                            <span style={{ fontSize: '8px', color: isDarkMode ? '#666' : '#aaa', marginTop: '2px', whiteSpace: 'nowrap' }}>var(--{displayPrefix}-{step})</span>
+                        </div>
+                    )
+                }
+                )}
+
             </div>
         </div>
     );
 };
 
 export const PaletteViz: React.FC<{ isDarkMode?: boolean }> = ({ isDarkMode }) => {
-    const { themes, globalColors } = useTheme();
+    const { themes, globalColors, updateThemePrimitiveOverride } = useTheme();
 
     if (themes.length === 0) return null;
 
@@ -65,6 +106,8 @@ export const PaletteViz: React.FC<{ isDarkMode?: boolean }> = ({ isDarkMode }) =
                                 cssPrefix={`color-${safeName}`}
                                 mappedName={safeName}
                                 isDarkMode={isDarkMode}
+                                overrides={theme.primitiveOverrides}
+                                onOverride={(path, hex) => updateThemePrimitiveOverride(theme.id, path, hex)}
                             />
                         );
                     })}
@@ -73,7 +116,14 @@ export const PaletteViz: React.FC<{ isDarkMode?: boolean }> = ({ isDarkMode }) =
 
             <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1.5rem', marginTop: '3rem', borderBottom: `1px solid ${isDarkMode ? '#333' : '#eee'}`, paddingBottom: '0.5rem', color: isDarkMode ? '#FFF' : '#000' }}>Global & Semantic Colors</h2>
             {globalColors.map(color => (
-                <RampRow key={color.id} title={color.name} seed={color.seed} isDarkMode={isDarkMode} />
+                <RampRow
+                    key={color.id}
+                    title={color.name}
+                    seed={color.seed}
+                    isDarkMode={isDarkMode}
+                    overrides={themes[0]?.primitiveOverrides}
+                    onOverride={(path, hex) => themes[0] && updateThemePrimitiveOverride(themes[0].id, path, hex)}
+                />
             ))}
         </div>
     );

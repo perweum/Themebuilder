@@ -62,6 +62,7 @@ export function mapTheme(
     successGen: GeneratedRamp,
     errorGen: GeneratedRamp,
     semanticOverrides?: Record<string, string>,
+    primitiveOverrides?: Record<string, string>,
     geometryConfig?: { radiusBase: number; includeRadius: boolean; includeBorders: boolean; borderWidth: 'small' | 'medium' | 'large' }
 ): ThemeTokensPayload {
 
@@ -329,6 +330,16 @@ export function mapTheme(
         };
     });
 
+    // --- APPLY PRIMITIVE OVERRIDES ---
+    if (primitiveOverrides) {
+        for (const [path, overrideHex] of Object.entries(primitiveOverrides)) {
+            const [colorName, step] = path.split('.');
+            if (colors[colorName] && colors[colorName][step]) {
+                colors[colorName][step].$value = overrideHex;
+            }
+        }
+    }
+
     const payload: ThemeTokensPayload = {
         color: colors,
         theme,
@@ -377,7 +388,14 @@ export function mapTheme(
     if (semanticOverrides) {
         Object.entries(semanticOverrides).forEach(([path, value]) => {
             if (!value) return;
-            const parts = path.split('.');
+
+            // Route light mode overrides safely into the 'theme' object if they lack a prefix
+            let fullPath = path;
+            if (!path.startsWith('theme.') && !path.startsWith('darkTheme.')) {
+                fullPath = `theme.${path}`;
+            }
+
+            const parts = fullPath.split('.');
             let current = payload as any;
             for (let i = 0; i < parts.length - 1; i++) {
                 if (!current[parts[i]]) current[parts[i]] = {};

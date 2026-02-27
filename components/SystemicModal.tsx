@@ -89,7 +89,7 @@ export const SystemicModal: React.FC<SystemicModalProps> = ({
         // Only apply transform scale animations to the centered variant
         transform: isCentered ? (isVisible ? 'scale(1) translateY(0)' : 'scale(0.95) translateY(20px)') : 'none',
         opacity: isCentered ? (isVisible ? 1 : 0) : 1,
-        transition: isCentered ? 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
+        transition: isCentered ? 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
         display: 'flex',
         flexDirection: 'column',
         maxHeight: isCentered ? '90vh' : 'auto',

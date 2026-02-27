@@ -334,9 +334,8 @@ const KitchenSink: React.FC<{ isDarkMode: boolean, setIsDarkMode: (val: boolean)
                                     padding: '0.5rem 1rem',
                                     fontSize: '1rem',
                                     borderRadius: '0px',
-                                    border: 'none',
-                                    background: 'var(--color-base-brand-default)',
-                                    color: 'var(--color-text-brand-contrast)',
+                                    background: isDarkMode ? '#C3E835' : '#0142FE',
+                                    color: isDarkMode ? '#000' : '#fff',
                                     cursor: 'pointer',
                                     fontWeight: 400
                                 }}

@@ -73,7 +73,7 @@ export const ExportScreen: React.FC<{
         const errorGen = generateRamp(errorHex);
 
         // Map WITH overrides to get final
-        return mapTheme(mappedColors, neutralGen, successGen, errorGen, activeTheme.semanticOverrides, activeTheme.geometry);
+        return mapTheme(mappedColors, neutralGen, successGen, errorGen, activeTheme.semanticOverrides, activeTheme.primitiveOverrides, activeTheme.geometry);
     }, [activeTheme, globalColors]);
 
 
@@ -195,7 +195,7 @@ export const ExportScreen: React.FC<{
                         </button>
                     </div>
 
-                    <div style={{ display: 'flex', gap: '1.5rem', padding: '0 1.5rem' }}>
+                    <div style={{ display: 'flex', gap: '3rem', padding: '0 1.5rem' }}>
                         <button
                             onClick={() => setActiveTab('semantic')}
                             style={{
@@ -211,7 +211,7 @@ export const ExportScreen: React.FC<{
                                 marginBottom: '-1px'
                             }}
                         >
-                            Semantic Tokens (Editable)
+                            Semantic Tokens
                         </button>
                         <button
                             onClick={() => setActiveTab('primitive')}
@@ -228,7 +228,7 @@ export const ExportScreen: React.FC<{
                                 marginBottom: '-1px'
                             }}
                         >
-                            Primitive Tokens (Read-Only)
+                            Primitive Tokens
                         </button>
                         <button
                             onClick={() => setActiveTab('geometry')}
@@ -245,7 +245,7 @@ export const ExportScreen: React.FC<{
                                 marginBottom: '-1px'
                             }}
                         >
-                            Geometry Tokens (Read-Only)
+                            Geometry Tokens
                         </button>
                     </div>
                 </div>
@@ -253,7 +253,7 @@ export const ExportScreen: React.FC<{
                 {/* Body */}
                 <div style={{ flex: 1, overflowY: 'auto', padding: '1rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }} className="no-scrollbar">
                     {activeTab === 'semantic' && (
-                        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(160px, 1fr) 1fr 1fr auto', gap: '0.75rem', padding: '0 0.75rem 0.5rem', borderBottom: `1px solid ${isDarkMode ? '#334155' : '#e2e8f0'}`, marginBottom: '-0.75rem', alignItems: 'end' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(160px, 1fr) 1fr 1fr auto', gap: '0.75rem', padding: '1rem 0.75rem 0.5rem', borderBottom: `1px solid ${isDarkMode ? '#334155' : '#e2e8f0'}`, marginBottom: '-0.75rem', alignItems: 'end' }}>
                             <div style={{ fontSize: '0.75rem', fontWeight: 600, color: isDarkMode ? '#94a3b8' : '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Token Name</div>
                             <div style={{ fontSize: '0.75rem', fontWeight: 600, color: isDarkMode ? '#94a3b8' : '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Light Mode</div>
                             <div style={{ fontSize: '0.75rem', fontWeight: 600, color: isDarkMode ? '#94a3b8' : '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Dark Mode</div>
@@ -267,7 +267,8 @@ export const ExportScreen: React.FC<{
                                 alignItems: 'center',
                                 gap: '0.75rem',
                                 borderBottom: `1px solid ${isDarkMode ? '#334155' : '#e2e8f0'}`,
-                                paddingBottom: '0.5rem',
+                                paddingTop: '0.5rem',
+                                paddingBottom: '1rem',
                                 marginBottom: '0.75rem',
                             }}>
                                 <input
@@ -302,8 +303,10 @@ export const ExportScreen: React.FC<{
                                 pointerEvents: excludedSemanticCategories.has(category) ? 'none' : 'auto'
                             }}>
                                 {paths.map(path => {
-                                    const lightPath = `theme.${path}`;
-                                    const darkPath = `darkTheme.${path}`;
+                                    const lightValuePath = `theme.${path}`;
+                                    const darkValuePath = `darkTheme.${path}`;
+                                    const lightOverridePath = path;
+                                    const darkOverridePath = `darkTheme.${path}`;
 
                                     const getValueByPath = (obj: any, p: string) => {
                                         const parts = p.split('.');
@@ -315,8 +318,8 @@ export const ExportScreen: React.FC<{
                                         return current?.$value || null;
                                     };
 
-                                    const currentLightVal = getValueByPath(activeThemePayloadWithOptions, lightPath);
-                                    const currentDarkVal = getValueByPath(activeThemePayloadWithOptions, darkPath);
+                                    const currentLightVal = getValueByPath(activeThemePayloadWithOptions, lightValuePath);
+                                    const currentDarkVal = getValueByPath(activeThemePayloadWithOptions, darkValuePath);
 
                                     let lightHex = currentLightVal;
                                     if (lightHex?.startsWith('{')) {
@@ -327,8 +330,8 @@ export const ExportScreen: React.FC<{
                                         darkHex = getValueByPath(activeThemePayloadWithOptions, darkHex.slice(1, -1)) || darkHex;
                                     }
 
-                                    const isLightOverridden = !!activeTheme.semanticOverrides?.[lightPath];
-                                    const isDarkOverridden = !!activeTheme.semanticOverrides?.[darkPath];
+                                    const isLightOverridden = !!activeTheme.semanticOverrides?.[lightOverridePath];
+                                    const isDarkOverridden = !!activeTheme.semanticOverrides?.[darkOverridePath];
 
                                     const renderSelectOptions = () => {
                                         return (
@@ -390,18 +393,14 @@ export const ExportScreen: React.FC<{
                                             </div>
 
                                             {/* Light Mode Picker */}
-                                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', position: 'relative' }}>
-                                                {isLightOverridden && (
-                                                    <button onClick={() => updateThemeSemanticOverride(activeTheme.id, lightPath, undefined)} style={{ position: 'absolute', top: '-18px', right: 0, background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '0.25rem' }} title="Revert to Default">
-                                                        <RotateCcw size={12} /> <span style={{ fontSize: '0.7rem' }}>Revert</span>
-                                                    </button>
-                                                )}
+                                            <div style={{ position: 'relative', display: 'flex', gap: '0.5rem', alignItems: 'center', flex: 1 }}>
                                                 <div style={{ width: '24px', height: '24px', borderRadius: '4px', backgroundColor: lightHex || 'transparent', border: '1px solid #ccc', flexShrink: 0 }} />
                                                 <select
-                                                    value={currentLightVal || ''}
-                                                    onChange={(e) => updateThemeSemanticOverride(activeTheme.id, lightPath, e.target.value)}
+                                                    value={isLightOverridden ? activeTheme.semanticOverrides![lightOverridePath] : (currentLightVal || '')}
+                                                    onChange={(e) => updateThemeSemanticOverride(activeTheme.id, lightOverridePath, e.target.value)}
                                                     style={{
                                                         flex: 1,
+                                                        width: isLightOverridden ? 'calc(100% - 28px)' : '100%',
                                                         padding: '0.5rem',
                                                         borderRadius: '4px',
                                                         border: `1px solid ${isLightOverridden ? '#3b82f6' : (isDarkMode ? '#334155' : '#e2e8f0')}`,
@@ -410,23 +409,43 @@ export const ExportScreen: React.FC<{
                                                         fontSize: '0.875rem'
                                                     }}
                                                 >
+                                                    {!isLightOverridden && (
+                                                        <option value={currentLightVal || ''}>
+                                                            Auto ({currentLightVal?.replace(/[{}]/g, '').replace('color.', '').replace('darkTheme.', '')})
+                                                        </option>
+                                                    )}
                                                     {renderSelectOptions()}
                                                 </select>
+                                                {isLightOverridden && (
+                                                    <button
+                                                        onClick={() => updateThemeSemanticOverride(activeTheme.id, lightOverridePath, undefined)}
+                                                        style={{
+                                                            background: 'none',
+                                                            border: 'none',
+                                                            color: '#ef4444',
+                                                            cursor: 'pointer',
+                                                            padding: '4px',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            borderRadius: '4px',
+                                                        }}
+                                                        title="Revert to Default"
+                                                    >
+                                                        <RotateCcw size={16} />
+                                                    </button>
+                                                )}
                                             </div>
 
                                             {/* Dark Mode Picker */}
-                                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', position: 'relative' }}>
-                                                {isDarkOverridden && (
-                                                    <button onClick={() => updateThemeSemanticOverride(activeTheme.id, darkPath, undefined)} style={{ position: 'absolute', top: '-18px', right: 0, background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '0.25rem' }} title="Revert to Default">
-                                                        <RotateCcw size={12} /> <span style={{ fontSize: '0.7rem' }}>Revert</span>
-                                                    </button>
-                                                )}
+                                            <div style={{ position: 'relative', display: 'flex', gap: '0.5rem', alignItems: 'center', flex: 1 }}>
                                                 <div style={{ width: '24px', height: '24px', borderRadius: '4px', backgroundColor: darkHex || 'transparent', border: '1px solid #ccc', flexShrink: 0 }} />
                                                 <select
-                                                    value={currentDarkVal || ''}
-                                                    onChange={(e) => updateThemeSemanticOverride(activeTheme.id, darkPath, e.target.value)}
+                                                    value={isDarkOverridden ? activeTheme.semanticOverrides![darkOverridePath] : (currentDarkVal || '')}
+                                                    onChange={(e) => updateThemeSemanticOverride(activeTheme.id, darkOverridePath, e.target.value)}
                                                     style={{
                                                         flex: 1,
+                                                        width: isDarkOverridden ? 'calc(100% - 28px)' : '100%',
                                                         padding: '0.5rem',
                                                         borderRadius: '4px',
                                                         border: `1px solid ${isDarkOverridden ? '#3b82f6' : (isDarkMode ? '#334155' : '#e2e8f0')}`,
@@ -435,8 +454,32 @@ export const ExportScreen: React.FC<{
                                                         fontSize: '0.875rem'
                                                     }}
                                                 >
+                                                    {!isDarkOverridden && (
+                                                        <option value={currentDarkVal || ''}>
+                                                            Auto ({currentDarkVal?.replace(/[{}]/g, '').replace('color.', '').replace('darkTheme.', '')})
+                                                        </option>
+                                                    )}
                                                     {renderSelectOptions()}
                                                 </select>
+                                                {isDarkOverridden && (
+                                                    <button
+                                                        onClick={() => updateThemeSemanticOverride(activeTheme.id, darkOverridePath, undefined)}
+                                                        style={{
+                                                            background: 'none',
+                                                            border: 'none',
+                                                            color: '#ef4444',
+                                                            cursor: 'pointer',
+                                                            padding: '4px',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            borderRadius: '4px',
+                                                        }}
+                                                        title="Revert to Default"
+                                                    >
+                                                        <RotateCcw size={16} />
+                                                    </button>
+                                                )}
                                             </div>
                                             <input
                                                 type="checkbox"

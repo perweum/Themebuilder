@@ -24,6 +24,7 @@ export type ThemeConfig = {
     // New array-based dynamic support
     colors: ThemeColorConfig[];
     semanticOverrides?: Record<string, string>;
+    primitiveOverrides?: Record<string, string>;
     geometry?: ThemeGeometryConfig;
 };
 
@@ -59,6 +60,7 @@ interface ThemeContextType {
     addThemeColor: (themeId: string) => void;
     removeThemeColor: (themeId: string, colorId: string) => void;
     updateThemeSemanticOverride: (themeId: string, path: string, value: string | undefined) => void;
+    updateThemePrimitiveOverride: (themeId: string, path: string, value: string | undefined) => void;
     updateThemeGeometryValue: <K extends keyof ThemeGeometryConfig>(themeId: string, key: K, value: ThemeGeometryConfig[K]) => void;
 
     removeTheme: (id: string) => void;
@@ -125,6 +127,7 @@ export const ThemeScope: React.FC<ThemeScopeProps> = ({
                 successGen,
                 errorGen,
                 themeConfig.semanticOverrides,
+                themeConfig.primitiveOverrides,
                 themeConfig.geometry
             );
 
@@ -343,6 +346,22 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         }));
     };
 
+    const updateThemePrimitiveOverride = (themeId: string, path: string, value: string | undefined) => {
+        saveHistory();
+        setThemes(prev => prev.map(t => {
+            if (t.id === themeId) {
+                const newOverrides = { ...(t.primitiveOverrides || {}) };
+                if (value === undefined) {
+                    delete newOverrides[path];
+                } else {
+                    newOverrides[path] = value;
+                }
+                return { ...t, primitiveOverrides: newOverrides };
+            }
+            return t;
+        }));
+    };
+
     const updateThemeGeometryValue = <K extends keyof ThemeGeometryConfig>(themeId: string, key: K, value: ThemeGeometryConfig[K]) => {
         saveHistory();
         setThemes(prev => prev.map(t => {
@@ -401,6 +420,7 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         addThemeColor,
         removeThemeColor,
         updateThemeSemanticOverride,
+        updateThemePrimitiveOverride,
         updateThemeGeometryValue,
         removeTheme,
         globalColors,
