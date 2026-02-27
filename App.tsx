@@ -11,6 +11,10 @@ import { Badge } from './components/DataDisplay';
 import { Select, SelectItem } from './components/Select';
 import { ExportScreen } from './components/ExportScreen';
 import { OnboardingModal } from './components/OnboardingModal';
+import { TabsDemo } from './components/TabsDemo';
+import { PaginationDemo } from './components/PaginationDemo';
+import { StepperDemo } from './components/StepperDemo';
+import { AccordionDemo } from './components/AccordionDemo';
 import { ContrastChecker } from './components/ContrastChecker';
 import { generateRamp, getAccessibleForeground } from './lib/palette-generator';
 import { wcagContrast } from 'culori';
@@ -18,6 +22,7 @@ import { wcagContrast } from 'culori';
 const ThemeBlock: React.FC<{ themeConfig: any, globalColors: any, isDarkMode?: boolean }> = ({ themeConfig, globalColors, isDarkMode }) => {
     // Determine the primary color to use as a fallback for form active states
     const primaryColorName = themeConfig.colors.length > 0 ? themeConfig.colors[0].name.toLowerCase().replace(/\s+/g, '-') : 'neutral';
+    const accentColorName = themeConfig.colors.length > 1 ? themeConfig.colors[1].name.toLowerCase().replace(/\s+/g, '-') : primaryColorName;
 
     return (
         <div style={{ marginBottom: '4rem' }}>
@@ -53,13 +58,13 @@ const ThemeBlock: React.FC<{ themeConfig: any, globalColors: any, isDarkMode?: b
 
                 {/* Section 1: Interactive Elements */}
                 <section>
-                    <h3 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '1rem', borderBottom: '1px solid #ddd', paddingBottom: '0.5rem' }}>Components</h3>
+                    <h3 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '1rem', borderBottom: 'var(--geometry-borderWidth-default, 1px) solid var(--color-border-subtle)', paddingBottom: '0.5rem' }}>Components</h3>
                     <div style={{ display: 'flex', gap: '2rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
                         {themeConfig.colors.map((color: any) => {
                             const cName = color.name.toLowerCase().replace(/\s+/g, '-');
                             return (
                                 <div key={color.id} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                    <h4 style={{ fontSize: '0.875rem', fontWeight: 600, color: '#666', textTransform: 'capitalize' }}>{color.name} Actions</h4>
+                                    <h4 style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-text-subtle)', textTransform: 'capitalize' }}>{color.name} Actions</h4>
                                     <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                                         <Button variant="primary" color={cName as any}>Primary</Button>
                                         <Button variant="outline" color={cName as any}>Outline</Button>
@@ -71,7 +76,7 @@ const ThemeBlock: React.FC<{ themeConfig: any, globalColors: any, isDarkMode?: b
                         {/* Static disabled row example attached to the first color */}
                         {themeConfig.colors.length > 0 && (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                <h4 style={{ fontSize: '0.875rem', fontWeight: 600, color: '#666' }}>Disabled Actions</h4>
+                                <h4 style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-text-subtle)' }}>Disabled Actions</h4>
                                 <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                                     <Button variant="primary" color={themeConfig.colors[0].name} isDisabled>Disabled</Button>
                                     <Button variant="outline" color={themeConfig.colors[0].name} isDisabled>Disabled</Button>
@@ -83,7 +88,7 @@ const ThemeBlock: React.FC<{ themeConfig: any, globalColors: any, isDarkMode?: b
 
                 {/* Section 1.5: Form Elements */}
                 <section>
-                    <h3 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '1rem', borderBottom: '1px solid #ddd', paddingBottom: '0.5rem' }}>Form Elements</h3>
+                    <h3 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '1rem', borderBottom: 'var(--geometry-borderWidth-default, 1px) solid var(--color-border-subtle)', paddingBottom: '0.5rem' }}>Form Elements</h3>
                     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr) minmax(0,1fr)', gap: '2rem', alignItems: 'start' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                             <Input label="Email Address" placeholder="name@company.com" colorName={primaryColorName} />
@@ -114,7 +119,7 @@ const ThemeBlock: React.FC<{ themeConfig: any, globalColors: any, isDarkMode?: b
 
                 {/* Section 1.6: Data Display */}
                 <section>
-                    <h3 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '1rem', borderBottom: '1px solid #ddd', paddingBottom: '0.5rem' }}>Data Display</h3>
+                    <h3 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '1rem', borderBottom: 'var(--geometry-borderWidth-default, 1px) solid var(--color-border-subtle)', paddingBottom: '0.5rem' }}>Data Display</h3>
                     <div style={{ display: 'flex', gap: '2rem', alignItems: 'center', flexWrap: 'wrap' }}>
                         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                             {themeConfig.colors.map((color: any) => {
@@ -123,7 +128,7 @@ const ThemeBlock: React.FC<{ themeConfig: any, globalColors: any, isDarkMode?: b
                             })}
                             <Badge color="neutral">Neutral Badge</Badge>
                         </div>
-                        <div style={{ width: '1px', height: '24px', background: '#ddd' }}></div>
+                        <div style={{ width: 'var(--geometry-borderWidth-default, 1px)', height: '24px', background: 'var(--color-border-subtle)' }}></div>
                         <div style={{ fontSize: '0.875rem', color: 'var(--color-text-subtle)' }}>
                             <strong>John Doe</strong> and <strong>Alice Bob</strong>
                         </div>
@@ -132,7 +137,7 @@ const ThemeBlock: React.FC<{ themeConfig: any, globalColors: any, isDarkMode?: b
 
                 {/* Section 2: Cards & Surfaces */}
                 <section>
-                    <h3 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '1rem', borderBottom: '1px solid #ddd', paddingBottom: '0.5rem' }}>Surfaces & Depth</h3>
+                    <h3 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '1rem', borderBottom: 'var(--geometry-borderWidth-default, 1px) solid var(--color-border-subtle)', paddingBottom: '0.5rem' }}>Surfaces & Depth</h3>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '2rem' }}>
                         <Card title="Default Surface">
                             This card uses the default surface and subtle text colors mapped from the neutral ramp. It represents the standard elevation.
@@ -159,13 +164,24 @@ const ThemeBlock: React.FC<{ themeConfig: any, globalColors: any, isDarkMode?: b
                     </div>
                 </section>
 
-                {/* Section 3: Global Feedback States */}
+                {/* Section 3: Layouts & Navigation */}
                 <section>
-                    <h3 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '1rem', borderBottom: '1px solid #ddd', paddingBottom: '0.5rem' }}>Global Feedback States</h3>
+                    <h3 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '1rem', borderBottom: 'var(--geometry-borderWidth-default, 1px) solid var(--color-border-subtle)', paddingBottom: '0.5rem' }}>Layout & Navigation</h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3rem' }}>
+                        <TabsDemo primaryColorName={primaryColorName} accentColorName={accentColorName} />
+                        <PaginationDemo primaryColorName={primaryColorName} accentColorName={accentColorName} />
+                        <StepperDemo primaryColorName={primaryColorName} accentColorName={accentColorName} />
+                        <AccordionDemo primaryColorName={primaryColorName} accentColorName={accentColorName} />
+                    </div>
+                </section>
+
+                {/* Section 4: Global Feedback States */}
+                <section>
+                    <h3 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '1rem', borderBottom: 'var(--geometry-borderWidth-default, 1px) solid var(--color-border-subtle)', paddingBottom: '0.5rem' }}>Global Feedback States</h3>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
                         {globalColors.map((color: any) => (
                             <FeedbackCard key={color.id} colorName={color.name} isDarkMode={isDarkMode}>
-                                <strong>{color.name} ({color.id})</strong>
+                                <strong>{color.name}</strong>
                             </FeedbackCard>
                         ))}
                     </div>

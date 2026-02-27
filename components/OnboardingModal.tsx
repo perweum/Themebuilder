@@ -192,7 +192,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onClose, isDar
                                 width: '8px',
                                 height: '8px',
                                 borderRadius: '50%',
-                                background: i === currentSlide ? 'var(--color-base-brand-default)' : isDarkMode ? '#444' : '#ddd',
+                                background: i === currentSlide ? 'var(--color-base-brand-default)' : 'var(--color-border-subtle)',
                                 transition: 'background 0.3s ease'
                             }}
                         />
