@@ -48,6 +48,7 @@ function getOffsetStep(step: ColorStep, offset: number): ColorStep {
 }
 
 export interface NamedColorRamp {
+    id?: string;       // Stable ID for core tracking
     name: string;      // The actual mapped name, like 'master' or 'secondary'
     gen: GeneratedRamp;
 }
@@ -64,9 +65,10 @@ export function mapTheme(
     geometryConfig?: { radiusBase: number; includeRadius: boolean; includeBorders: boolean; borderWidth: 'small' | 'medium' | 'large' }
 ): ThemeTokensPayload {
 
-    const neutralRamp = globalColors.find(c => c.name.toLowerCase() === 'neutral');
-    const successRamp = globalColors.find(c => c.name.toLowerCase() === 'success');
-    const errorRamp = globalColors.find(c => c.name.toLowerCase() === 'error' || c.name.toLowerCase() === 'critical');
+    // Lookup core semantics by stable ID so renaming them doesn't drop their required mapping
+    const neutralRamp = globalColors.find(c => c.id === 'neutral');
+    const successRamp = globalColors.find(c => c.id === 'success');
+    const errorRamp = globalColors.find(c => c.id === 'error' || c.id === 'critical');
 
     // Extract default fallbacks if somehow missing
     const fallbackNeutral = generateRamp('#64748b');

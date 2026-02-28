@@ -111,11 +111,13 @@ export const ThemeScope: React.FC<ThemeScopeProps> = ({
         try {
             // Build the dynamic array of NamedColorRamp objects to feed to the mapper
             const mappedColors: NamedColorRamp[] = themeConfig.colors.map(c => ({
+                id: c.id,
                 name: c.name.toLowerCase().replace(/\s+/g, '-'),
                 gen: generateRamp(c.seed)
             }));
 
             const mappedGlobal = globalColors.map(c => ({
+                id: c.id,
                 name: c.name.toLowerCase().replace(/\s+/g, '-'),
                 gen: generateRamp(c.seed)
             }));
@@ -412,12 +414,14 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     // Calculate globally to avoid components like ExportScreen running generateRamp loops on tick
     const resolvedThemes = React.useMemo(() => {
         const mappedGlobal = globalColors.map(c => ({
+            id: c.id,
             name: c.name.toLowerCase().replace(/\s+/g, '-'),
             gen: generateRamp(c.seed)
         }));
 
         return themes.map(t => {
             const mappedColors = t.colors.map(c => ({
+                id: c.id,
                 name: c.name.toLowerCase().replace(/\s+/g, '-'),
                 gen: generateRamp(c.seed)
             }));

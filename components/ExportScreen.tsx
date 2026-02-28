@@ -42,11 +42,13 @@ export const ExportScreen: React.FC<{
     const defaultTheme = useMemo(() => {
         if (!activeTheme) return null;
         const mappedColors = activeTheme.colors.map(c => ({
+            id: c.id,
             name: c.name.toLowerCase().replace(/\s+/g, '-'),
             gen: generateRamp(c.seed)
         }));
 
         const mappedGlobal = globalColors.map(c => ({
+            id: c.id,
             name: c.name.toLowerCase().replace(/\s+/g, '-'),
             gen: generateRamp(c.seed)
         }));
