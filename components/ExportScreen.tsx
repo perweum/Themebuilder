@@ -22,10 +22,11 @@ export const ExportScreen: React.FC<{
     isDarkMode: boolean;
     onClose: () => void;
 }> = ({ isDarkMode, onClose }) => {
-    const { themes, globalColors, updateThemeSemanticOverride, resolvedThemes } = useTheme();
+    const { themes, globalColors, updateThemeSemanticOverride, resolvedThemes, resolvedDefaultThemes } = useTheme();
     // Assuming we export the first theme or have a selector. Keep simple: export active theme (first one).
     const activeTheme = themes[0];
     const activeThemePayloadWithOptions = resolvedThemes[0];
+    const defaultTheme = resolvedDefaultThemes[0];
 
     const [expandedColor, setExpandedColor] = useState<string | null>(
         activeTheme?.colors[0]?.name.toLowerCase().replace(/\s+/g, '-') || null
@@ -37,26 +38,6 @@ export const ExportScreen: React.FC<{
     const [excludedSemanticCategories, setExcludedSemanticCategories] = useState<Set<string>>(new Set());
     const [excludedSemanticTokens, setExcludedSemanticTokens] = useState<Set<string>>(new Set());
     const [excludedGeometry, setExcludedGeometry] = useState<Set<string>>(new Set());
-
-    // Generate defaults on the fly to show what they are (categories list needs raw structure without overrides)
-    const defaultTheme = useMemo(() => {
-        if (!activeTheme) return null;
-        const mappedColors = activeTheme.colors.map(c => ({
-            id: c.id,
-            name: c.name.toLowerCase().replace(/\s+/g, '-'),
-            gen: generateRamp(c.seed)
-        }));
-
-        const mappedGlobal = globalColors.map(c => ({
-            id: c.id,
-            name: c.name.toLowerCase().replace(/\s+/g, '-'),
-            gen: generateRamp(c.seed)
-        }));
-
-        // Map WITHOUT overrides to get base categories
-        return mapTheme(mappedColors, mappedGlobal);
-    }, [activeTheme.colors, globalColors]);
-
 
     if (!activeTheme || !defaultTheme || !activeThemePayloadWithOptions) return null;
 

@@ -73,6 +73,7 @@ interface ThemeContextType {
 
     // Memoized output themes globally mapped so UI doesn't stutter on re-renders
     resolvedThemes: import('./lib/theme-mapper').ThemeTokensPayload[];
+    resolvedDefaultThemes: import('./lib/theme-mapper').ThemeTokensPayload[]; // Used purely for finding categories structure without overrides
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -429,6 +430,23 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         });
     }, [themes, globalColors]);
 
+    const resolvedDefaultThemes = React.useMemo(() => {
+        const mappedGlobal = globalColors.map(c => ({
+            id: c.id,
+            name: c.name.toLowerCase().replace(/\s+/g, '-'),
+            gen: generateRamp(c.seed)
+        }));
+
+        return themes.map(t => {
+            const mappedColors = t.colors.map(c => ({
+                id: c.id,
+                name: c.name.toLowerCase().replace(/\s+/g, '-'),
+                gen: generateRamp(c.seed)
+            }));
+            return mapTheme(mappedColors, mappedGlobal); // No overrides passed here
+        });
+    }, [themes, globalColors]);
+
     const value = {
         themes,
         addTheme,
@@ -445,7 +463,8 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         addRandomGlobalColor,
         updateGlobalColor,
         removeGlobalColor,
-        resolvedThemes
+        resolvedThemes,
+        resolvedDefaultThemes
     };
 
     return (

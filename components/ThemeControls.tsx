@@ -95,7 +95,9 @@ export const ThemeControls: React.FC<{
         updateGlobalColor,
         removeGlobalColor,
         addGlobalColorsPreset,
-        updateThemeSemanticOverride
+        updateThemeSemanticOverride,
+        resolvedThemes,
+        resolvedDefaultThemes
     } = useTheme();
 
     const [activeTab, setActiveTab] = React.useState<'colors' | 'geometry' | 'semantic'>('colors');
@@ -104,36 +106,8 @@ export const ThemeControls: React.FC<{
     const hasAllPresets = FULL_GLOBAL_PRESET.every(fp => globalColors.some(gc => gc.id === fp.id));
 
     const activeTheme = themes[0];
-
-    const defaultTheme = React.useMemo(() => {
-        if (!activeTheme) return null;
-        const mappedColors = activeTheme.colors.map(c => ({
-            name: c.name.toLowerCase().replace(/\s+/g, '-'),
-            gen: generateRamp(c.seed)
-        }));
-
-        const mappedGlobal = globalColors.map(c => ({
-            name: c.name.toLowerCase().replace(/\s+/g, '-'),
-            gen: generateRamp(c.seed)
-        }));
-
-        return mapTheme(mappedColors, mappedGlobal);
-    }, [activeTheme, globalColors]);
-
-    const activeThemePayloadWithOptions = React.useMemo(() => {
-        if (!activeTheme) return null;
-        const mappedColors = activeTheme.colors.map(c => ({
-            name: c.name.toLowerCase().replace(/\s+/g, '-'),
-            gen: generateRamp(c.seed)
-        }));
-
-        const mappedGlobal = globalColors.map(c => ({
-            name: c.name.toLowerCase().replace(/\s+/g, '-'),
-            gen: generateRamp(c.seed)
-        }));
-
-        return mapTheme(mappedColors, mappedGlobal, activeTheme.semanticOverrides, activeTheme.primitiveOverrides);
-    }, [activeTheme, globalColors]);
+    const defaultTheme = resolvedDefaultThemes[0];
+    const activeThemePayloadWithOptions = resolvedThemes[0];
 
     const tokenCategories = React.useMemo(() => {
         if (!defaultTheme) return {};
