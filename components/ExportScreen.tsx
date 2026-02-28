@@ -340,21 +340,16 @@ export const ExportScreen: React.FC<{
                                                         </optgroup>
                                                     );
                                                 })}
-                                                <optgroup label="Neutral">
-                                                    {COLOR_STEPS.map((step: any) => (
-                                                        <option key={`neutral-${step}`} value={`{color.neutral.${step}}`}>neutral-{step}</option>
-                                                    ))}
-                                                </optgroup>
-                                                <optgroup label="Success">
-                                                    {COLOR_STEPS.map((step: any) => (
-                                                        <option key={`success-${step}`} value={`{color.success.${step}}`}>success-{step}</option>
-                                                    ))}
-                                                </optgroup>
-                                                <optgroup label="Error">
-                                                    {COLOR_STEPS.map((step: any) => (
-                                                        <option key={`error-${step}`} value={`{color.error.${step}}`}>error-{step}</option>
-                                                    ))}
-                                                </optgroup>
+                                                {globalColors.map(gc => {
+                                                    const safeName = gc.name.toLowerCase().replace(/\s+/g, '-');
+                                                    return (
+                                                        <optgroup label={gc.name} style={{ textTransform: 'capitalize' }} key={gc.id}>
+                                                            {COLOR_STEPS.map((step: any) => (
+                                                                <option key={`${safeName}-${step}`} value={`{color.${safeName}.${step}}`}>{safeName}-{step}</option>
+                                                            ))}
+                                                        </optgroup>
+                                                    );
+                                                })}
                                                 <optgroup label="White (Alpha)">
                                                     {ALPHA_STEPS.map((step: any) => (
                                                         <option key={`white-${step}`} value={`{color.white.${step}}`}>white-{step}%</option>
