@@ -70,6 +70,9 @@ interface ThemeContextType {
     addRandomGlobalColor: () => void;
     updateGlobalColor: (id: string, name: string, hex: string) => void;
     removeGlobalColor: (id: string) => void;
+
+    // Memoized output themes globally mapped so UI doesn't stutter on re-renders
+    resolvedThemes: import('./lib/theme-mapper').ThemeTokensPayload[];
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -406,6 +409,22 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         setGlobalColors(prev => prev.filter(c => c.id !== id));
     };
 
+    // Calculate globally to avoid components like ExportScreen running generateRamp loops on tick
+    const resolvedThemes = React.useMemo(() => {
+        const mappedGlobal = globalColors.map(c => ({
+            name: c.name.toLowerCase().replace(/\s+/g, '-'),
+            gen: generateRamp(c.seed)
+        }));
+
+        return themes.map(t => {
+            const mappedColors = t.colors.map(c => ({
+                name: c.name.toLowerCase().replace(/\s+/g, '-'),
+                gen: generateRamp(c.seed)
+            }));
+            return mapTheme(mappedColors, mappedGlobal, t.semanticOverrides, t.primitiveOverrides, t.geometry);
+        });
+    }, [themes, globalColors]);
+
     const value = {
         themes,
         addTheme,
@@ -421,7 +440,8 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         addGlobalColorsPreset,
         addRandomGlobalColor,
         updateGlobalColor,
-        removeGlobalColor
+        removeGlobalColor,
+        resolvedThemes
     };
 
     return (

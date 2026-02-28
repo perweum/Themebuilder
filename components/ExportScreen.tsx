@@ -22,9 +22,10 @@ export const ExportScreen: React.FC<{
     isDarkMode: boolean;
     onClose: () => void;
 }> = ({ isDarkMode, onClose }) => {
-    const { themes, globalColors, updateThemeSemanticOverride } = useTheme();
+    const { themes, globalColors, updateThemeSemanticOverride, resolvedThemes } = useTheme();
     // Assuming we export the first theme or have a selector. Keep simple: export active theme (first one).
     const activeTheme = themes[0];
+    const activeThemePayloadWithOptions = resolvedThemes[0];
 
     const [expandedColor, setExpandedColor] = useState<string | null>(
         activeTheme?.colors[0]?.name.toLowerCase().replace(/\s+/g, '-') || null
@@ -37,7 +38,7 @@ export const ExportScreen: React.FC<{
     const [excludedSemanticTokens, setExcludedSemanticTokens] = useState<Set<string>>(new Set());
     const [excludedGeometry, setExcludedGeometry] = useState<Set<string>>(new Set());
 
-    // Generate defaults on the fly to show what they are
+    // Generate defaults on the fly to show what they are (categories list needs raw structure without overrides)
     const defaultTheme = useMemo(() => {
         if (!activeTheme) return null;
         const mappedColors = activeTheme.colors.map(c => ({
@@ -50,25 +51,9 @@ export const ExportScreen: React.FC<{
             gen: generateRamp(c.seed)
         }));
 
-        // Map WITHOUT overrides to get base
+        // Map WITHOUT overrides to get base categories
         return mapTheme(mappedColors, mappedGlobal);
-    }, [activeTheme, globalColors]);
-
-    const activeThemePayloadWithOptions = useMemo(() => {
-        if (!activeTheme) return null;
-        const mappedColors = activeTheme.colors.map(c => ({
-            name: c.name.toLowerCase().replace(/\s+/g, '-'),
-            gen: generateRamp(c.seed)
-        }));
-
-        const mappedGlobal = globalColors.map(c => ({
-            name: c.name.toLowerCase().replace(/\s+/g, '-'),
-            gen: generateRamp(c.seed)
-        }));
-
-        // Map WITH overrides to get final
-        return mapTheme(mappedColors, mappedGlobal, activeTheme.semanticOverrides, activeTheme.primitiveOverrides, activeTheme.geometry);
-    }, [activeTheme, globalColors]);
+    }, [activeTheme.colors, globalColors]);
 
 
     if (!activeTheme || !defaultTheme || !activeThemePayloadWithOptions) return null;
