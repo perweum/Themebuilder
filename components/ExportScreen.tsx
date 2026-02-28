@@ -143,13 +143,17 @@ export const ExportScreen: React.FC<{
             exportData = exportPayload;
         }
 
-        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportData, null, 2));
+        const jsonStr = JSON.stringify(exportData, null, 2);
+        const blob = new Blob([jsonStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+
         const element = document.createElement('a');
-        element.setAttribute("href", dataStr);
+        element.setAttribute("href", url);
         element.setAttribute("download", `theme-${exportFormat}.json`);
         document.body.appendChild(element);
         element.click();
         document.body.removeChild(element);
+        URL.revokeObjectURL(url);
     };
 
     return (
