@@ -480,35 +480,33 @@ export const ExportScreen: React.FC<{
                     {activeTab === 'primitive' && (() => {
                         const colors = activeThemePayloadWithOptions.color;
                         const themeNames = activeTheme.colors.map((c: any) => c.name.toLowerCase().replace(/\s+/g, '-'));
+                        const globalNames = globalColors.map((c: any) => c.name.toLowerCase().replace(/\s+/g, '-'));
 
                         // Build ordered array
                         const orderedPalettes: { name: string, steps: any, label: string }[] = [];
+                        const seen = new Set<string>();
 
                         // 1. Theme palettes
                         themeNames.forEach((name: string) => {
-                            if (colors[name]) {
+                            if (colors[name] && !seen.has(name)) {
                                 orderedPalettes.push({ name, steps: colors[name], label: `${name} Palette` });
+                                seen.add(name);
                             }
                         });
 
-                        // 2. Neutral
-                        if (colors.neutral) {
-                            orderedPalettes.push({ name: 'neutral', steps: colors.neutral, label: 'Neutral Palette' });
-                        }
+                        // 2. Global palettes
+                        globalNames.forEach((name: string) => {
+                            if (colors[name] && !seen.has(name)) {
+                                orderedPalettes.push({ name, steps: colors[name], label: `${name} Palette` });
+                                seen.add(name);
+                            }
+                        });
 
-                        // 3. Global (Success, Error)
-                        if (colors.success) {
-                            orderedPalettes.push({ name: 'success', steps: colors.success, label: 'Success Palette' });
-                        }
-                        if (colors.error) {
-                            orderedPalettes.push({ name: 'error', steps: colors.error, label: 'Error Palette' });
-                        }
-
-                        // 4. White & Black
-                        if (colors.white) {
+                        // 3. White & Black
+                        if (colors.white && !seen.has('white')) {
                             orderedPalettes.push({ name: 'white', steps: colors.white, label: 'White (Alpha)' });
                         }
-                        if (colors.black) {
+                        if (colors.black && !seen.has('black')) {
                             orderedPalettes.push({ name: 'black', steps: colors.black, label: 'Black (Alpha)' });
                         }
 
