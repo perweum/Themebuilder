@@ -378,6 +378,16 @@ export function mapTheme(
         const rest = gen.closestStep;
 
         // --- LIGHT THEME TOKENS ---
+        theme.background[safeName] = {
+            default: {},
+            success: { $value: `{color.${aliasName}.25}`, $type: "color" }, // We default to the 25 step for light background tints
+        };
+
+        // Note: we just place it in 'success' slot so it has a default if someone overrides directly onto the background object. 
+        // A cleaner architecture is creating a generic `.tint` or `.default` that maps. Let's stick to the structure we have.
+        // Actually, user wants a single background color. The core background uses .default.
+        theme.background[safeName] = { $value: `{color.${aliasName}.25}`, $type: "color" };
+
         theme.surface[safeName] = {
             default: { $value: `{color.${aliasName}.50}`, $type: "color" },
             hover: { $value: `{color.${aliasName}.100}`, $type: "color" },
@@ -406,6 +416,8 @@ export function mapTheme(
         };
 
         // --- DARK THEME TOKENS ---
+        darkTheme.background[safeName] = { $value: `{color.${aliasName}.900}`, $type: "color" };
+
         darkTheme.surface[safeName] = {
             default: { $value: `{color.${aliasName}.900}`, $type: "color" },
             hover: { $value: `{color.${aliasName}.800}`, $type: "color" },
