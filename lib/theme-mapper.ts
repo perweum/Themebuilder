@@ -77,85 +77,89 @@ export function mapTheme(
     const successGen = successRamp ? successRamp.gen : fallbackSuccess;
     const errorGen = errorRamp ? errorRamp.gen : fallbackError;
 
+    const neutralKey = neutralRamp ? neutralRamp.name.toLowerCase().replace(/\s+/g, '-') : 'neutral';
+    const successKey = successRamp ? successRamp.name.toLowerCase().replace(/\s+/g, '-') : 'success';
+    const errorKey = errorRamp ? errorRamp.name.toLowerCase().replace(/\s+/g, '-') : 'error';
+
     const colors: Record<string, any> = {
         white: toAlphaTokenRamp(generateAlphaRamp('#ffffff')),
         black: toAlphaTokenRamp(generateAlphaRamp('#000000')),
-        neutral: toTokenRamp(neutralGen.ramp),
-        success: toTokenRamp(successGen.ramp),
-        error: toTokenRamp(errorGen.ramp),
+        [neutralKey]: toTokenRamp(neutralGen.ramp),
+        [successKey]: toTokenRamp(successGen.ramp),
+        [errorKey]: toTokenRamp(errorGen.ramp),
     };
 
     // Initialize root objects
     const theme: Record<string, any> = {
         background: {
             default: {},
-            success: { $value: `{color.success.25}`, $type: "color" },
-            error: { $value: `{color.error.25}`, $type: "color" }
+            [successKey]: { $value: `{color.${successKey}.25}`, $type: "color" },
+            [errorKey]: { $value: `{color.${errorKey}.25}`, $type: "color" }
         },
         surface: {
             default: { $value: `{color.white.100}`, $type: "color" },
-            disabled: { $value: `{color.neutral.50}`, $type: "color" },
-            success: {
-                default: { $value: `{color.success.50}`, $type: "color" },
-                hover: { $value: `{color.success.100}`, $type: "color" },
-                active: { $value: `{color.success.200}`, $type: "color" }
+            disabled: { $value: `{color.${neutralKey}.50}`, $type: "color" },
+            [successKey]: {
+                default: { $value: `{color.${successKey}.50}`, $type: "color" },
+                hover: { $value: `{color.${successKey}.100}`, $type: "color" },
+                active: { $value: `{color.${successKey}.200}`, $type: "color" }
             },
-            error: {
-                default: { $value: `{color.error.50}`, $type: "color" },
-                hover: { $value: `{color.error.100}`, $type: "color" },
-                active: { $value: `{color.error.200}`, $type: "color" }
+            [errorKey]: {
+                default: { $value: `{color.${errorKey}.50}`, $type: "color" },
+                hover: { $value: `{color.${errorKey}.100}`, $type: "color" },
+                active: { $value: `{color.${errorKey}.200}`, $type: "color" }
             }
         },
         border: {
-            subtle: { $value: `{color.neutral.200}`, $type: "color" },
-            default: { $value: `{color.neutral.300}`, $type: "color" },
-            disabled: { $value: `{color.neutral.200}`, $type: "color" },
+            subtle: { $value: `{color.${neutralKey}.200}`, $type: "color" },
+            default: { $value: `{color.${neutralKey}.300}`, $type: "color" },
+            disabled: { $value: `{color.${neutralKey}.200}`, $type: "color" },
             focus: {},
-            success: {
-                default: { $value: `{color.success.300}`, $type: "color" },
-                hover: { $value: `{color.success.400}`, $type: "color" }
+            [successKey]: {
+                default: { $value: `{color.${successKey}.300}`, $type: "color" },
+                hover: { $value: `{color.${successKey}.400}`, $type: "color" }
             },
-            error: {
-                default: { $value: `{color.error.300}`, $type: "color" },
-                hover: { $value: `{color.error.400}`, $type: "color" }
+            [errorKey]: {
+                default: { $value: `{color.${errorKey}.300}`, $type: "color" },
+                hover: { $value: `{color.${errorKey}.400}`, $type: "color" }
             }
         },
         base: {
-            disabled: { $value: `{color.neutral.200}`, $type: "color" },
-            success: {
-                default: { $value: `{color.success.500}`, $type: "color" },
-                hover: { $value: `{color.success.600}`, $type: "color" },
-                active: { $value: `{color.success.700}`, $type: "color" },
+            disabled: { $value: `{color.${neutralKey}.200}`, $type: "color" },
+            [successKey]: {
+                default: { $value: `{color.${successKey}.500}`, $type: "color" },
+                hover: { $value: `{color.${successKey}.600}`, $type: "color" },
+                active: { $value: `{color.${successKey}.700}`, $type: "color" },
             },
-            error: {
-                default: { $value: `{color.error.500}`, $type: "color" },
-                hover: { $value: `{color.error.600}`, $type: "color" },
-                active: { $value: `{color.error.700}`, $type: "color" },
+            [errorKey]: {
+                default: { $value: `{color.${errorKey}.500}`, $type: "color" },
+                hover: { $value: `{color.${errorKey}.600}`, $type: "color" },
+                active: { $value: `{color.${errorKey}.700}`, $type: "color" },
             }
         },
         text: {
-            default: { $value: `{color.neutral.950}`, $type: "color" },
-            subtle: { $value: `{color.neutral.500}`, $type: "color" },
-            disabled: { $value: `{color.neutral.400}`, $type: "color" },
-            success: {
-                default: { $value: `{color.success.600}`, $type: "color" },
+            default: { $value: `{color.${neutralKey}.950}`, $type: "color" },
+            subtle: { $value: `{color.${neutralKey}.500}`, $type: "color" },
+            disabled: { $value: `{color.${neutralKey}.400}`, $type: "color" },
+            [successKey]: {
+                default: { $value: `{color.${successKey}.600}`, $type: "color" },
                 contrast: { $value: `{color.white.100}`, $type: "color" }
             },
-            error: {
-                default: { $value: `{color.error.600}`, $type: "color" },
+            [errorKey]: {
+                default: { $value: `{color.${errorKey}.600}`, $type: "color" },
                 contrast: { $value: `{color.white.100}`, $type: "color" }
             }
         },
         icon: {
             default: { $value: `{theme.text.default}`, $type: "color" },
             subtle: { $value: `{theme.text.subtle}`, $type: "color" },
-            success: {
-                default: { $value: `{theme.text.success.default}`, $type: "color" },
-                contrast: { $value: `{theme.text.success.contrast}`, $type: "color" }
+            [successKey]: {
+                default: { $value: `{theme.text.${successKey}.default}`, $type: "color" },
+                contrast: { $value: `{theme.text.${successKey}.contrast}`, $type: "color" }
             },
-            error: {
-                default: { $value: `{theme.text.error.default}`, $type: "color" },
-                contrast: { $value: `{theme.text.error.contrast}`, $type: "color" }
+            [errorKey]: {
+                default: { $value: `{theme.text.${errorKey}.default}`, $type: "color" },
+                contrast: { $value: `{theme.text.${errorKey}.contrast}`, $type: "color" }
             }
         }
     };
@@ -163,73 +167,73 @@ export function mapTheme(
     const darkTheme: Record<string, any> = {
         background: {
             default: {},
-            success: { $value: `{color.success.900}`, $type: "color" },
-            error: { $value: `{color.error.900}`, $type: "color" }
+            [successKey]: { $value: `{color.${successKey}.900}`, $type: "color" },
+            [errorKey]: { $value: `{color.${errorKey}.900}`, $type: "color" }
         },
         surface: {
-            default: { $value: `{color.neutral.900}`, $type: "color" },
-            disabled: { $value: `{color.neutral.900}`, $type: "color" },
-            success: {
-                default: { $value: `{color.success.900}`, $type: "color" },
-                hover: { $value: `{color.success.800}`, $type: "color" },
-                active: { $value: `{color.success.700}`, $type: "color" }
+            default: { $value: `{color.${neutralKey}.900}`, $type: "color" },
+            disabled: { $value: `{color.${neutralKey}.900}`, $type: "color" },
+            [successKey]: {
+                default: { $value: `{color.${successKey}.900}`, $type: "color" },
+                hover: { $value: `{color.${successKey}.800}`, $type: "color" },
+                active: { $value: `{color.${successKey}.700}`, $type: "color" }
             },
-            error: {
-                default: { $value: `{color.error.900}`, $type: "color" },
-                hover: { $value: `{color.error.800}`, $type: "color" },
-                active: { $value: `{color.error.700}`, $type: "color" }
+            [errorKey]: {
+                default: { $value: `{color.${errorKey}.900}`, $type: "color" },
+                hover: { $value: `{color.${errorKey}.800}`, $type: "color" },
+                active: { $value: `{color.${errorKey}.700}`, $type: "color" }
             }
         },
         border: {
-            subtle: { $value: `{color.neutral.700}`, $type: "color" },
-            default: { $value: `{color.neutral.500}`, $type: "color" },
-            disabled: { $value: `{color.neutral.700}`, $type: "color" },
+            subtle: { $value: `{color.${neutralKey}.700}`, $type: "color" },
+            default: { $value: `{color.${neutralKey}.500}`, $type: "color" },
+            disabled: { $value: `{color.${neutralKey}.700}`, $type: "color" },
             focus: {},
-            success: {
-                default: { $value: `{color.success.500}`, $type: "color" },
-                hover: { $value: `{color.success.400}`, $type: "color" }
+            [successKey]: {
+                default: { $value: `{color.${successKey}.500}`, $type: "color" },
+                hover: { $value: `{color.${successKey}.400}`, $type: "color" }
             },
-            error: {
-                default: { $value: `{color.error.500}`, $type: "color" },
-                hover: { $value: `{color.error.400}`, $type: "color" }
+            [errorKey]: {
+                default: { $value: `{color.${errorKey}.500}`, $type: "color" },
+                hover: { $value: `{color.${errorKey}.400}`, $type: "color" }
             }
         },
         base: {
-            disabled: { $value: `{color.neutral.800}`, $type: "color" },
-            success: {
-                default: { $value: `{color.success.400}`, $type: "color" },
-                hover: { $value: `{color.success.300}`, $type: "color" },
-                active: { $value: `{color.success.200}`, $type: "color" },
+            disabled: { $value: `{color.${neutralKey}.800}`, $type: "color" },
+            [successKey]: {
+                default: { $value: `{color.${successKey}.400}`, $type: "color" },
+                hover: { $value: `{color.${successKey}.300}`, $type: "color" },
+                active: { $value: `{color.${successKey}.200}`, $type: "color" },
             },
-            error: {
-                default: { $value: `{color.error.400}`, $type: "color" },
-                hover: { $value: `{color.error.300}`, $type: "color" },
-                active: { $value: `{color.error.200}`, $type: "color" },
+            [errorKey]: {
+                default: { $value: `{color.${errorKey}.400}`, $type: "color" },
+                hover: { $value: `{color.${errorKey}.300}`, $type: "color" },
+                active: { $value: `{color.${errorKey}.200}`, $type: "color" },
             }
         },
         text: {
-            default: { $value: `{color.neutral.50}`, $type: "color" },
-            subtle: { $value: `{color.neutral.400}`, $type: "color" },
-            disabled: { $value: `{color.neutral.500}`, $type: "color" },
-            success: {
-                default: { $value: `{color.success.400}`, $type: "color" },
+            default: { $value: `{color.${neutralKey}.50}`, $type: "color" },
+            subtle: { $value: `{color.${neutralKey}.400}`, $type: "color" },
+            disabled: { $value: `{color.${neutralKey}.500}`, $type: "color" },
+            [successKey]: {
+                default: { $value: `{color.${successKey}.400}`, $type: "color" },
                 contrast: { $value: `{color.white.100}`, $type: "color" }
             },
-            error: {
-                default: { $value: `{color.error.400}`, $type: "color" },
+            [errorKey]: {
+                default: { $value: `{color.${errorKey}.400}`, $type: "color" },
                 contrast: { $value: `{color.white.100}`, $type: "color" }
             }
         },
         icon: {
             default: { $value: `{darkTheme.text.default}`, $type: "color" },
             subtle: { $value: `{darkTheme.text.subtle}`, $type: "color" },
-            success: {
-                default: { $value: `{darkTheme.text.success.default}`, $type: "color" },
-                contrast: { $value: `{darkTheme.text.success.contrast}`, $type: "color" }
+            [successKey]: {
+                default: { $value: `{darkTheme.text.${successKey}.default}`, $type: "color" },
+                contrast: { $value: `{darkTheme.text.${successKey}.contrast}`, $type: "color" }
             },
-            error: {
-                default: { $value: `{darkTheme.text.error.default}`, $type: "color" },
-                contrast: { $value: `{darkTheme.text.error.contrast}`, $type: "color" }
+            [errorKey]: {
+                default: { $value: `{darkTheme.text.${errorKey}.default}`, $type: "color" },
+                contrast: { $value: `{darkTheme.text.${errorKey}.contrast}`, $type: "color" }
             }
         }
     };
@@ -367,7 +371,8 @@ export function mapTheme(
         const safeName = gc.name.toLowerCase().replace(/\s+/g, '-');
 
         // Skip if this is a reserved core color, or if the interactive theme loop above already seeded it.
-        if (['white', 'black', 'neutral', 'success', 'error', 'critical'].includes(safeName) || theme.surface[safeName]) {
+        // We check against the dynamic keys (successKey, errorKey) in case the user renamed them.
+        if (['white', 'black', 'neutral', successKey, errorKey, 'critical'].includes(safeName) || theme.surface[safeName]) {
             return;
         }
 
