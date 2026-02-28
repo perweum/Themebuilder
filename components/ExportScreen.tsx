@@ -34,10 +34,24 @@ export const ExportScreen: React.FC<{
 
     const [exportFormat, setExportFormat] = useState<'figma' | 'json'>('json');
     const [activeTab, setActiveTab] = useState<'semantic' | 'primitive' | 'geometry'>('semantic');
-    const [excludedPalettes, setExcludedPalettes] = useState<Set<string>>(new Set());
-    const [excludedSemanticCategories, setExcludedSemanticCategories] = useState<Set<string>>(new Set());
-    const [excludedSemanticTokens, setExcludedSemanticTokens] = useState<Set<string>>(new Set());
-    const [excludedGeometry, setExcludedGeometry] = useState<Set<string>>(new Set());
+
+    const parseSetFromStorage = (key: string) => {
+        try {
+            const saved = localStorage.getItem(key);
+            if (saved) return new Set<string>(JSON.parse(saved));
+        } catch (e) { }
+        return new Set<string>();
+    };
+
+    const [excludedPalettes, setExcludedPalettes] = useState<Set<string>>(() => parseSetFromStorage('sys_ex_palettes'));
+    const [excludedSemanticCategories, setExcludedSemanticCategories] = useState<Set<string>>(() => parseSetFromStorage('sys_ex_sem_cats'));
+    const [excludedSemanticTokens, setExcludedSemanticTokens] = useState<Set<string>>(() => parseSetFromStorage('sys_ex_sem_toks'));
+    const [excludedGeometry, setExcludedGeometry] = useState<Set<string>>(() => parseSetFromStorage('sys_ex_geo'));
+
+    useEffect(() => { localStorage.setItem('sys_ex_palettes', JSON.stringify([...excludedPalettes])); }, [excludedPalettes]);
+    useEffect(() => { localStorage.setItem('sys_ex_sem_cats', JSON.stringify([...excludedSemanticCategories])); }, [excludedSemanticCategories]);
+    useEffect(() => { localStorage.setItem('sys_ex_sem_toks', JSON.stringify([...excludedSemanticTokens])); }, [excludedSemanticTokens]);
+    useEffect(() => { localStorage.setItem('sys_ex_geo', JSON.stringify([...excludedGeometry])); }, [excludedGeometry]);
 
     if (!activeTheme || !defaultTheme || !activeThemePayloadWithOptions) return null;
 
