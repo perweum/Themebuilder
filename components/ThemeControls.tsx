@@ -433,7 +433,6 @@ export const ThemeControls: React.FC<{
                                             name={color.name}
                                             seed={color.seed}
                                             isDarkMode={isDarkMode}
-                                            isNameEditable={!isCore}
                                             existingColors={allExistingColors}
                                             onUpdate={(newName, newSeed) => {
                                                 updateGlobalColor(color.id, newName, newSeed);
