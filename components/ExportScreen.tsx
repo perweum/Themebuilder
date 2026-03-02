@@ -103,17 +103,20 @@ export const ExportScreen: React.FC<{
 
         // Strip individually excluded semantic tokens
         excludedSemanticTokens.forEach(path => {
-            // path is "category.item" (e.g. "background.default")
+            // path can be deeply nested like "surface.green.hover"
             const parts = path.split('.');
-            if (parts.length === 2) {
-                const [category, item] = parts;
-                if (exportPayload.theme && exportPayload.theme[category]) {
-                    delete exportPayload.theme[category][item];
+
+            const deleteNested = (obj: any, pathParts: string[]) => {
+                let current = obj;
+                for (let i = 0; i < pathParts.length - 1; i++) {
+                    if (!current[pathParts[i]]) return;
+                    current = current[pathParts[i]];
                 }
-                if (exportPayload.darkTheme && exportPayload.darkTheme[category]) {
-                    delete exportPayload.darkTheme[category][item];
-                }
-            }
+                if (current) delete current[pathParts[pathParts.length - 1]];
+            };
+
+            if (exportPayload.theme) deleteNested(exportPayload.theme, parts);
+            if (exportPayload.darkTheme) deleteNested(exportPayload.darkTheme, parts);
         });
 
         // Strip excluded geometry categories

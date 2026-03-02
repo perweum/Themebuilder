@@ -387,7 +387,7 @@ export const ThemeControls: React.FC<{
 
                             {globalColors.map(color => {
                                 // Lock names like 'neutral', 'success', 'error' because mapTheme structurally requires them
-                                const isCore = ['neutral', 'success', 'error'].includes(color.name.toLowerCase());
+                                const isCore = ['neutral', 'success', 'error'].includes(color.id.toLowerCase());
                                 return (
                                     <div key={color.id} style={styles.group}>
                                         <label style={styles.label}>
