@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTheme, FULL_GLOBAL_PRESET } from '../theme-context';
 import { ColorPickerMenu } from './ColorPickerMenu';
-import { Pencil, RotateCcw, ChevronDown, ChevronRight } from 'lucide-react';
+import { Pencil, RotateCcw, ChevronDown, ChevronRight, X } from 'lucide-react';
 import { COLOR_STEPS, ALPHA_STEPS, generateRamp } from '../lib/palette-generator';
 import { mapTheme } from '../lib/theme-mapper';
 
@@ -79,8 +79,10 @@ const buttonStyle = {
 
 
 export const ThemeControls: React.FC<{
-    isDarkMode?: boolean
-}> = ({ isDarkMode = false }) => {
+    isDarkMode?: boolean;
+    isMobile?: boolean;
+    onClose?: () => void;
+}> = ({ isDarkMode = false, isMobile = false, onClose }) => {
     const {
         themes,
         addTheme,
@@ -102,6 +104,7 @@ export const ThemeControls: React.FC<{
 
     const [activeTab, setActiveTab] = React.useState<'colors' | 'geometry' | 'semantic'>('colors');
     const [expandedSemanticCategories, setExpandedSemanticCategories] = React.useState<Record<string, boolean>>({});
+    const [isPresetsExpanded, setIsPresetsExpanded] = React.useState(false);
 
     const hasAllPresets = FULL_GLOBAL_PRESET.every(fp => globalColors.some(gc => gc.id === fp.id));
 
@@ -117,9 +120,11 @@ export const ThemeControls: React.FC<{
                 const newPath = currentPath ? `${currentPath}.${key}` : key;
                 if (typeof obj[key] === 'object' && obj[key] !== null) {
                     if (obj[key].$value !== undefined) {
-                        const rootCategory = newPath.split('.')[0];
-                        if (!cats[rootCategory]) cats[rootCategory] = [];
-                        cats[rootCategory].push(newPath);
+                        if (obj[key].$type === 'color') {
+                            const rootCategory = newPath.split('.')[0];
+                            if (!cats[rootCategory]) cats[rootCategory] = [];
+                            cats[rootCategory].push(newPath);
+                        }
                     } else {
                         flatten(obj[key], newPath);
                     }
@@ -157,7 +162,7 @@ export const ThemeControls: React.FC<{
 
     const styles = {
         container: {
-            width: '320px',
+            width: isMobile ? '100%' : '320px',
             height: '100vh',
             borderRight: `1px solid ${isDarkMode ? '#333' : '#eee'}`,
             padding: '2rem 1.5rem',
@@ -202,6 +207,7 @@ export const ThemeControls: React.FC<{
             borderRadius: '8px',
             padding: '1.5rem',
             marginBottom: '1.5rem',
+            // Will use inline override for the specific color tint
             backgroundColor: isDarkMode ? '#1a1a1a' : '#f9fafb'
         }
     };
@@ -230,7 +236,7 @@ export const ThemeControls: React.FC<{
                     color: ${isDarkMode ? '#C3E835' : '#0142FE'} !important;
                 }
             `}</style>
-            <div style={{ marginBottom: '1rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 626.59 180" style={{ height: '40px', width: 'auto', display: 'block' }}>
                     <g>
                         <path d="M 91.8 81.6 c 4.9 6 7.3 13.6 7.3 22.8 c 0 6.6 -1.5 12.7 -4.4 18.5 c -3 5.8 -7.9 10.5 -14.8 14.3 c -6.9 3.7 -15.9 5.6 -27.1 5.6 H 0 V 3 h 48.6 c 16.7 0 28.6 3.7 35.8 11 c 7.2 7.3 10.7 16.1 10.7 26.2 c 0 7 -2 13.2 -6 18.7 c -4 5.5 -9.8 9.4 -17.4 11.6 c 8.5 1.4 15.2 5.2 20.1 11.1 Z M 18.7 18.7 v 44.9 h 29.9 c 18.6 0 28 -7.3 28 -22.1 c 0 -6.6 -2.1 -12 -6.2 -16.4 c -4.1 -4.3 -11.4 -6.5 -21.8 -6.5 h -29.9 Z m 33.1 108.3 c 10.1 0 17.4 -2.3 22 -6.9 c 4.5 -4.6 6.8 -10.4 6.8 -17.5 s -2.2 -12.6 -6.6 -16.8 c -4.4 -4.3 -11.1 -6.4 -20.2 -6.4 H 18.7 v 47.7 h 33.1 Z" fill={isDarkMode ? "#F8F8F8" : "#1F1F1F"}></path>
@@ -239,6 +245,11 @@ export const ThemeControls: React.FC<{
                         <path d="M 421.2 142.8 h -20.7 l -29.7 -48.3 l -17.9 18.1 v 30.1 h -16.7 V 0 h 16.7 v 92.8 l 44.1 -48.5 h 21.9 l -36 38 l 38.4 60.5 Z" fill={isDarkMode ? "#F8F8F8" : "#1F1F1F"}></path>
                     </g>
                 </svg>
+                {isMobile && (
+                    <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: isDarkMode ? '#F8F8F8' : '#1F1F1F', cursor: 'pointer', padding: '0.5rem', display: 'flex' }}>
+                        <X size={24} />
+                    </button>
+                )}
             </div>
 
             {/* TAB SELECTOR */}
@@ -298,77 +309,179 @@ export const ThemeControls: React.FC<{
                         marginBottom: '-1px'
                     }}
                 >
-                    Semantics
+                    Customize
                 </button>
             </div>
 
             {activeTab === 'colors' && (
                 <>
+                    {/* BETA PRESETS (COLLAPSIBLE) */}
+                    <div style={{ ...styles.themeBox, padding: '1rem', marginBottom: '1.5rem', marginTop: 0 }}>
+                        <div
+                            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
+                            onClick={() => setIsPresetsExpanded(!isPresetsExpanded)}
+                        >
+                            <h3 style={{ ...styles.sectionTitle, borderBottom: 'none', paddingBottom: 0, margin: 0 }}>
+                                Theme Presets
+                                <span style={{ fontSize: '0.65rem', background: '#eab308', color: '#000', padding: '0.125rem 0.375rem', borderRadius: '4px', verticalAlign: 'middle', marginLeft: '0.5rem' }}>BETA</span>
+                            </h3>
+                            <svg
+                                width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                                style={{ transform: isPresetsExpanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s', color: isDarkMode ? '#aaa' : '#666' }}
+                            >
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </div>
+
+                        {isPresetsExpanded && (
+                            <div style={{ marginTop: '1rem' }}>
+                                <p style={{ fontSize: '0.75rem', color: isDarkMode ? '#aaa' : '#666', marginBottom: '1rem', marginTop: 0 }}>
+                                    Instantly apply curated color scales to your current active theme (AAA Contrast).
+                                </p>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.5rem' }}>
+                                    {[
+                                        { name: "Midnight Forest", colors: ['#143524', '#f59e0b'] }, // Darker green
+                                        { name: "Corporate Blue", colors: ['#0f172a', '#1d4ed8', '#0ea5e9'] },
+                                        { name: "Stripe Purple", colors: ['#312e81', '#0ea5e9'] }, // Indigo 900 for AAA
+                                        { name: "Vercel Black", colors: ['#000000', '#0070f3'] },
+                                        { name: "Linear Indigo", colors: ['#3730A3', '#eab308'] } // Even darker indigo
+                                    ].map(preset => (
+                                        <button
+                                            key={preset.name}
+                                            onClick={() => {
+                                                // Actually, Vercel Light and Dark are just variants of the seed.
+                                                // The active theme is just a collection of seeds. The "DarkMode" toggle is global.
+                                                // So applying "Vercel Dark" just sets the primary seed to white (or very light gray).
+                                                if (themes.length === 0) return;
+                                                const themeId = themes[0].id;
+
+                                                const newColors = preset.colors.map((seed, idx) => {
+                                                    let colorName = 'brand';
+                                                    if (idx === 1) colorName = 'accent';
+                                                    if (idx === 2) colorName = 'support';
+                                                    if (idx === 3) colorName = 'tertiary';
+                                                    return { name: colorName, seed };
+                                                });
+
+                                                // Ensure the theme has exactly the right number of colors to match the preset length
+                                                themes[0].colors.forEach(existingColor => {
+                                                    // Remove any existing colors not covered by the preset length immediately
+                                                    if (themes[0].colors.indexOf(existingColor) >= preset.colors.length) {
+                                                        removeThemeColor(themeId, existingColor.id);
+                                                    }
+                                                });
+
+                                                newColors.forEach((nc, idx) => {
+                                                    if (idx < themes[0].colors.length) {
+                                                        updateThemeColor(themeId, themes[0].colors[idx].id, nc.name, nc.seed);
+                                                    } else {
+                                                        // Fallback for missing slots: add them. 
+                                                        // Note: addThemeColor is async relative to state, so we trigger a global add but we can't reliably name it yet without context support.
+                                                        // As a workaround, we dispatch addThemeColor but user will have to name it. 
+                                                        // For now this works for Corporate Blue since usually users have 2 or 3 colors already.
+                                                        addThemeColor(themeId);
+                                                    }
+                                                });
+
+                                                updateThemeName(themeId, preset.name);
+                                            }}
+                                            style={{
+                                                ...actionButtonStyle,
+                                                justifyContent: 'flex-start',
+                                                background: isDarkMode ? '#222' : '#f0f0f0',
+                                                border: '1px solid transparent',
+                                                position: 'relative',
+                                                overflow: 'hidden'
+                                            }}
+                                        >
+                                            <div style={{
+                                                position: 'absolute', left: 0, top: 0, bottom: 0, width: '4px',
+                                                background: `linear-gradient(to bottom, ${preset.colors[0]}, ${preset.colors[1] || preset.colors[0]})`
+                                            }} />
+                                            <span style={{ paddingLeft: '0.5rem' }}>{preset.name}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
                     {/* THEMES SECTION */}
                     <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
                         <div>
-                            {themes.map((theme, index) => (
-                                <div key={theme.id} style={styles.themeBox}>
-                                    <div style={{ ...styles.sectionTitle, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: 'none', paddingBottom: 0 }}>
-                                        <div style={{ flex: 1, marginRight: '1rem' }}>
-                                            <ThemeNameEditor
-                                                initialName={theme.name || theme.id}
-                                                themeId={theme.id}
-                                                onRename={updateThemeName}
-                                                isDarkMode={isDarkMode}
-                                            />
+                            {themes.map((theme, index) => {
+                                // Default background
+                                let bgStyle = isDarkMode ? '#1a1a1a' : '#f9fafb';
+                                // If the theme has colors, use the 50 step of the first color for light mode
+                                if (theme.colors.length > 0) {
+                                    try {
+                                        const gen = generateRamp(theme.colors[0].seed);
+                                        bgStyle = isDarkMode ? '#1a1a1a' : gen.ramp[50];
+                                    } catch (e) { /* ignore */ }
+                                }
+
+                                return (
+                                    <div key={theme.id} style={{ ...styles.themeBox, backgroundColor: bgStyle }}>
+                                        <div style={{ ...styles.sectionTitle, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: 'none', paddingBottom: 0 }}>
+                                            <div style={{ flex: 1, marginRight: '1rem' }}>
+                                                <ThemeNameEditor
+                                                    initialName={theme.name || theme.id}
+                                                    themeId={theme.id}
+                                                    onRename={updateThemeName}
+                                                    isDarkMode={isDarkMode}
+                                                />
+                                            </div>
+                                            {index > 0 && (
+                                                <button
+                                                    className="btn-remove"
+                                                    onClick={() => removeTheme(theme.id)}
+                                                    style={buttonStyle}
+                                                >
+                                                    Remove
+                                                </button>
+                                            )}
                                         </div>
-                                        {index > 0 && (
-                                            <button
-                                                className="btn-remove"
-                                                onClick={() => removeTheme(theme.id)}
-                                                style={buttonStyle}
-                                            >
-                                                Remove
-                                            </button>
-                                        )}
+
+                                        {/* Map exactly over the N colors the user defines for the Theme */}
+                                        {theme.colors.map((color, cIdx) => (
+                                            <div key={color.id} style={styles.group}>
+                                                <label style={styles.label}>
+                                                    {color.name} Color
+                                                    {theme.colors.length > 1 && (
+                                                        <button
+                                                            className="btn-remove"
+                                                            onClick={() => removeThemeColor(theme.id, color.id)}
+                                                            style={{ ...buttonStyle, padding: '0 0.25rem' }}
+                                                            title="Remove Color"
+                                                        >
+                                                            ✕
+                                                        </button>
+                                                    )}
+                                                </label>
+
+                                                <ColorPickerMenu
+                                                    name={color.name}
+                                                    seed={color.seed}
+                                                    isDarkMode={isDarkMode}
+                                                    existingColors={allExistingColors}
+                                                    onUpdate={(newName, newSeed) => {
+                                                        updateThemeColor(theme.id, color.id, newName, newSeed);
+                                                    }}
+                                                />
+                                            </div>
+                                        ))}
+
+                                        <button
+                                            className="btn-action"
+                                            onClick={() => addThemeColor(theme.id)}
+                                            style={{ ...actionButtonStyle, marginTop: '0.5rem' }}
+                                        >
+                                            + Add theme color
+                                        </button>
                                     </div>
-
-                                    {/* Map exactly over the N colors the user defines for the Theme */}
-                                    {theme.colors.map((color, cIdx) => (
-                                        <div key={color.id} style={styles.group}>
-                                            <label style={styles.label}>
-                                                {color.name} Color
-                                                {theme.colors.length > 1 && (
-                                                    <button
-                                                        className="btn-remove"
-                                                        onClick={() => removeThemeColor(theme.id, color.id)}
-                                                        style={{ ...buttonStyle, padding: '0 0.25rem' }}
-                                                        title="Remove Color"
-                                                    >
-                                                        ✕
-                                                    </button>
-                                                )}
-                                            </label>
-
-                                            <ColorPickerMenu
-                                                name={color.name}
-                                                seed={color.seed}
-                                                isDarkMode={isDarkMode}
-                                                existingColors={allExistingColors}
-                                                onUpdate={(newName, newSeed) => {
-                                                    updateThemeColor(theme.id, color.id, newName, newSeed);
-                                                }}
-                                            />
-                                        </div>
-                                    ))}
-
-                                    <button
-                                        className="btn-action"
-                                        onClick={() => addThemeColor(theme.id)}
-                                        style={{ ...actionButtonStyle, marginTop: '0.5rem' }}
-                                    >
-                                        + Add theme color
-                                    </button>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
-
                         <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: `1px solid ${isDarkMode ? '#fff' : '#000'}`, marginBottom: '1.5rem' }}>
                             <button
                                 className="btn-action"
@@ -378,6 +491,7 @@ export const ThemeControls: React.FC<{
                                 + Add New Theme
                             </button>
                         </div>
+
                     </div>
 
                     {/* GLOBAL PRESETS */}

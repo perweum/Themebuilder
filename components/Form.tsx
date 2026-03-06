@@ -78,7 +78,7 @@ export const Toggle: React.FC<CustomToggleProps> = ({ checked: initialChecked = 
         <Switch
             defaultSelected={initialChecked}
             {...props}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}
+            style={{ position: 'relative', outline: 'none', cursor: 'pointer', margin: 0 }}
         >
             {({ isSelected, isFocusVisible, isHovered }) => {
 
@@ -93,29 +93,31 @@ export const Toggle: React.FC<CustomToggleProps> = ({ checked: initialChecked = 
                 const thumbColor = isSelected ? `var(--color-text-${colorName}-contrast)` : 'var(--color-text-subtle)';
 
                 return (
-                    <div
-                        style={{
-                            width: '52px',
-                            height: '32px',
-                            borderRadius: 'var(--geometry-radius-full)',
-                            background: isHovered ? trackHoverBg : trackBg,
-                            position: 'relative',
-                            transition: 'background-color 0.2s',
-                            boxShadow: isFocusVisible ? '0 0 0 2px var(--color-background-default), 0 0 0 4px var(--color-border-focus)' : 'none',
-                            outline: 'none',
-                        }}
-                    >
-                        <div style={{
-                            position: 'absolute',
-                            top: isSelected ? '4px' : '8px',
-                            left: isSelected ? '24px' : '8px',
-                            width: isSelected ? '24px' : '16px',
-                            height: isSelected ? '24px' : '16px',
-                            borderRadius: '50%',
-                            background: thumbColor,
-                            transition: 'all 0.2s cubic-bezier(0.2, 0, 0, 1)',
-                            boxShadow: '0 1px 2px rgba(0,0,0,0.2)'
-                        }} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <div
+                            style={{
+                                width: '52px',
+                                height: '32px',
+                                borderRadius: 'var(--geometry-radius-full)',
+                                background: isHovered ? trackHoverBg : trackBg,
+                                position: 'relative',
+                                transition: 'background-color 0.2s',
+                                boxShadow: isFocusVisible ? '0 0 0 2px var(--color-background-default), 0 0 0 4px var(--color-border-focus)' : 'none',
+                                outline: 'none',
+                            }}
+                        >
+                            <div style={{
+                                position: 'absolute',
+                                top: isSelected ? '4px' : '8px',
+                                left: isSelected ? '24px' : '8px',
+                                width: isSelected ? '24px' : '16px',
+                                height: isSelected ? '24px' : '16px',
+                                borderRadius: '50%',
+                                background: thumbColor,
+                                transition: 'all 0.2s cubic-bezier(0.2, 0, 0, 1)',
+                                boxShadow: 'var(--color-shadow-1)'
+                            }} />
+                        </div>
                     </div>
                 );
             }}
@@ -130,7 +132,7 @@ export interface CustomCheckboxProps extends Omit<CheckboxProps, 'children'> {
 
 export const CustomCheckbox: React.FC<CustomCheckboxProps> = ({ label, colorName = 'brand', ...props }) => {
     return (
-        <Checkbox {...props} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: 500, color: 'var(--color-text-default)' }}>
+        <Checkbox {...props} style={{ position: 'relative', outline: 'none', cursor: 'pointer', margin: 0 }}>
             {({ isSelected, isFocusVisible, isInvalid, isHovered, isPressed }) => {
                 const bg = isPressed ? (isSelected ? `var(--color-base-${colorName}-active)` : 'var(--color-surface-hover)') : isHovered ? (isSelected ? `var(--color-base-${colorName}-hover)` : 'var(--color-surface-hover)') : (isSelected ? `var(--color-base-${colorName}-default)` : 'transparent');
                 const borderColor = isInvalid ? 'var(--color-border-error-default)' : isHovered ? (isSelected ? `var(--color-base-${colorName}-hover)` : `var(--color-base-${colorName}-hover)`) : (isSelected ? `var(--color-base-${colorName}-default)` : 'var(--color-border-default)');
@@ -138,7 +140,7 @@ export const CustomCheckbox: React.FC<CustomCheckboxProps> = ({ label, colorName
                 const shadow = isFocusVisible ? '0 0 0 2px var(--color-background-default), 0 0 0 4px var(--color-border-focus)' : 'none';
 
                 return (
-                    <>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', fontWeight: 500, color: 'var(--color-text-default)' }}>
                         <div style={{
                             width: '24px',
                             height: '24px',
@@ -159,7 +161,7 @@ export const CustomCheckbox: React.FC<CustomCheckboxProps> = ({ label, colorName
                             )}
                         </div>
                         {label}
-                    </>
+                    </div>
                 );
             }}
         </Checkbox>
@@ -173,7 +175,7 @@ export interface CustomRadioProps extends Omit<RadioProps, 'children'> {
 
 export const CustomRadio: React.FC<CustomRadioProps> = ({ label, colorName = 'brand', ...props }) => {
     return (
-        <Radio {...props} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: 500, color: 'var(--color-text-default)' }}>
+        <Radio {...props} style={{ position: 'relative', outline: 'none', cursor: 'pointer', margin: 0 }}>
             {({ isSelected, isFocusVisible, isInvalid, isHovered, isPressed }) => {
                 const bg = isPressed ? 'var(--color-surface-hover)' : isHovered && !isSelected ? 'var(--color-surface-hover)' : 'transparent';
                 const borderColor = isInvalid ? 'var(--color-border-error-default)' : isHovered ? `var(--color-base-${colorName}-hover)` : isSelected ? `var(--color-base-${colorName}-default)` : 'var(--color-border-default)';
@@ -181,7 +183,7 @@ export const CustomRadio: React.FC<CustomRadioProps> = ({ label, colorName = 'br
                 const shadow = isFocusVisible ? '0 0 0 2px var(--color-background-default), 0 0 0 4px var(--color-border-focus)' : 'none';
 
                 return (
-                    <>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', fontWeight: 500, color: 'var(--color-text-default)' }}>
                         <div style={{
                             width: '24px',
                             height: '24px',
@@ -205,7 +207,7 @@ export const CustomRadio: React.FC<CustomRadioProps> = ({ label, colorName = 'br
                             )}
                         </div>
                         {label}
-                    </>
+                    </div>
                 );
             }}
         </Radio>

@@ -82,9 +82,7 @@ export const SystemicModal: React.FC<SystemicModalProps> = ({
         backgroundColor: isDarkMode ? 'var(--color-surface-default, #1a1a1a)' : '#FFFFFF',
         color: isDarkMode ? '#FFFFFF' : '#1F1F1F',
         borderRadius: '24px',
-        boxShadow: isDarkMode
-            ? '0 24px 48px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05)'
-            : '0 24px 48px rgba(0,0,0,0.1), 0 0 0 1px rgba(0,0,0,0.05)',
+        boxShadow: 'var(--color-shadow-4)',
         overflow: 'hidden',
         // Only apply transform scale animations to the centered variant
         transform: isCentered ? (isVisible ? 'scale(1) translateY(0)' : 'scale(0.95) translateY(20px)') : 'none',

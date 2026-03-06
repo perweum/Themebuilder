@@ -1,4 +1,5 @@
 import { ColorStep, COLOR_STEPS, getAccessibleForeground, GeneratedRamp, getColorName, generateAlphaRamp, AlphaStep, getClosestLuminosityStep, generateRamp } from './palette-generator';
+import { wcagContrast } from 'culori';
 
 export interface Token<T = string> {
     $value: T;
@@ -45,6 +46,97 @@ function getOffsetStep(step: ColorStep, offset: number): ColorStep {
     if (idx === -1) return step;
     const newIdx = Math.max(0, Math.min(COLOR_STEPS.length - 1, idx + offset));
     return COLOR_STEPS[newIdx];
+}
+
+/**
+ * Checks if the contrast between background and text meets AAA (7:1).
+ * If not, it forcefully returns pure white or pure black, depending on which is better.
+ */
+function getStrictAAAContrast(bgHex: string, textHex: string): { $value: string, $type: string } {
+    const contrast = wcagContrast(textHex, bgHex);
+    if (contrast >= 7) {
+        return { $value: `{#${textHex}}`, $type: "color" }; // We will just return the literal hex if it's naturally AAA
+    }
+    const whiteC = wcagContrast('#ffffff', bgHex);
+    const blackC = wcagContrast('#000000', bgHex);
+    return { $value: whiteC > blackC ? '{color.white.100}' : '{color.black.100}', $type: "color" };
+}
+
+/**
+ * Returns the best possible text color token (white or black) for a given background,
+ * and the actual hex that was chosen.
+ */
+export function getBestTextForBg(bgHex: string): { token: string, hex: string, contrast: number } {
+    const whiteC = wcagContrast('#ffffff', bgHex);
+    const blackC = wcagContrast('#000000', bgHex);
+    if (whiteC >= blackC) {
+        return { token: '{color.white.100}', hex: '#ffffff', contrast: whiteC };
+    }
+    return { token: '{color.black.100}', hex: '#000000', contrast: blackC };
+}
+
+/**
+ * If the preferred base step doesn't meet AA (4.5) with either white or black,
+ * shift the base step until it does.
+ */
+export function getAccessibleBaseStep(ramp: Record<ColorStep, string>, preferredStep: ColorStep): { bgStep: ColorStep, textToken: string, textHex: string } {
+    const bgHex = ramp[preferredStep];
+    const { token, hex: textHex, contrast } = getBestTextForBg(bgHex);
+
+    if (contrast >= 4.5) {
+        return { bgStep: preferredStep, textToken: token, textHex }; // It safely meets AA natively
+    }
+
+    // It fails AA entirely. We must find a step that passes AA with white or black.
+    // Try scanning away from 500 towards the extremes to find one that works.
+    let bestAltStep = preferredStep;
+    let maxFoundContrast = contrast;
+    let bestAltToken = token;
+
+    for (const step of COLOR_STEPS) {
+        const testBg = ramp[step];
+        const testText = getBestTextForBg(testBg);
+        if (testText.contrast >= 4.5) {
+            // We found one that passes! Pick the one closest to the preferred step that passes.
+            // But since this is a simple linear search, let's just grab the first one that passes when moving progressively darker (or lighter).
+        }
+        if (testText.contrast > maxFoundContrast) {
+            maxFoundContrast = testText.contrast;
+            bestAltStep = step;
+            bestAltToken = testText.token;
+        }
+    }
+
+    // Return the step that has the absolute highest possible contrast if none meet 4.5 (unlikely with a 12 step scale),
+    // or return the first step moving away from the center that hits 4.5.
+
+    // Better algorithm: Search outward from the preferred step to find the nearest compliant step.
+    const preferredIdx = COLOR_STEPS.indexOf(preferredStep);
+    let nearestCompliantStep = preferredStep;
+    let nearestCompliantToken = token;
+    let minDistance = Infinity;
+
+    for (let i = 0; i < COLOR_STEPS.length; i++) {
+        const step = COLOR_STEPS[i];
+        const testBg = ramp[step];
+        const testText = getBestTextForBg(testBg);
+
+        if (testText.contrast >= 4.5) {
+            const dist = Math.abs(i - preferredIdx);
+            if (dist < minDistance) {
+                minDistance = dist;
+                nearestCompliantStep = step;
+                nearestCompliantToken = testText.token;
+            }
+        }
+    }
+
+    if (minDistance !== Infinity) {
+        return { bgStep: nearestCompliantStep, textToken: nearestCompliantToken, textHex: getBestTextForBg(ramp[nearestCompliantStep]).hex };
+    }
+
+    // Fallback if the entire scale is somehow low contrast
+    return { bgStep: bestAltStep, textToken: bestAltToken, textHex: getBestTextForBg(ramp[bestAltStep]).hex };
 }
 
 export interface NamedColorRamp {
@@ -153,16 +245,23 @@ export function mapTheme(
             }
         },
         icon: {
-            default: { $value: `{theme.text.default}`, $type: "color" },
-            subtle: { $value: `{theme.text.subtle}`, $type: "color" },
+            default: { $value: `{color.text.default}`, $type: "color" },
+            subtle: { $value: `{color.text.subtle}`, $type: "color" },
             [successKey]: {
-                default: { $value: `{theme.text.${successKey}.default}`, $type: "color" },
-                contrast: { $value: `{theme.text.${successKey}.contrast}`, $type: "color" }
+                default: { $value: `{color.text.${successKey}.default}`, $type: "color" },
+                contrast: { $value: `{color.text.${successKey}.contrast}`, $type: "color" }
             },
             [errorKey]: {
-                default: { $value: `{theme.text.${errorKey}.default}`, $type: "color" },
-                contrast: { $value: `{theme.text.${errorKey}.contrast}`, $type: "color" }
+                default: { $value: `{color.text.${errorKey}.default}`, $type: "color" },
+                contrast: { $value: `{color.text.${errorKey}.contrast}`, $type: "color" }
             }
+        },
+        shadow: {
+            color: { $value: `{color.black.30}`, $type: "color" },
+            1: { $value: `0 1px 2px color-mix(in srgb, {color.shadow.color} 5%, transparent), 0 1px 3px color-mix(in srgb, {color.shadow.color} 10%, transparent)`, $type: "shadow" },
+            2: { $value: `0 4px 6px -1px color-mix(in srgb, {color.shadow.color} 10%, transparent), 0 2px 4px -2px color-mix(in srgb, {color.shadow.color} 5%, transparent)`, $type: "shadow" },
+            3: { $value: `0 10px 15px -3px color-mix(in srgb, {color.shadow.color} 10%, transparent), 0 4px 6px -4px color-mix(in srgb, {color.shadow.color} 5%, transparent)`, $type: "shadow" },
+            4: { $value: `0 20px 25px -5px color-mix(in srgb, {color.shadow.color} 10%, transparent), 0 10px 10px -5px color-mix(in srgb, {color.shadow.color} 5%, transparent)`, $type: "shadow" },
         }
     };
 
@@ -227,16 +326,23 @@ export function mapTheme(
             }
         },
         icon: {
-            default: { $value: `{darkTheme.text.default}`, $type: "color" },
-            subtle: { $value: `{darkTheme.text.subtle}`, $type: "color" },
+            default: { $value: `{color.text.default}`, $type: "color" },
+            subtle: { $value: `{color.text.subtle}`, $type: "color" },
             [successKey]: {
-                default: { $value: `{darkTheme.text.${successKey}.default}`, $type: "color" },
-                contrast: { $value: `{darkTheme.text.${successKey}.contrast}`, $type: "color" }
+                default: { $value: `{color.text.${successKey}.default}`, $type: "color" },
+                contrast: { $value: `{color.text.${successKey}.contrast}`, $type: "color" }
             },
             [errorKey]: {
-                default: { $value: `{darkTheme.text.${errorKey}.default}`, $type: "color" },
-                contrast: { $value: `{darkTheme.text.${errorKey}.contrast}`, $type: "color" }
+                default: { $value: `{color.text.${errorKey}.default}`, $type: "color" },
+                contrast: { $value: `{color.text.${errorKey}.contrast}`, $type: "color" }
             }
+        },
+        shadow: {
+            color: { $value: `{color.white.30}`, $type: "color" },
+            1: { $value: `0 1px 2px color-mix(in srgb, {color.shadow.color} 50%, transparent), 0 0 0 1px {color.white.5}`, $type: "shadow" },
+            2: { $value: `0 4px 6px -1px color-mix(in srgb, {color.shadow.color} 50%, transparent), 0 0 0 1px {color.white.5}`, $type: "shadow" },
+            3: { $value: `0 10px 15px -3px color-mix(in srgb, {color.shadow.color} 60%, transparent), 0 0 0 1px {color.white.5}`, $type: "shadow" },
+            4: { $value: `0 20px 25px -5px color-mix(in srgb, {color.shadow.color} 70%, transparent), 0 0 0 1px {color.white.10}`, $type: "shadow" },
         }
     };
 
@@ -300,13 +406,18 @@ export function mapTheme(
         }
 
         const rest = gen.closestStep;
-        const hover = getOffsetStep(rest, rest >= 600 ? -1 : 1);
-        const press = getOffsetStep(rest, rest >= 600 ? -2 : 2);
 
         // --- LIGHT THEME TOKENS ---
+        const preferredLightStep = Math.max(rest, 200) as import('./palette-generator').ColorStep;
+        const lightBaseAccess = getAccessibleBaseStep(gen.ramp, preferredLightStep);
+        const lightBaseStep = lightBaseAccess.bgStep;
+        const hover = getOffsetStep(lightBaseStep, lightBaseStep >= 600 ? -1 : 1);
+        const press = getOffsetStep(lightBaseStep, lightBaseStep >= 600 ? -2 : 2);
+
         theme.background[cName] = { $value: `{color.${aliasName}.25}`, $type: "color" };
 
         theme.surface[cName] = {
+            subtle: { $value: `color-mix(in srgb, {color.${aliasName}.${lightBaseStep}} 10%, transparent)`, $type: "color" },
             default: { $value: `{color.${aliasName}.50}`, $type: "color" },
             hover: { $value: `{color.${aliasName}.100}`, $type: "color" },
             active: { $value: `{color.${aliasName}.200}`, $type: "color" },
@@ -319,25 +430,30 @@ export function mapTheme(
 
         theme.base = theme.base || {};
         theme.base[cName] = {
-            default: { $value: `{color.${aliasName}.${rest}}`, $type: "color" },
+            default: { $value: `{color.${aliasName}.${lightBaseStep}}`, $type: "color" },
             hover: { $value: `{color.${aliasName}.${hover}}`, $type: "color" },
             active: { $value: `{color.${aliasName}.${press}}`, $type: "color" },
         };
 
         theme.text[cName] = {
             default: { $value: `{color.${aliasName}.600}`, $type: "color" },
-            contrast: { $value: `{color.${aliasName}.${getAccessibleForeground(gen.ramp, gen.ramp[rest])}}`, $type: "color" },
+            contrast: { $value: lightBaseAccess.textToken, $type: "color" }
         };
 
         theme.icon[cName] = {
-            default: { $value: `{theme.text.${cName}.default}`, $type: "color" },
-            contrast: { $value: `{theme.text.${cName}.contrast}`, $type: "color" },
+            default: { $value: `{color.text.${cName}.default}`, $type: "color" },
+            contrast: { $value: `{color.text.${cName}.contrast}`, $type: "color" },
         };
 
         // --- DARK THEME TOKENS ---
+        const darkBaseAccess = getAccessibleBaseStep(gen.ramp, 300);
+        const darkBaseStep = darkBaseAccess.bgStep;
+        const darkHover = getOffsetStep(darkBaseStep, -1);
+        const darkPress = getOffsetStep(darkBaseStep, -2);
         darkTheme.background[cName] = { $value: `{color.${aliasName}.900}`, $type: "color" };
 
         darkTheme.surface[cName] = {
+            subtle: { $value: `color-mix(in srgb, {color.${aliasName}.${darkBaseStep}} 15%, transparent)`, $type: "color" },
             default: { $value: `{color.${aliasName}.900}`, $type: "color" },
             hover: { $value: `{color.${aliasName}.800}`, $type: "color" },
             active: { $value: `{color.${aliasName}.700}`, $type: "color" },
@@ -350,15 +466,15 @@ export function mapTheme(
 
         darkTheme.base = darkTheme.base || {};
         darkTheme.base[cName] = {
-            default: { $value: `{color.${aliasName}.300}`, $type: "color" },
-            hover: { $value: `{color.${aliasName}.200}`, $type: "color" },
-            active: { $value: `{color.${aliasName}.100}`, $type: "color" },
+            default: { $value: `{color.${aliasName}.${darkBaseStep}}`, $type: "color" },
+            hover: { $value: `{color.${aliasName}.${darkHover}}`, $type: "color" },
+            active: { $value: `{color.${aliasName}.${darkPress}}`, $type: "color" },
         };
 
         // Dark text contrast logic
         darkTheme.text[cName] = {
             default: { $value: `{color.${aliasName}.300}`, $type: "color" },
-            contrast: { $value: `{color.${aliasName}.${getAccessibleForeground(gen.ramp, gen.ramp[300])}}`, $type: "color" },
+            contrast: { $value: darkBaseAccess.textToken, $type: "color" },
         };
 
         darkTheme.icon[cName] = {
@@ -384,6 +500,11 @@ export function mapTheme(
         // Use generic step offsets for severity semantic mapping
         const rest = gen.closestStep;
 
+        const lightBaseAccess = getAccessibleBaseStep(gen.ramp, rest);
+        const lightBaseStep = lightBaseAccess.bgStep;
+        const hover = getOffsetStep(lightBaseStep, lightBaseStep >= 600 ? -1 : 1);
+        const press = getOffsetStep(lightBaseStep, lightBaseStep >= 600 ? -2 : 2);
+
         // --- LIGHT THEME TOKENS ---
         theme.background[safeName] = { $value: `{color.${aliasName}.25}`, $type: "color" };
 
@@ -399,22 +520,27 @@ export function mapTheme(
         };
 
         theme.base[safeName] = {
-            default: { $value: `{color.${aliasName}.500}`, $type: "color" },
-            hover: { $value: `{color.${aliasName}.600}`, $type: "color" },
-            active: { $value: `{color.${aliasName}.700}`, $type: "color" },
+            default: { $value: `{color.${aliasName}.${lightBaseStep}}`, $type: "color" },
+            hover: { $value: `{color.${aliasName}.${hover}}`, $type: "color" },
+            active: { $value: `{color.${aliasName}.${press}}`, $type: "color" },
         };
 
         theme.text[safeName] = {
             default: { $value: `{color.${aliasName}.600}`, $type: "color" },
-            contrast: { $value: `{color.${aliasName}.${getAccessibleForeground(gen.ramp, gen.ramp[600])}}`, $type: "color" },
+            contrast: { $value: lightBaseAccess.textToken, $type: "color" },
         };
 
         theme.icon[safeName] = {
-            default: { $value: `{theme.text.${safeName}.default}`, $type: "color" },
-            contrast: { $value: `{theme.text.${safeName}.contrast}`, $type: "color" },
+            default: { $value: `{color.text.${safeName}.default}`, $type: "color" },
+            contrast: { $value: `{color.text.${safeName}.contrast}`, $type: "color" },
         };
 
         // --- DARK THEME TOKENS ---
+        const darkBaseAccess = getAccessibleBaseStep(gen.ramp, 300);
+        const darkBaseStep = darkBaseAccess.bgStep;
+        const darkHover = getOffsetStep(darkBaseStep, -1);
+        const darkPress = getOffsetStep(darkBaseStep, -2);
+
         darkTheme.background[safeName] = { $value: `{color.${aliasName}.900}`, $type: "color" };
 
         darkTheme.surface[safeName] = {
@@ -429,19 +555,19 @@ export function mapTheme(
         };
 
         darkTheme.base[safeName] = {
-            default: { $value: `{color.${aliasName}.300}`, $type: "color" },
-            hover: { $value: `{color.${aliasName}.200}`, $type: "color" },
-            active: { $value: `{color.${aliasName}.100}`, $type: "color" },
+            default: { $value: `{color.${aliasName}.${darkBaseStep}}`, $type: "color" },
+            hover: { $value: `{color.${aliasName}.${darkHover}}`, $type: "color" },
+            active: { $value: `{color.${aliasName}.${darkPress}}`, $type: "color" },
         };
 
         darkTheme.text[safeName] = {
             default: { $value: `{color.${aliasName}.300}`, $type: "color" },
-            contrast: { $value: `{color.${aliasName}.${getAccessibleForeground(gen.ramp, gen.ramp[300])}}`, $type: "color" },
+            contrast: { $value: darkBaseAccess.textToken, $type: "color" },
         };
 
         darkTheme.icon[safeName] = {
-            default: { $value: `{darkTheme.text.${safeName}.default}`, $type: "color" },
-            contrast: { $value: `{darkTheme.text.${safeName}.contrast}`, $type: "color" },
+            default: { $value: `{color.text.${safeName}.default}`, $type: "color" },
+            contrast: { $value: `{color.text.${safeName}.contrast}`, $type: "color" },
         };
     });
 

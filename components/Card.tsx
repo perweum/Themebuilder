@@ -26,7 +26,7 @@ export const Card: React.FC<CardProps> = ({ children, variant = 'default', title
             border: border,
             borderRadius: 'var(--geometry-radius-lg)',
             padding: '1.5rem',
-            boxShadow: variant === 'default' ? '0 2px 8px rgba(0,0,0,0.05)' : 'none',
+            boxShadow: variant === 'default' ? 'var(--color-shadow-2)' : 'none',
             display: 'flex',
             flexDirection: 'column',
             gap: '0.5rem',

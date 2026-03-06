@@ -43,7 +43,7 @@ export const TabsDemo: React.FC<DemoProps> = ({ primaryColorName = 'brand', acce
                                 borderRadius: 'var(--geometry-radius-1, 6px)',
                                 cursor: 'pointer',
                                 transition: 'all 0.2s',
-                                boxShadow: isActive ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                                boxShadow: isActive ? 'var(--color-shadow-1)' : 'none'
                             }}
                             onMouseEnter={(e) => {
                                 if (!isActive) {

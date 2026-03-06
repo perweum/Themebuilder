@@ -104,7 +104,7 @@ export function Select<T extends object>({
                     background: isDarkMode !== undefined ? (isDarkMode ? '#1f2128' : '#ffffff') : 'var(--color-surface-default)',
                     border: 'var(--geometry-borderWidth-default) solid var(--color-border-default)',
                     borderRadius: 'var(--geometry-radius-sm)',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                    boxShadow: 'var(--color-shadow-3)',
                     minWidth: 'var(--trigger-width)',
                     zIndex: 9999
                 }}

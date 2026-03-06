@@ -132,11 +132,11 @@ export const ThemeScope: React.FC<ThemeScopeProps> = ({
             );
 
             const resolveAlias = (val: string) => {
-                if (val.startsWith('{') && val.endsWith('}')) {
-                    // Turn {color.brand.500} into var(--color-brand-500)
-                    return `var(--${val.slice(1, -1).replace(/\./g, '-')})`;
-                }
-                return val;
+                if (typeof val !== 'string') return val;
+                // Replace all occurrences of {path.to.token} with var(--path-to-token)
+                return val.replace(/\{([^{}]+)\}/g, (match, path) => {
+                    return `var(--${path.replace(/\./g, '-')})`;
+                });
             };
 
             const setVariables = (obj: any, prefix: string) => {

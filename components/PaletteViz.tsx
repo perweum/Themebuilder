@@ -29,7 +29,7 @@ const RampRow = ({ title, seed, cssPrefix, mappedName, isDarkMode, overrides, on
                     </span>
                 )}
             </h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '4px' }}>
+            <div className="palette-grid" style={{ gap: '6px' }}>
                 {Object.entries(gen.ramp).map(([step, hex]) => {
                     const path = mappedName ? `${mappedName}.${step}` : `${title.toLowerCase()}.${step}`;
                     const overrideHex = overrides?.[path];
@@ -97,7 +97,25 @@ export const PaletteViz: React.FC<{ isDarkMode?: boolean }> = ({ isDarkMode }) =
     if (themes.length === 0) return null;
 
     return (
-        <div className="palette-viz-container" style={{ padding: '2rem', background: isDarkMode ? '#1a1a1a' : '#fff', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', transition: 'background-color 0.3s' }}>
+        <div className="palette-viz-container" style={{ padding: '2rem', background: isDarkMode ? '#1a1a1a' : '#fff', borderRadius: '8px', boxShadow: 'var(--theme-shadow-3)', transition: 'background-color 0.3s' }}>
+            <style>{`
+                .palette-grid {
+                    display: grid;
+                    grid-template-columns: repeat(12, 1fr);
+                }
+                @media (max-width: 860px) {
+                    .palette-grid {
+                        grid-template-columns: repeat(6, 1fr);
+                        row-gap: 16px;
+                    }
+                }
+                @media (max-width: 480px) {
+                    .palette-grid {
+                        grid-template-columns: repeat(4, 1fr);
+                        row-gap: 16px;
+                    }
+                }
+            `}</style>
             {themes.map((theme, index) => (
                 <div key={theme.id} style={{ marginBottom: index < themes.length - 1 ? '3rem' : '0' }}>
                     <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1.5rem', borderBottom: `1px solid ${isDarkMode ? '#333' : '#eee'}`, paddingBottom: '0.5rem', color: isDarkMode ? '#FFF' : '#000' }}>Core Palette Engine ({theme.id})</h2>

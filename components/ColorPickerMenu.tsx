@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Dialog, DialogTrigger, Button, Modal, Input, Label, TextField } from 'react-aria-components';
+import { Dialog, DialogTrigger, Button, Popover, Input, Label, TextField } from 'react-aria-components';
 import { HexColorPicker } from 'react-colorful';
 import { Pencil, ChevronLeft } from 'lucide-react';
 import { SystemicModal } from './SystemicModal';
@@ -68,41 +68,42 @@ export const ColorPickerMenu: React.FC<ColorPickerMenuProps> = ({
                     alignItems: 'center',
                     gap: '0.75rem',
                     background: 'transparent',
-                    border: `var(--geometry-borderWidth-default) solid ${isDarkMode ? '#555' : '#ccc'}`,
+                    border: 'none', // Remove solid border, just use background on hover
                     borderRadius: 'var(--geometry-radius-2)',
-                    padding: '0.625rem 1rem',
+                    padding: '0.5rem', // Tighter padding to align better with text
                     cursor: 'pointer',
                     color: textColor,
-                    width: '100%',
+                    width: 'calc(100% + 1rem)', // Expand width slightly to account for negative margin
+                    marginLeft: '-0.5rem',      // Pull left so the inner content aligns with the heading above
                     justifyContent: 'space-between'
                 }}
             >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                     <div
                         style={{
-                            width: '28px',
-                            height: '28px',
+                            width: '24px', // Slightly smaller swatch
+                            height: '24px',
                             backgroundColor: seed,
-                            borderRadius: '6px'
+                            borderRadius: '4px',
+                            boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.1)' // Add subtle border to swatch itself
                         }}
                     />
-                    <span style={{ fontSize: '1rem', fontFamily: 'inherit' }}>{seed}</span>
+                    <span style={{ fontSize: '0.875rem', fontFamily: 'inherit', fontWeight: 500 }}>{seed}</span>
                 </div>
-                <Pencil size={16} strokeWidth={2} style={{ color: isDarkMode ? '#8892b0' : '#64748b' }} />
+                <Pencil className="picker-icon" size={14} strokeWidth={2} style={{ color: isDarkMode ? '#8892b0' : '#64748b' }} />
             </Button>
 
-            <Modal
-                isDismissable
+            <Popover
+                placement="start"
+                offset={16}
                 style={{
-                    position: 'fixed',
-                    left: '420px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
                     zIndex: 1000,
                     background: 'transparent',
-                    boxShadow: 'none',
                     border: 'none',
-                    padding: 0
+                    padding: 0,
+                    outline: 'none',
+                    // Adding shadow directly to popover helps ensure it's visible if SystemicModal popover variant doesn't have it
+                    filter: 'drop-shadow(0 20px 25px rgba(0,0,0,0.15))'
                 }}
             >
                 <SystemicModal variant="popover" isDarkMode={isDarkMode} maxWidth="320px">
@@ -219,7 +220,7 @@ export const ColorPickerMenu: React.FC<ColorPickerMenuProps> = ({
                         )}
                     </Dialog>
                 </SystemicModal>
-            </Modal>
+            </Popover>
         </DialogTrigger>
     );
 };

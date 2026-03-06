@@ -27,7 +27,7 @@ export const PrimitiveColorPicker: React.FC<PrimitiveColorPickerProps> = ({ colo
             <Button style={{ background: 'none', border: 'none', padding: 0, margin: 0, cursor: 'pointer', display: 'block', width: '100%', height: '100%', outline: 'none' }}>
                 {children}
             </Button>
-            <Popover placement="bottom" style={{ background: bgColor, border: `1px solid ${borderColor}`, borderRadius: '8px', padding: '16px', boxShadow: '0 10px 25px rgba(0,0,0,0.2)', zIndex: 100 }}>
+            <Popover placement="bottom" style={{ background: bgColor, border: `1px solid ${borderColor}`, borderRadius: '8px', padding: '16px', boxShadow: 'var(--color-shadow-3)', zIndex: 100 }}>
                 <Dialog style={{ outline: 'none' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '200px' }}>
                         <div className="custom-primitive-color-picker">

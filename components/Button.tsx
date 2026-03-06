@@ -46,6 +46,7 @@ export const Button: React.FC<ButtonProps> = ({
                 let textColor = 'inherit';
                 let borderColor = 'transparent';
                 let shadow = 'none';
+                let transform = 'scale(1)';
 
                 // --- DISABLED STATE ---
                 if (isDisabled) {
@@ -58,7 +59,7 @@ export const Button: React.FC<ButtonProps> = ({
                     } else {
                         textColor = 'var(--color-text-disabled)';
                     }
-                    return { ...baseStyle, background: bg, color: textColor, borderColor, borderStyle: 'solid', boxShadow: shadow };
+                    return { ...baseStyle, background: bg, color: textColor, borderColor, borderStyle: 'solid', boxShadow: shadow, transform };
                 }
 
                 // --- ACTIVE STATES (Rest, Hover, Press) ---
@@ -67,11 +68,16 @@ export const Button: React.FC<ButtonProps> = ({
                     // Uses actionable token for text/bg to adapt, and interactive steps for hover/press state layers.
                     textColor = isDestructive ? 'var(--color-error-100)' : `var(--color-text-${c}-contrast)`;
                     bg = isDestructive ? 'var(--color-error-700)' : `var(--color-base-${c}-default)`;
+                    shadow = 'var(--color-shadow-1)';
 
                     if (isPressed) {
                         bg = `var(--color-base-${c}-active)`;
+                        transform = 'scale(0.98)';
+                        shadow = 'none';
                     } else if (isHovered) {
                         bg = `var(--color-base-${c}-hover)`;
+                        transform = 'scale(1.02)';
+                        shadow = 'var(--color-shadow-2)';
                     }
 
                 } else if (variant === 'outline') {
@@ -82,8 +88,10 @@ export const Button: React.FC<ButtonProps> = ({
 
                     if (isPressed) {
                         bg = isDestructive ? 'var(--color-error-300)' : `var(--color-surface-${c}-active)`;
+                        transform = 'scale(0.98)';
                     } else if (isHovered) {
                         bg = isDestructive ? 'var(--color-error-100)' : `var(--color-surface-${c}-hover)`;
+                        transform = 'scale(1.02)';
                     }
 
                 } else if (variant === 'ghost') {
@@ -92,15 +100,17 @@ export const Button: React.FC<ButtonProps> = ({
 
                     if (isPressed) {
                         bg = isDestructive ? 'var(--color-error-300)' : `var(--color-surface-${c}-active)`;
+                        transform = 'scale(0.98)';
                     } else if (isHovered) {
                         bg = isDestructive ? 'var(--color-error-100)' : `var(--color-surface-${c}-hover)`;
+                        transform = 'scale(1.02)';
                     }
                 }
 
                 // --- FOCUS VISIBLE STATE ---
                 if (isFocusVisible) {
                     // Focus ring style matching the color
-                    shadow = `0 0 0 2px var(--color-background-default), 0 0 0 4px var(--color-border-focus)`;
+                    shadow = `${shadow !== 'none' ? shadow + ', ' : ''}0 0 0 2px var(--color-background-default), 0 0 0 4px var(--color-border-focus)`;
                 }
 
                 return {
@@ -109,7 +119,8 @@ export const Button: React.FC<ButtonProps> = ({
                     color: textColor,
                     borderColor,
                     borderStyle: 'solid',
-                    boxShadow: shadow
+                    boxShadow: shadow,
+                    transform
                 };
             }}
             {...props}
