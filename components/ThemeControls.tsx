@@ -291,10 +291,11 @@ export const ThemeControls: React.FC<{
                         fontWeight: 600,
                         cursor: 'pointer',
                         transition: 'all 0.2s ease',
-                        marginBottom: '-1px'
+                        marginBottom: '-1px',
+                        whiteSpace: isMobile ? 'normal' : 'nowrap'
                     }}
                 >
-                    Typography & Geometry
+                    Type & Size
                 </button>
                 <button
                     onClick={() => setActiveTab('semantic')}
