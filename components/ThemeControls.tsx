@@ -4,6 +4,8 @@ import { ColorPickerMenu } from './ColorPickerMenu';
 import { Pencil, RotateCcw, ChevronDown, ChevronRight, X } from 'lucide-react';
 import { COLOR_STEPS, ALPHA_STEPS, generateRamp } from '../lib/palette-generator';
 import { mapTheme } from '../lib/theme-mapper';
+import FontPicker from 'react-fontpicker-ts';
+import 'react-fontpicker-ts/dist/index.css';
 
 const ThemeNameEditor: React.FC<{ initialName: string, themeId: string, onRename: (id: string, newName: string) => void, isDarkMode: boolean }> = ({ initialName, themeId, onRename, isDarkMode }) => {
     const [isEditing, setIsEditing] = React.useState(false);
@@ -92,6 +94,7 @@ export const ThemeControls: React.FC<{
         updateThemeColor,
         removeThemeColor,
         updateThemeGeometryValue,
+        updateThemeFont,
         globalColors,
         addRandomGlobalColor,
         updateGlobalColor,
@@ -272,7 +275,6 @@ export const ThemeControls: React.FC<{
                         fontWeight: 600,
                         cursor: 'pointer',
                         transition: 'all 0.2s ease',
-                        marginBottom: '-1px'
                     }}
                 >
                     Colors
@@ -292,7 +294,7 @@ export const ThemeControls: React.FC<{
                         marginBottom: '-1px'
                     }}
                 >
-                    Geometry
+                    Typography & Geometry
                 </button>
                 <button
                     onClick={() => setActiveTab('semantic')}
@@ -551,263 +553,287 @@ export const ThemeControls: React.FC<{
                         </div>
                     </div>
                 </>
-            )}
+            )
+            }
 
-            {activeTab === 'geometry' && (
-                <div style={{ display: 'flex', flexDirection: 'column', flex: 1, gap: '1.5rem' }}>
-                    {themes.map((theme, index) => {
-                        const geometry = theme.geometry || { radiusBase: 4, includeRadius: true, includeBorders: true, borderWidth: 'small' };
+            {
+                activeTab === 'geometry' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, gap: '1.5rem' }}>
+                        {themes.map((theme, index) => {
+                            const geometry = theme.geometry || { radiusBase: 4, includeRadius: true, includeBorders: true, borderWidth: 'small' };
 
-                        return (
-                            <div key={`geo-${theme.id}`} style={styles.themeBox}>
-                                <div style={{ ...styles.sectionTitle, borderBottom: 'none', paddingBottom: 0, marginTop: 0 }}>
-                                    <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: 0 }}>{theme.name || theme.id} Geometry</h3>
-                                </div>
-
-                                <div style={styles.group}>
-                                    <label style={{ ...styles.label, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '0.5rem', cursor: 'pointer', marginBottom: '0.25rem' }}>
-                                        <input
-                                            type="checkbox"
-                                            checked={geometry.includeRadius}
-                                            onChange={(e) => updateThemeGeometryValue(theme.id, 'includeRadius', e.target.checked)}
-                                            style={{
-                                                width: '16px',
-                                                height: '16px',
-                                                accentColor: isDarkMode ? '#C3E835' : '#0142FE',
-                                                cursor: 'pointer'
-                                            }}
-                                        />
-                                        <span style={{ textTransform: 'uppercase' }}>Include Border Radius</span>
-                                    </label>
-                                    <label style={{ ...styles.label, marginTop: '0.5rem', opacity: geometry.includeRadius ? 1 : 0.5 }}>Radius Base Scale (px)</label>
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        max="64"
-                                        value={geometry.radiusBase}
-                                        disabled={!geometry.includeRadius}
-                                        onChange={(e) => updateThemeGeometryValue(theme.id, 'radiusBase', Number(e.target.value))}
-                                        style={{
-                                            ...actionButtonStyle,
-                                            justifyContent: 'flex-start',
-                                            padding: '0.5rem',
-                                            display: 'block',
-                                            width: '100%',
-                                            boxSizing: 'border-box',
-                                            opacity: geometry.includeRadius ? 1 : 0.5,
-                                            cursor: geometry.includeRadius ? 'auto' : 'not-allowed'
-                                        }}
-                                    />
-                                </div>
-
-                                <div style={{ ...styles.group, marginTop: '1.5rem' }}>
-                                    <label style={{ ...styles.label, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '0.5rem', cursor: 'pointer' }}>
-                                        <input
-                                            type="checkbox"
-                                            checked={geometry.includeBorders}
-                                            onChange={(e) => updateThemeGeometryValue(theme.id, 'includeBorders', e.target.checked)}
-                                            style={{
-                                                width: '16px',
-                                                height: '16px',
-                                                accentColor: isDarkMode ? '#C3E835' : '#0142FE',
-                                                cursor: 'pointer'
-                                            }}
-                                        />
-                                        <span style={{ textTransform: 'uppercase' }}>Include Borders</span>
-                                    </label>
-                                </div>
-
-                                {geometry.includeBorders && (
+                            return (
+                                <div key={`geo-${theme.id}`} style={styles.themeBox}>
+                                    <div style={{ ...styles.sectionTitle, borderBottom: 'none', paddingBottom: 0, marginTop: 0 }}>
+                                        <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: 0 }}>Typography Setting</h3>
+                                    </div>
                                     <div style={styles.group}>
-                                        <label style={styles.label}>Border Width</label>
-                                        <select
-                                            value={geometry.borderWidth}
-                                            onChange={(e) => updateThemeGeometryValue(theme.id, 'borderWidth', e.target.value as 'small' | 'medium' | 'large')}
+                                        <label style={styles.label}>Global Font</label>
+                                        <div style={{
+                                            border: `1px solid ${isDarkMode ? '#F8F8F8' : '#1F1F1F'}`,
+                                            padding: '0.25rem',
+                                            background: 'transparent',
+                                            color: isDarkMode ? '#F8F8F8' : '#1F1F1F'
+                                        }}>
+                                            <FontPicker
+                                                defaultValue={theme.fontFamily || 'Inter'}
+                                                value={(val) => updateThemeFont(theme.id, val)}
+                                                autoLoad={true}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div style={{ ...styles.sectionTitle, borderBottom: 'none', paddingBottom: 0, marginTop: '2rem' }}>
+                                        <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: 0 }}>Geometry</h3>
+                                    </div>
+
+                                    <div style={styles.group}>
+                                        <label style={{ ...styles.label, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '0.5rem', cursor: 'pointer', marginBottom: '0.25rem' }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={geometry.includeRadius}
+                                                onChange={(e) => updateThemeGeometryValue(theme.id, 'includeRadius', e.target.checked)}
+                                                style={{
+                                                    width: '16px',
+                                                    height: '16px',
+                                                    accentColor: isDarkMode ? '#C3E835' : '#0142FE',
+                                                    cursor: 'pointer'
+                                                }}
+                                            />
+                                            <span style={{ textTransform: 'uppercase' }}>Include Border Radius</span>
+                                        </label>
+                                        <label style={{ ...styles.label, marginTop: '0.5rem', opacity: geometry.includeRadius ? 1 : 0.5 }}>Radius Base Scale (px)</label>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            max="64"
+                                            value={geometry.radiusBase}
+                                            disabled={!geometry.includeRadius}
+                                            onChange={(e) => updateThemeGeometryValue(theme.id, 'radiusBase', Number(e.target.value))}
                                             style={{
                                                 ...actionButtonStyle,
                                                 justifyContent: 'flex-start',
                                                 padding: '0.5rem',
-                                                appearance: 'auto'
+                                                display: 'block',
+                                                width: '100%',
+                                                boxSizing: 'border-box',
+                                                opacity: geometry.includeRadius ? 1 : 0.5,
+                                                cursor: geometry.includeRadius ? 'auto' : 'not-allowed'
                                             }}
-                                        >
-                                            <option value="small">Small (1px)</option>
-                                            <option value="medium">Medium (2px)</option>
-                                            <option value="large">Large (3px)</option>
-                                        </select>
+                                        />
+                                    </div>
+
+                                    <div style={{ ...styles.group, marginTop: '1.5rem' }}>
+                                        <label style={{ ...styles.label, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '0.5rem', cursor: 'pointer' }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={geometry.includeBorders}
+                                                onChange={(e) => updateThemeGeometryValue(theme.id, 'includeBorders', e.target.checked)}
+                                                style={{
+                                                    width: '16px',
+                                                    height: '16px',
+                                                    accentColor: isDarkMode ? '#C3E835' : '#0142FE',
+                                                    cursor: 'pointer'
+                                                }}
+                                            />
+                                            <span style={{ textTransform: 'uppercase' }}>Include Borders</span>
+                                        </label>
+                                    </div>
+
+                                    {geometry.includeBorders && (
+                                        <div style={styles.group}>
+                                            <label style={styles.label}>Border Width</label>
+                                            <select
+                                                value={geometry.borderWidth}
+                                                onChange={(e) => updateThemeGeometryValue(theme.id, 'borderWidth', e.target.value as 'small' | 'medium' | 'large')}
+                                                style={{
+                                                    ...actionButtonStyle,
+                                                    justifyContent: 'flex-start',
+                                                    padding: '0.5rem',
+                                                    appearance: 'auto'
+                                                }}
+                                            >
+                                                <option value="small">Small (1px)</option>
+                                                <option value="medium">Medium (2px)</option>
+                                                <option value="large">Large (3px)</option>
+                                            </select>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                )
+            }
+            {
+                activeTab === 'semantic' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, gap: '0.5rem' }}>
+                        {Object.entries(tokenCategories).map(([category, paths]) => (
+                            <div key={category} style={{
+                                background: isDarkMode ? 'var(--color-surface-default, #1a1a1a)' : '#f8fafc',
+                                borderRadius: '12px',
+                                padding: '1rem 0.5rem',
+                            }}>
+                                <div
+                                    style={{ ...styles.sectionTitle, borderBottom: 'none', paddingBottom: 0, marginTop: 0, marginBottom: 0, display: 'flex', alignItems: 'center', cursor: 'pointer', gap: '0.5rem' }}
+                                    onClick={() => setExpandedSemanticCategories(prev => ({ ...prev, [category]: !prev[category] }))}
+                                >
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '16   px', height: '16px' }}>
+                                        {expandedSemanticCategories[category] ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                                    </div>
+                                    <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: 0, textTransform: 'capitalize' }}>{category} Tokens</h3>
+                                </div>
+
+                                {expandedSemanticCategories[category] && (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.5rem' }}>
+                                        {paths.map(path => {
+                                            // "category.item" e.g., "background.default"
+                                            const isLightOverridden = activeTheme.semanticOverrides?.[path] !== undefined;
+                                            const darkPath = `darkTheme.${path}`;
+                                            const isDarkOverridden = activeTheme.semanticOverrides?.[darkPath] !== undefined;
+
+                                            const currentLightVal = isLightOverridden ? activeTheme.semanticOverrides![path] : null;
+                                            const currentDarkVal = isDarkOverridden ? activeTheme.semanticOverrides![darkPath] : null;
+
+                                            const getHexVal = (valStr: string | null) => {
+                                                if (!valStr) return null;
+                                                const clean = valStr.replace(/[{}]/g, '').replace('color.', '');
+                                                const [palette, step] = clean.split('.');
+                                                return activeThemePayloadWithOptions?.color?.[palette]?.[step]?.$value || null;
+                                            };
+
+                                            const getDefValStr = (obj: any, defPath: string) => {
+                                                let current = obj;
+                                                const pathParts = defPath.split('.');
+                                                for (const p of pathParts) {
+                                                    if (current && current[p] !== undefined) current = current[p];
+                                                    else return null;
+                                                }
+                                                return current?.$value || null;
+                                            };
+
+                                            const calculatedLightVal = currentLightVal || getDefValStr(defaultTheme?.theme || {}, path);
+                                            const calculatedDarkVal = currentDarkVal || getDefValStr(defaultTheme?.darkTheme || defaultTheme?.theme || {}, path);
+
+                                            const lightHex = getHexVal(calculatedLightVal);
+                                            const darkHex = getHexVal(calculatedDarkVal);
+
+                                            const renderSelectOptions = () => {
+                                                if (!activeThemePayloadWithOptions) return null;
+                                                const exportedPalettes = Object.keys(activeThemePayloadWithOptions.color);
+
+                                                return (
+                                                    <>
+                                                        {exportedPalettes.map(paletteName => {
+                                                            const isAlpha = paletteName === 'white' || paletteName === 'black';
+                                                            const steps = isAlpha ? ALPHA_STEPS : COLOR_STEPS;
+                                                            const labelSuffix = isAlpha ? ' (Alpha)' : ' Palette';
+                                                            const formattedName = paletteName.charAt(0).toUpperCase() + paletteName.slice(1);
+
+                                                            return (
+                                                                <optgroup key={paletteName} label={`${formattedName}${labelSuffix}`}>
+                                                                    {steps.map((step: any) => (
+                                                                        <option key={`${paletteName}-${step}`} value={`{color.${paletteName}.${step}}`}>
+                                                                            {paletteName}-{step}{isAlpha ? '%' : ''}
+                                                                        </option>
+                                                                    ))}
+                                                                </optgroup>
+                                                            );
+                                                        })}
+                                                    </>
+                                                );
+                                            };
+
+                                            return (
+                                                <div key={path} style={{
+                                                    display: 'flex',
+                                                    flexDirection: 'column',
+                                                    gap: '0.25rem',
+                                                    padding: '0.5rem',
+                                                    background: isDarkMode ? '#222' : '#f8fafc',
+                                                    borderRadius: '6px',
+                                                    border: `1px solid ${isDarkMode ? '#333' : '#e2e8f0'}`,
+                                                }}>
+                                                    <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>{formatPathLabel(path)}</div>
+                                                    <div style={{ fontSize: '0.75rem', color: isDarkMode ? '#94a3b8' : '#64748b', marginBottom: '0.5rem' }}>{path}</div>
+
+                                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.5rem' }}>
+                                                        {/* Light Mode Picker */}
+                                                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', position: 'relative' }}>
+                                                            <span style={{ fontSize: '0.75rem', width: '40px' }}>Light</span>
+                                                            <div style={{ width: '20px', height: '20px', borderRadius: '4px', backgroundColor: lightHex || 'transparent', border: `1px solid ${isDarkMode ? '#444' : '#ccc'}`, flexShrink: 0 }} />
+                                                            <select
+                                                                value={calculatedLightVal || ''}
+                                                                onChange={(e) => updateThemeSemanticOverride(activeTheme.id, path, e.target.value)}
+                                                                style={{
+                                                                    flex: 1,
+                                                                    padding: '0.25rem 0.5rem',
+                                                                    borderRadius: '4px',
+                                                                    border: `1px solid ${isLightOverridden ? '#3b82f6' : (isDarkMode ? '#444' : '#ccc')}`,
+                                                                    background: isDarkMode ? '#111' : '#fff',
+                                                                    color: 'inherit',
+                                                                    fontSize: '0.75rem',
+                                                                    width: '100%',
+                                                                    appearance: 'auto'
+                                                                }}
+                                                            >
+                                                                {!isLightOverridden && (
+                                                                    <option value={calculatedLightVal || ''}>
+                                                                        Auto ({calculatedLightVal?.replace(/[{}]/g, '').replace('color.', '').replace('darkTheme.', '')})
+                                                                    </option>
+                                                                )}
+                                                                {renderSelectOptions()}
+                                                            </select>
+                                                            {isLightOverridden && (
+                                                                <button onClick={() => updateThemeSemanticOverride(activeTheme.id, path, undefined)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }} title="Revert to Default">
+                                                                    <RotateCcw size={14} />
+                                                                </button>
+                                                            )}
+                                                        </div>
+
+                                                        {/* Dark Mode Picker */}
+                                                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', position: 'relative' }}>
+                                                            <span style={{ fontSize: '0.75rem', width: '40px' }}>Dark</span>
+                                                            <div style={{ width: '20px', height: '20px', borderRadius: '4px', backgroundColor: darkHex || 'transparent', border: `1px solid ${isDarkMode ? '#444' : '#ccc'}`, flexShrink: 0 }} />
+                                                            <select
+                                                                value={calculatedDarkVal || ''}
+                                                                onChange={(e) => updateThemeSemanticOverride(activeTheme.id, darkPath, e.target.value)}
+                                                                style={{
+                                                                    flex: 1,
+                                                                    padding: '0.25rem 0.5rem',
+                                                                    borderRadius: '4px',
+                                                                    border: `1px solid ${isDarkOverridden ? '#3b82f6' : (isDarkMode ? '#444' : '#ccc')}`,
+                                                                    background: isDarkMode ? '#111' : '#fff',
+                                                                    color: 'inherit',
+                                                                    fontSize: '0.75rem',
+                                                                    width: '100%',
+                                                                    appearance: 'auto'
+                                                                }}
+                                                            >
+                                                                {!isDarkOverridden && (
+                                                                    <option value={calculatedDarkVal || ''}>
+                                                                        Auto ({calculatedDarkVal?.replace(/[{}]/g, '').replace('color.', '').replace('darkTheme.', '')})
+                                                                    </option>
+                                                                )}
+                                                                {renderSelectOptions()}
+                                                            </select>
+                                                            {isDarkOverridden && (
+                                                                <button onClick={() => updateThemeSemanticOverride(activeTheme.id, darkPath, undefined)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }} title="Revert to Default">
+                                                                    <RotateCcw size={14} />
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 )}
                             </div>
-                        );
-                    })}
-                </div>
-            )}
-            {activeTab === 'semantic' && (
-                <div style={{ display: 'flex', flexDirection: 'column', flex: 1, gap: '0.5rem' }}>
-                    {Object.entries(tokenCategories).map(([category, paths]) => (
-                        <div key={category} style={{
-                            background: isDarkMode ? 'var(--color-surface-default, #1a1a1a)' : '#f8fafc',
-                            borderRadius: '12px',
-                            padding: '1rem 0.5rem',
-                        }}>
-                            <div
-                                style={{ ...styles.sectionTitle, borderBottom: 'none', paddingBottom: 0, marginTop: 0, marginBottom: 0, display: 'flex', alignItems: 'center', cursor: 'pointer', gap: '0.5rem' }}
-                                onClick={() => setExpandedSemanticCategories(prev => ({ ...prev, [category]: !prev[category] }))}
-                            >
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '16   px', height: '16px' }}>
-                                    {expandedSemanticCategories[category] ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                                </div>
-                                <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: 0, textTransform: 'capitalize' }}>{category} Tokens</h3>
-                            </div>
-
-                            {expandedSemanticCategories[category] && (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.5rem' }}>
-                                    {paths.map(path => {
-                                        // "category.item" e.g., "background.default"
-                                        const isLightOverridden = activeTheme.semanticOverrides?.[path] !== undefined;
-                                        const darkPath = `darkTheme.${path}`;
-                                        const isDarkOverridden = activeTheme.semanticOverrides?.[darkPath] !== undefined;
-
-                                        const currentLightVal = isLightOverridden ? activeTheme.semanticOverrides![path] : null;
-                                        const currentDarkVal = isDarkOverridden ? activeTheme.semanticOverrides![darkPath] : null;
-
-                                        const getHexVal = (valStr: string | null) => {
-                                            if (!valStr) return null;
-                                            const clean = valStr.replace(/[{}]/g, '').replace('color.', '');
-                                            const [palette, step] = clean.split('.');
-                                            return activeThemePayloadWithOptions?.color?.[palette]?.[step]?.$value || null;
-                                        };
-
-                                        const getDefValStr = (obj: any, defPath: string) => {
-                                            let current = obj;
-                                            const pathParts = defPath.split('.');
-                                            for (const p of pathParts) {
-                                                if (current && current[p] !== undefined) current = current[p];
-                                                else return null;
-                                            }
-                                            return current?.$value || null;
-                                        };
-
-                                        const calculatedLightVal = currentLightVal || getDefValStr(defaultTheme?.theme || {}, path);
-                                        const calculatedDarkVal = currentDarkVal || getDefValStr(defaultTheme?.darkTheme || defaultTheme?.theme || {}, path);
-
-                                        const lightHex = getHexVal(calculatedLightVal);
-                                        const darkHex = getHexVal(calculatedDarkVal);
-
-                                        const renderSelectOptions = () => {
-                                            if (!activeThemePayloadWithOptions) return null;
-                                            const exportedPalettes = Object.keys(activeThemePayloadWithOptions.color);
-
-                                            return (
-                                                <>
-                                                    {exportedPalettes.map(paletteName => {
-                                                        const isAlpha = paletteName === 'white' || paletteName === 'black';
-                                                        const steps = isAlpha ? ALPHA_STEPS : COLOR_STEPS;
-                                                        const labelSuffix = isAlpha ? ' (Alpha)' : ' Palette';
-                                                        const formattedName = paletteName.charAt(0).toUpperCase() + paletteName.slice(1);
-
-                                                        return (
-                                                            <optgroup key={paletteName} label={`${formattedName}${labelSuffix}`}>
-                                                                {steps.map((step: any) => (
-                                                                    <option key={`${paletteName}-${step}`} value={`{color.${paletteName}.${step}}`}>
-                                                                        {paletteName}-{step}{isAlpha ? '%' : ''}
-                                                                    </option>
-                                                                ))}
-                                                            </optgroup>
-                                                        );
-                                                    })}
-                                                </>
-                                            );
-                                        };
-
-                                        return (
-                                            <div key={path} style={{
-                                                display: 'flex',
-                                                flexDirection: 'column',
-                                                gap: '0.25rem',
-                                                padding: '0.5rem',
-                                                background: isDarkMode ? '#222' : '#f8fafc',
-                                                borderRadius: '6px',
-                                                border: `1px solid ${isDarkMode ? '#333' : '#e2e8f0'}`,
-                                            }}>
-                                                <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>{formatPathLabel(path)}</div>
-                                                <div style={{ fontSize: '0.75rem', color: isDarkMode ? '#94a3b8' : '#64748b', marginBottom: '0.5rem' }}>{path}</div>
-
-                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.5rem' }}>
-                                                    {/* Light Mode Picker */}
-                                                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', position: 'relative' }}>
-                                                        <span style={{ fontSize: '0.75rem', width: '40px' }}>Light</span>
-                                                        <div style={{ width: '20px', height: '20px', borderRadius: '4px', backgroundColor: lightHex || 'transparent', border: `1px solid ${isDarkMode ? '#444' : '#ccc'}`, flexShrink: 0 }} />
-                                                        <select
-                                                            value={calculatedLightVal || ''}
-                                                            onChange={(e) => updateThemeSemanticOverride(activeTheme.id, path, e.target.value)}
-                                                            style={{
-                                                                flex: 1,
-                                                                padding: '0.25rem 0.5rem',
-                                                                borderRadius: '4px',
-                                                                border: `1px solid ${isLightOverridden ? '#3b82f6' : (isDarkMode ? '#444' : '#ccc')}`,
-                                                                background: isDarkMode ? '#111' : '#fff',
-                                                                color: 'inherit',
-                                                                fontSize: '0.75rem',
-                                                                width: '100%',
-                                                                appearance: 'auto'
-                                                            }}
-                                                        >
-                                                            {!isLightOverridden && (
-                                                                <option value={calculatedLightVal || ''}>
-                                                                    Auto ({calculatedLightVal?.replace(/[{}]/g, '').replace('color.', '').replace('darkTheme.', '')})
-                                                                </option>
-                                                            )}
-                                                            {renderSelectOptions()}
-                                                        </select>
-                                                        {isLightOverridden && (
-                                                            <button onClick={() => updateThemeSemanticOverride(activeTheme.id, path, undefined)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }} title="Revert to Default">
-                                                                <RotateCcw size={14} />
-                                                            </button>
-                                                        )}
-                                                    </div>
-
-                                                    {/* Dark Mode Picker */}
-                                                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', position: 'relative' }}>
-                                                        <span style={{ fontSize: '0.75rem', width: '40px' }}>Dark</span>
-                                                        <div style={{ width: '20px', height: '20px', borderRadius: '4px', backgroundColor: darkHex || 'transparent', border: `1px solid ${isDarkMode ? '#444' : '#ccc'}`, flexShrink: 0 }} />
-                                                        <select
-                                                            value={calculatedDarkVal || ''}
-                                                            onChange={(e) => updateThemeSemanticOverride(activeTheme.id, darkPath, e.target.value)}
-                                                            style={{
-                                                                flex: 1,
-                                                                padding: '0.25rem 0.5rem',
-                                                                borderRadius: '4px',
-                                                                border: `1px solid ${isDarkOverridden ? '#3b82f6' : (isDarkMode ? '#444' : '#ccc')}`,
-                                                                background: isDarkMode ? '#111' : '#fff',
-                                                                color: 'inherit',
-                                                                fontSize: '0.75rem',
-                                                                width: '100%',
-                                                                appearance: 'auto'
-                                                            }}
-                                                        >
-                                                            {!isDarkOverridden && (
-                                                                <option value={calculatedDarkVal || ''}>
-                                                                    Auto ({calculatedDarkVal?.replace(/[{}]/g, '').replace('color.', '').replace('darkTheme.', '')})
-                                                                </option>
-                                                            )}
-                                                            {renderSelectOptions()}
-                                                        </select>
-                                                        {isDarkOverridden && (
-                                                            <button onClick={() => updateThemeSemanticOverride(activeTheme.id, darkPath, undefined)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }} title="Revert to Default">
-                                                                <RotateCcw size={14} />
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
-                        </div>
-                    ))}
-                </div>
-            )}
-        </div>
+                        ))}
+                    </div>
+                )
+            }
+        </div >
     );
 };
