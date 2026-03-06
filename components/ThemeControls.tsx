@@ -7,6 +7,24 @@ import { mapTheme } from '../lib/theme-mapper';
 import FontPicker from 'react-fontpicker-ts';
 import 'react-fontpicker-ts/dist/index.css';
 
+const MD3_TYPOGRAPHY_SCALE = [
+    { name: 'Display Large', desktop: { size: '57px', line: '64px', tracking: '-0.25px' }, mobile: { size: '45px', line: '52px', tracking: '0px' } },
+    { name: 'Display Medium', desktop: { size: '45px', line: '52px', tracking: '0px' }, mobile: { size: '36px', line: '44px', tracking: '0px' } },
+    { name: 'Display Small', desktop: { size: '36px', line: '44px', tracking: '0px' }, mobile: { size: '36px', line: '44px', tracking: '0px' } },
+    { name: 'Headline Large', desktop: { size: '32px', line: '40px', tracking: '0px' }, mobile: { size: '32px', line: '40px', tracking: '0px' } },
+    { name: 'Headline Medium', desktop: { size: '28px', line: '36px', tracking: '0px' }, mobile: { size: '28px', line: '36px', tracking: '0px' } },
+    { name: 'Headline Small', desktop: { size: '24px', line: '32px', tracking: '0px' }, mobile: { size: '24px', line: '32px', tracking: '0px' } },
+    { name: 'Title Large', desktop: { size: '22px', line: '28px', tracking: '0px' }, mobile: { size: '22px', line: '28px', tracking: '0px' } },
+    { name: 'Title Medium', desktop: { size: '16px', line: '24px', tracking: '0.15px', weight: 500 }, mobile: { size: '16px', line: '24px', tracking: '0.15px', weight: 500 } },
+    { name: 'Title Small', desktop: { size: '14px', line: '20px', tracking: '0.1px', weight: 500 }, mobile: { size: '14px', line: '20px', tracking: '0.1px', weight: 500 } },
+    { name: 'Body Large', desktop: { size: '16px', line: '24px', tracking: '0.5px' }, mobile: { size: '16px', line: '24px', tracking: '0.5px' } },
+    { name: 'Body Medium', desktop: { size: '14px', line: '20px', tracking: '0.25px' }, mobile: { size: '14px', line: '20px', tracking: '0.25px' } },
+    { name: 'Body Small', desktop: { size: '12px', line: '16px', tracking: '0.4px' }, mobile: { size: '12px', line: '16px', tracking: '0.4px' } },
+    { name: 'Label Large', desktop: { size: '14px', line: '20px', tracking: '0.1px', weight: 500 }, mobile: { size: '14px', line: '20px', tracking: '0.1px', weight: 500 } },
+    { name: 'Label Medium', desktop: { size: '12px', line: '16px', tracking: '0.5px', weight: 500 }, mobile: { size: '12px', line: '16px', tracking: '0.5px', weight: 500 } },
+    { name: 'Label Small', desktop: { size: '11px', line: '16px', tracking: '0.5px', weight: 500 }, mobile: { size: '11px', line: '16px', tracking: '0.5px', weight: 500 } },
+];
+
 const ThemeNameEditor: React.FC<{ initialName: string, themeId: string, onRename: (id: string, newName: string) => void, isDarkMode: boolean }> = ({ initialName, themeId, onRename, isDarkMode }) => {
     const [isEditing, setIsEditing] = React.useState(false);
     const [tempName, setTempName] = React.useState(initialName);
@@ -108,6 +126,7 @@ export const ThemeControls: React.FC<{
     const [activeTab, setActiveTab] = React.useState<'colors' | 'geometry' | 'semantic'>('colors');
     const [expandedSemanticCategories, setExpandedSemanticCategories] = React.useState<Record<string, boolean>>({});
     const [isPresetsExpanded, setIsPresetsExpanded] = React.useState(false);
+    const [scaleMode, setScaleMode] = React.useState<'desktop' | 'mobile'>('desktop');
 
     const hasAllPresets = FULL_GLOBAL_PRESET.every(fp => globalColors.some(gc => gc.id === fp.id));
 
@@ -582,6 +601,89 @@ export const ThemeControls: React.FC<{
                                                 autoLoad={true}
                                             />
                                         </div>
+                                    </div>
+
+                                    <div style={{ ...styles.sectionTitle, borderBottom: 'none', paddingBottom: 0, marginTop: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: 0 }}>Scale Preview</h3>
+                                        <div style={{
+                                            display: 'flex',
+                                            background: isDarkMode ? '#2A2A2A' : '#E5E5E5',
+                                            borderRadius: '999px',
+                                            padding: '2px',
+                                        }}>
+                                            <button
+                                                onClick={() => setScaleMode('desktop')}
+                                                style={{
+                                                    background: scaleMode === 'desktop' ? (isDarkMode ? '#F8F8F8' : '#FFFFFF') : 'transparent',
+                                                    color: scaleMode === 'desktop' ? (isDarkMode ? '#000000' : '#000000') : (isDarkMode ? '#888888' : '#666666'),
+                                                    border: 'none',
+                                                    borderRadius: '999px',
+                                                    padding: '4px 12px',
+                                                    fontSize: '0.75rem',
+                                                    fontWeight: 600,
+                                                    cursor: 'pointer',
+                                                    transition: 'all 0.2s',
+                                                    boxShadow: scaleMode === 'desktop' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                                                }}
+                                            >
+                                                Desktop
+                                            </button>
+                                            <button
+                                                onClick={() => setScaleMode('mobile')}
+                                                style={{
+                                                    background: scaleMode === 'mobile' ? (isDarkMode ? '#F8F8F8' : '#FFFFFF') : 'transparent',
+                                                    color: scaleMode === 'mobile' ? (isDarkMode ? '#000000' : '#000000') : (isDarkMode ? '#888888' : '#666666'),
+                                                    border: 'none',
+                                                    borderRadius: '999px',
+                                                    padding: '4px 12px',
+                                                    fontSize: '0.75rem',
+                                                    fontWeight: 600,
+                                                    cursor: 'pointer',
+                                                    transition: 'all 0.2s',
+                                                    boxShadow: scaleMode === 'mobile' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                                                }}
+                                            >
+                                                Mobile
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div style={{
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        gap: '1rem',
+                                        maxHeight: '400px',
+                                        overflowY: 'auto',
+                                        overflowX: 'hidden',
+                                        paddingRight: '0.5rem',
+                                        background: isDarkMode ? '#1E1E1E' : '#F5F5F5',
+                                        padding: '1rem',
+                                        borderRadius: '8px',
+                                        border: `1px solid ${isDarkMode ? '#333' : '#E5E5E5'}`
+                                    }}>
+                                        {MD3_TYPOGRAPHY_SCALE.map((item) => {
+                                            const specs = item[scaleMode];
+                                            return (
+                                                <div key={item.name} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: isDarkMode ? '#888' : '#666', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{item.name}</span>
+                                                        <span style={{ fontSize: '0.75rem', color: isDarkMode ? '#666' : '#888' }}>{specs.size} / {specs.line}</span>
+                                                    </div>
+                                                    <div style={{
+                                                        fontFamily: theme.fontFamily ? `"${theme.fontFamily}", sans-serif` : 'var(--theme-font-family)',
+                                                        fontSize: specs.size,
+                                                        lineHeight: specs.line,
+                                                        fontWeight: specs.weight || 400,
+                                                        letterSpacing: specs.tracking,
+                                                        color: isDarkMode ? '#F8F8F8' : '#1F1F1F',
+                                                        whiteSpace: 'nowrap',
+                                                        overflow: 'hidden',
+                                                        textOverflow: 'ellipsis'
+                                                    }}>
+                                                        Almost before we knew it
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
                                     </div>
 
                                     <div style={{ ...styles.sectionTitle, borderBottom: 'none', paddingBottom: 0, marginTop: '2rem' }}>
