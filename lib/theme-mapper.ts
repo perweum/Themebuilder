@@ -41,102 +41,35 @@ function toAlphaTokenRamp(ramp: Record<AlphaStep, string>): AlphaRampTokens {
     return tokens;
 }
 
-function getOffsetStep(step: ColorStep, offset: number): ColorStep {
-    const idx = COLOR_STEPS.indexOf(step);
-    if (idx === -1) return step;
+// Simple logic to find a step with enough contrast
+export const getBestTextForBg = (bgHex: string) => {
+    const onWhite = wcagContrast(bgHex, '#ffffff');
+    const onBlack = wcagContrast(bgHex, '#000000');
+    return onWhite > onBlack ? { hex: '#ffffff', token: '{color.white.100}' } : { hex: '#000000', token: '{color.black.100}' };
+};
+
+export function getAccessibleBaseStep(ramp: Record<ColorStep, string>, startStep: ColorStep): { bgStep: ColorStep; textToken: string; textHex: string } {
+    let currentStep = startStep;
+    const res = getBestTextForBg(ramp[currentStep]);
+    if (wcagContrast(ramp[currentStep], res.hex) >= 4.5) {
+        return { bgStep: currentStep, textToken: res.token, textHex: res.hex };
+    }
+
+    // Search neighbors
+    const neighbors: ColorStep[] = [500, 600, 400, 700, 300, 800, 200, 900, 100, 950, 50];
+    for (const step of neighbors) {
+        const textRes = getBestTextForBg(ramp[step]);
+        if (wcagContrast(ramp[step], textRes.hex) >= 4.5) {
+            return { bgStep: step, textToken: textRes.token, textHex: textRes.hex };
+        }
+    }
+    return { bgStep: startStep, textToken: res.token, textHex: res.hex };
+}
+
+function getOffsetStep(base: ColorStep, offset: number): ColorStep {
+    const idx = COLOR_STEPS.indexOf(base);
     const newIdx = Math.max(0, Math.min(COLOR_STEPS.length - 1, idx + offset));
     return COLOR_STEPS[newIdx];
-}
-
-/**
- * Checks if the contrast between background and text meets AAA (7:1).
- * If not, it forcefully returns pure white or pure black, depending on which is better.
- */
-function getStrictAAAContrast(bgHex: string, textHex: string): { $value: string, $type: string } {
-    const contrast = wcagContrast(textHex, bgHex);
-    if (contrast >= 7) {
-        return { $value: `{#${textHex}}`, $type: "color" }; // We will just return the literal hex if it's naturally AAA
-    }
-    const whiteC = wcagContrast('#ffffff', bgHex);
-    const blackC = wcagContrast('#000000', bgHex);
-    return { $value: whiteC > blackC ? '{color.white.100}' : '{color.black.100}', $type: "color" };
-}
-
-/**
- * Returns the best possible text color token (white or black) for a given background,
- * and the actual hex that was chosen.
- */
-export function getBestTextForBg(bgHex: string): { token: string, hex: string, contrast: number } {
-    const whiteC = wcagContrast('#ffffff', bgHex);
-    const blackC = wcagContrast('#000000', bgHex);
-    if (whiteC >= blackC) {
-        return { token: '{color.white.100}', hex: '#ffffff', contrast: whiteC };
-    }
-    return { token: '{color.black.100}', hex: '#000000', contrast: blackC };
-}
-
-/**
- * If the preferred base step doesn't meet AA (4.5) with either white or black,
- * shift the base step until it does.
- */
-export function getAccessibleBaseStep(ramp: Record<ColorStep, string>, preferredStep: ColorStep): { bgStep: ColorStep, textToken: string, textHex: string } {
-    const bgHex = ramp[preferredStep];
-    const { token, hex: textHex, contrast } = getBestTextForBg(bgHex);
-
-    if (contrast >= 4.5) {
-        return { bgStep: preferredStep, textToken: token, textHex }; // It safely meets AA natively
-    }
-
-    // It fails AA entirely. We must find a step that passes AA with white or black.
-    // Try scanning away from 500 towards the extremes to find one that works.
-    let bestAltStep = preferredStep;
-    let maxFoundContrast = contrast;
-    let bestAltToken = token;
-
-    for (const step of COLOR_STEPS) {
-        const testBg = ramp[step];
-        const testText = getBestTextForBg(testBg);
-        if (testText.contrast >= 4.5) {
-            // We found one that passes! Pick the one closest to the preferred step that passes.
-            // But since this is a simple linear search, let's just grab the first one that passes when moving progressively darker (or lighter).
-        }
-        if (testText.contrast > maxFoundContrast) {
-            maxFoundContrast = testText.contrast;
-            bestAltStep = step;
-            bestAltToken = testText.token;
-        }
-    }
-
-    // Return the step that has the absolute highest possible contrast if none meet 4.5 (unlikely with a 12 step scale),
-    // or return the first step moving away from the center that hits 4.5.
-
-    // Better algorithm: Search outward from the preferred step to find the nearest compliant step.
-    const preferredIdx = COLOR_STEPS.indexOf(preferredStep);
-    let nearestCompliantStep = preferredStep;
-    let nearestCompliantToken = token;
-    let minDistance = Infinity;
-
-    for (let i = 0; i < COLOR_STEPS.length; i++) {
-        const step = COLOR_STEPS[i];
-        const testBg = ramp[step];
-        const testText = getBestTextForBg(testBg);
-
-        if (testText.contrast >= 4.5) {
-            const dist = Math.abs(i - preferredIdx);
-            if (dist < minDistance) {
-                minDistance = dist;
-                nearestCompliantStep = step;
-                nearestCompliantToken = testText.token;
-            }
-        }
-    }
-
-    if (minDistance !== Infinity) {
-        return { bgStep: nearestCompliantStep, textToken: nearestCompliantToken, textHex: getBestTextForBg(ramp[nearestCompliantStep]).hex };
-    }
-
-    // Fallback if the entire scale is somehow low contrast
-    return { bgStep: bestAltStep, textToken: bestAltToken, textHex: getBestTextForBg(ramp[bestAltStep]).hex };
 }
 
 export interface NamedColorRamp {
@@ -490,7 +423,7 @@ export function mapTheme(
 
         // Skip if this is a reserved core color, or if the interactive theme loop above already seeded it.
         // We check against the dynamic keys (successKey, errorKey) in case the user renamed them.
-        if (['white', 'black', 'neutral', successKey, errorKey, 'critical'].includes(safeName) || theme.surface[safeName]) {
+        if (['white', 'black', 'neutral', successKey, errorKey, 'critical'].includes(safeName) || (theme.surface && theme.surface[safeName])) {
             return;
         }
 
@@ -589,48 +522,47 @@ export function mapTheme(
     };
 
     // --- GEOMETRY TOKENS ---
-    const radiusBase = geometryConfig?.radiusBase ?? 4;
-    const includeRadius = geometryConfig?.includeRadius ?? true;
-    const includeBorders = geometryConfig?.includeBorders ?? true;
-    const borderWidthType = geometryConfig?.borderWidth || 'small';
+    if (geometryConfig) {
+        const radiusBase = geometryConfig.radiusBase || 4;
+        const includeRadius = geometryConfig.includeRadius;
+        const includeBorders = geometryConfig.includeBorders;
+        const borderWidthType = geometryConfig.borderWidth || 'small';
 
-    const borderWidths: Record<string, string> = {
-        'small': '1px',
-        'medium': '2px',
-        'large': '3px'
-    };
+        const borderWidths: Record<string, string> = {
+            'small': '1px',
+            'medium': '2px',
+            'large': '3px'
+        };
 
-    // The user's requested non-linear multiplier scale for base 4px: 0, 4, 8, 16, 24, 36, 56, 100
-    // These correspond to multipliers of: 0, 1, 2, 4, 6, 9, 14, 25
-    const radiusMultipliers = [0, 1, 2, 4, 6, 9, 14, 25];
+        const radiusMultipliers = [0, 1, 2, 4, 6, 9, 14, 25];
 
-    payload.geometry = {
-        radius: {
-            '0': { $value: includeRadius ? `${radiusBase * radiusMultipliers[0]}px` : '0px', $type: "dimension" },
-            '1': { $value: includeRadius ? `${radiusBase * radiusMultipliers[1]}px` : '0px', $type: "dimension" },
-            '2': { $value: includeRadius ? `${radiusBase * radiusMultipliers[2]}px` : '0px', $type: "dimension" },
-            '3': { $value: includeRadius ? `${radiusBase * radiusMultipliers[3]}px` : '0px', $type: "dimension" },
-            '4': { $value: includeRadius ? `${radiusBase * radiusMultipliers[4]}px` : '0px', $type: "dimension" },
-            '5': { $value: includeRadius ? `${radiusBase * radiusMultipliers[5]}px` : '0px', $type: "dimension" },
-            '6': { $value: includeRadius ? `${radiusBase * radiusMultipliers[6]}px` : '0px', $type: "dimension" },
-            '7': { $value: includeRadius ? `${radiusBase * radiusMultipliers[7]}px` : '0px', $type: "dimension" },
-            'full': { $value: includeRadius ? `9999px` : '0px', $type: "dimension" },
-            'none': { $value: '{geometry.radius.0}', $type: "dimension" },
-            'sm': { $value: '{geometry.radius.1}', $type: "dimension" },
-            'md': { $value: '{geometry.radius.2}', $type: "dimension" },
-            'lg': { $value: '{geometry.radius.3}', $type: "dimension" }
-        },
-        borderWidth: {
-            default: { $value: includeBorders ? borderWidths[borderWidthType] : '0px', $type: "dimension" },
-            base: { $value: '{geometry.borderWidth.default}', $type: "dimension" }
-        }
-    };
+        payload.geometry = {
+            radius: {
+                '0': { $value: includeRadius ? `${radiusBase * radiusMultipliers[0]}px` : '0px', $type: "dimension" },
+                '1': { $value: includeRadius ? `${radiusBase * radiusMultipliers[1]}px` : '0px', $type: "dimension" },
+                '2': { $value: includeRadius ? `${radiusBase * radiusMultipliers[2]}px` : '0px', $type: "dimension" },
+                '3': { $value: includeRadius ? `${radiusBase * radiusMultipliers[3]}px` : '0px', $type: "dimension" },
+                '4': { $value: includeRadius ? `${radiusBase * radiusMultipliers[4]}px` : '0px', $type: "dimension" },
+                '5': { $value: includeRadius ? `${radiusBase * radiusMultipliers[5]}px` : '0px', $type: "dimension" },
+                '6': { $value: includeRadius ? `${radiusBase * radiusMultipliers[6]}px` : '0px', $type: "dimension" },
+                '7': { $value: includeRadius ? `${radiusBase * radiusMultipliers[7]}px` : '0px', $type: "dimension" },
+                'full': { $value: includeRadius ? `9999px` : '0px', $type: "dimension" },
+                'none': { $value: '{geometry.radius.0}', $type: "dimension" },
+                'sm': { $value: '{geometry.radius.1}', $type: "dimension" },
+                'md': { $value: '{geometry.radius.2}', $type: "dimension" },
+                'lg': { $value: '{geometry.radius.3}', $type: "dimension" }
+            },
+            borderWidth: {
+                default: { $value: includeBorders ? borderWidths[borderWidthType] : '0px', $type: "dimension" },
+                base: { $value: '{geometry.borderWidth.default}', $type: "dimension" }
+            }
+        };
+    }
 
     if (semanticOverrides) {
         Object.entries(semanticOverrides).forEach(([path, value]) => {
             if (!value) return;
 
-            // Route light mode overrides safely into the 'theme' object if they lack a prefix
             let fullPath = path;
             if (!path.startsWith('theme.') && !path.startsWith('darkTheme.')) {
                 fullPath = `theme.${path}`;

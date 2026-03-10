@@ -27,7 +27,7 @@ export const TestThemeWebsite: React.FC<{ isDarkMode: boolean, activeTheme: Them
             zIndex: 100,
             backgroundColor: tColor('color-background-default'),
             color: tColor('color-text-default'),
-            fontFamily: '"GT America", "Arial", sans-serif',
+            fontFamily: 'var(--theme-font-family)',
             animation: 'fadeIn 0.3s ease-out',
         },
         container: {

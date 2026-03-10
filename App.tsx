@@ -81,10 +81,12 @@ const ThemeBlock: React.FC<{ themeConfig: any, globalColors: any, isDarkMode?: b
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '3rem' }}>
                 {themeConfig.colors.map((color: any) => {
                     const gen = generateRamp(color.seed);
-                    const preferredStep = isDarkMode ? 300 : gen.closestStep;
+                    const preferredStep = (isDarkMode ? 300 : gen.closestStep) as import('./lib/palette-generator').ColorStep;
                     const { bgStep, textHex } = getAccessibleBaseStep(gen.ramp, preferredStep);
                     const bgHex = gen.ramp[bgStep];
                     const contrast = wcagContrast(textHex, bgHex);
+
+                    if (contrast === undefined) return null;
 
                     if (contrast < 4.5) {
                         return (
@@ -147,10 +149,11 @@ const KitchenSink: React.FC<{
     setThemeMode: (val: ThemeMode) => void,
     onShowOnboarding: () => void,
     isMobile: boolean,
-    onMenuClick: () => void
-}> = ({ isDarkMode, themeMode, setThemeMode, onShowOnboarding, isMobile, onMenuClick }) => {
+    onMenuClick: () => void,
+    activeThemeId: string,
+    setActiveThemeId: (id: string) => void
+}> = ({ isDarkMode, themeMode, setThemeMode, onShowOnboarding, isMobile, onMenuClick, activeThemeId, setActiveThemeId }) => {
     const { themes, globalColors } = useTheme();
-    const [activeThemeId, setActiveThemeId] = React.useState(themes[0]?.id || '');
     const [isExportOpen, setIsExportOpen] = React.useState(false);
     const [isContrastOpen, setIsContrastOpen] = React.useState(false);
     const [isDemoOpen, setIsDemoOpen] = React.useState(false);
@@ -170,6 +173,7 @@ const KitchenSink: React.FC<{
         padding: isMobile ? '1.5rem 1rem' : '3rem',
         backgroundColor: 'var(--color-background-default, #F8F8F8)',
         color: 'var(--color-text-default, #1F1F1F)',
+        fontFamily: 'var(--theme-font-family)',
         transition: 'all 0.4s cubic-bezier(0.2, 0, 0, 1)',
         width: '100%',
         boxSizing: 'border-box'
@@ -401,6 +405,99 @@ function useMediaQuery(query: string) {
     return matches;
 }
 
+function AppInner({ isMobile, isMobileMenuOpen, setIsMobileMenuOpen, themeMode, setThemeMode, systemIsDark }: {
+    isMobile: boolean,
+    isMobileMenuOpen: boolean,
+    setIsMobileMenuOpen: (val: boolean) => void,
+    themeMode: ThemeMode,
+    setThemeMode: (val: ThemeMode) => void,
+    systemIsDark: boolean
+}) {
+    const { themes } = useTheme();
+    const [activeThemeId, setActiveThemeId] = React.useState('');
+    const [showOnboarding, setShowOnboarding] = React.useState(false);
+
+    // Initial sync
+    React.useEffect(() => {
+        if (!activeThemeId && themes.length > 0) {
+            setActiveThemeId(themes[0].id);
+        }
+    }, [themes, activeThemeId]);
+
+    const isDarkMode = themeMode === 'system' ? systemIsDark : themeMode === 'dark';
+
+    React.useEffect(() => {
+        if (!localStorage.getItem('systemic_onboarding_completed')) {
+            setShowOnboarding(true);
+        }
+    }, []);
+
+    const handleThemeModeChange = (mode: ThemeMode) => {
+        setThemeMode(mode);
+        localStorage.setItem('systemic_theme_mode', mode);
+    };
+
+    return (
+        <div style={{ display: 'flex', height: '100vh', fontFamily: '"GT America", "Arial", sans-serif', overflow: 'hidden', position: 'relative' }}>
+            {/* Overlay backdrop that fades in/out */}
+            {isMobile && (
+                <div
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    style={{
+                        position: 'fixed',
+                        top: 0, left: 0, right: 0, bottom: 0,
+                        backgroundColor: 'rgba(0,0,0,0.5)',
+                        zIndex: 40,
+                        backdropFilter: 'blur(4px)',
+                        opacity: isMobileMenuOpen ? 1 : 0,
+                        pointerEvents: isMobileMenuOpen ? 'auto' : 'none',
+                        transition: 'opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1)'
+                    }}
+                />
+            )}
+
+            {/* Full-width sidebar overlay */}
+            <div style={{
+                width: isMobile ? '100vw' : '320px',
+                flexShrink: 0,
+                position: isMobile ? 'fixed' : 'relative',
+                top: 0, bottom: 0,
+                left: 0,
+                transform: isMobile ? (isMobileMenuOpen ? 'translateX(0)' : 'translateX(-100%)') : 'none',
+                zIndex: 50,
+                transition: 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+                backgroundColor: isDarkMode ? '#1a1f26' : '#ffffff',
+                height: '100vh'
+            }}>
+                <ThemeControls 
+                    isDarkMode={isDarkMode} 
+                    isMobile={isMobile} 
+                    onClose={() => setIsMobileMenuOpen(false)} 
+                />
+            </div>
+
+            <KitchenSink
+                isDarkMode={isDarkMode}
+                themeMode={themeMode}
+                setThemeMode={handleThemeModeChange}
+                onShowOnboarding={() => setShowOnboarding(true)}
+                isMobile={isMobile}
+                onMenuClick={() => setIsMobileMenuOpen(true)}
+                activeThemeId={activeThemeId}
+                setActiveThemeId={setActiveThemeId}
+            />
+            {showOnboarding && <OnboardingModal isDarkMode={isDarkMode} onClose={() => setShowOnboarding(false)} />}
+
+            <style>{`
+                @keyframes fadeIn {
+                    from { opacity: 0; }
+                    to { opacity: 1; }
+                }
+            `}</style>
+        </div>
+    );
+}
+
 export default function App() {
     const isMobile = useMediaQuery('(max-width: 860px)');
     const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
@@ -411,7 +508,6 @@ export default function App() {
     });
 
     const [systemIsDark, setSystemIsDark] = React.useState(() => {
-        // Fallback to light if matchMedia is unavailable (e.g. server rendering, though Vite is mostly client)
         if (typeof window !== 'undefined' && window.matchMedia) {
             return window.matchMedia('(prefers-color-scheme: dark)').matches;
         }
@@ -427,75 +523,16 @@ export default function App() {
         }
     }, []);
 
-    const isDarkMode = themeMode === 'system' ? systemIsDark : themeMode === 'dark';
-
-    const handleThemeModeChange = (mode: ThemeMode) => {
-        setThemeMode(mode);
-        localStorage.setItem('systemic_theme_mode', mode);
-    };
-
-    const [showOnboarding, setShowOnboarding] = React.useState(false);
-
-    React.useEffect(() => {
-        if (!localStorage.getItem('systemic_onboarding_completed')) {
-            setShowOnboarding(true);
-        }
-    }, []);
-
     return (
         <ThemeProvider>
-            <div style={{ display: 'flex', height: '100vh', fontFamily: '"GT America", "Arial", sans-serif', overflow: 'hidden', position: 'relative' }}>
-
-                {/* Overlay backdrop that fades in/out */}
-                {isMobile && (
-                    <div
-                        onClick={() => setIsMobileMenuOpen(false)}
-                        style={{
-                            position: 'fixed',
-                            top: 0, left: 0, right: 0, bottom: 0,
-                            backgroundColor: 'rgba(0,0,0,0.5)',
-                            zIndex: 40,
-                            backdropFilter: 'blur(4px)',
-                            opacity: isMobileMenuOpen ? 1 : 0,
-                            pointerEvents: isMobileMenuOpen ? 'auto' : 'none',
-                            transition: 'opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1)'
-                        }}
-                    />
-                )}
-
-                {/* Full-width sidebar overlay */}
-                <div style={{
-                    width: isMobile ? '100vw' : '320px',
-                    flexShrink: 0,
-                    position: isMobile ? 'fixed' : 'relative',
-                    top: 0, bottom: 0,
-                    left: 0,
-                    transform: isMobile ? (isMobileMenuOpen ? 'translateX(0)' : 'translateX(-100%)') : 'none',
-                    zIndex: 50,
-                    transition: 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
-                    backgroundColor: isDarkMode ? '#1a1f26' : '#ffffff',
-                    height: '100vh'
-                }}>
-                    <ThemeControls isDarkMode={isDarkMode} isMobile={isMobile} onClose={() => setIsMobileMenuOpen(false)} />
-                </div>
-
-                <KitchenSink
-                    isDarkMode={isDarkMode}
-                    themeMode={themeMode}
-                    setThemeMode={handleThemeModeChange}
-                    onShowOnboarding={() => setShowOnboarding(true)}
-                    isMobile={isMobile}
-                    onMenuClick={() => setIsMobileMenuOpen(true)}
-                />
-                {showOnboarding && <OnboardingModal isDarkMode={isDarkMode} onClose={() => setShowOnboarding(false)} />}
-
-                <style>{`
-                    @keyframes fadeIn {
-                        from { opacity: 0; }
-                        to { opacity: 1; }
-                    }
-                `}</style>
-            </div>
+            <AppInner
+                isMobile={isMobile}
+                isMobileMenuOpen={isMobileMenuOpen}
+                setIsMobileMenuOpen={setIsMobileMenuOpen}
+                themeMode={themeMode}
+                setThemeMode={setThemeMode}
+                systemIsDark={systemIsDark}
+            />
         </ThemeProvider>
     );
 }

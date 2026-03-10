@@ -26,6 +26,7 @@ export type ThemeConfig = {
     semanticOverrides?: Record<string, string>;
     primitiveOverrides?: Record<string, string>;
     geometry?: ThemeGeometryConfig;
+    fontFamily?: string;
 };
 
 export type GlobalColorConfig = {
@@ -62,6 +63,7 @@ interface ThemeContextType {
     updateThemeSemanticOverride: (themeId: string, path: string, value: string | undefined) => void;
     updateThemePrimitiveOverride: (themeId: string, path: string, value: string | undefined) => void;
     updateThemeGeometryValue: <K extends keyof ThemeGeometryConfig>(themeId: string, key: K, value: ThemeGeometryConfig[K]) => void;
+    updateThemeFont: (themeId: string, font: string) => void;
 
     removeTheme: (id: string) => void;
 
@@ -166,10 +168,28 @@ export const ThemeScope: React.FC<ThemeScopeProps> = ({
                 }
             });
 
+            // Set typography root variable
+            const font = themeConfig.fontFamily || 'Inter';
+            scopeRef.current?.style.setProperty('--theme-font-family', `"${font}", sans-serif`);
+
         } catch (e) {
             console.error("Failed to generate scoped theme:", e);
         }
     }, [themeConfig, globalColors, isDarkMode]);
+
+    // Handle dynamic Google Fonts injection
+    useEffect(() => {
+        const font = themeConfig.fontFamily || 'Inter';
+        const fontId = `google-font-${font.replace(/\s+/g, '-')}`;
+
+        if (!document.getElementById(fontId)) {
+            const link = document.createElement('link');
+            link.id = fontId;
+            link.rel = 'stylesheet';
+            link.href = `https://fonts.googleapis.com/css2?family=${font.replace(/\s+/g, '+')}:wght@400;500;600;700&display=swap`;
+            document.head.appendChild(link);
+        }
+    }, [themeConfig.fontFamily]);
 
     return (
         <div ref={scopeRef} className={className} style={{ display: 'contents', ...style }}>
@@ -216,7 +236,8 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
                 { id: 'brand', name: 'brand', seed: DEFAULT_BRAND_SEED },
                 { id: 'accent', name: 'accent', seed: DEFAULT_ACCENT_SEED }
             ],
-            geometry: { radiusBase: 4, includeRadius: true, includeBorders: true, borderWidth: 'small' }
+            geometry: { radiusBase: 4, includeRadius: true, includeBorders: true, borderWidth: 'small' },
+            fontFamily: 'Inter'
         }];
     };
 
@@ -278,7 +299,8 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
                     { id: `c-${Date.now()}-1`, name: 'brand', seed: '#4f46e5' },
                     { id: `c-${Date.now()}-2`, name: 'accent', seed: '#10b981' }
                 ],
-                geometry: { radiusBase: 4, includeRadius: true, includeBorders: true, borderWidth: 'small' }
+                geometry: { radiusBase: 4, includeRadius: true, includeBorders: true, borderWidth: 'small' },
+                fontFamily: 'Inter'
             }
         ]);
     };
@@ -378,6 +400,11 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         }));
     };
 
+    const updateThemeFont = (themeId: string, font: string) => {
+        saveHistory();
+        setThemes(prev => prev.map(t => t.id === themeId ? { ...t, fontFamily: font } : t));
+    };
+
     const removeTheme = (id: string) => {
         saveHistory();
         setThemes(prev => prev.filter(t => t.id !== id));
@@ -443,7 +470,7 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
                 name: c.name.toLowerCase().replace(/\s+/g, '-'),
                 gen: generateRamp(c.seed)
             }));
-            return mapTheme(mappedColors, mappedGlobal); // No overrides passed here
+            return mapTheme(mappedColors, mappedGlobal, undefined, undefined, undefined);
         });
     }, [themes, globalColors]);
 
@@ -457,6 +484,7 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         updateThemeSemanticOverride,
         updateThemePrimitiveOverride,
         updateThemeGeometryValue,
+        updateThemeFont,
         removeTheme,
         globalColors,
         addGlobalColorsPreset,

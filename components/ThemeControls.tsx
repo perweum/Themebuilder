@@ -3,27 +3,8 @@ import { useTheme, FULL_GLOBAL_PRESET } from '../theme-context';
 import { ColorPickerMenu } from './ColorPickerMenu';
 import { Pencil, RotateCcw, ChevronDown, ChevronRight, X } from 'lucide-react';
 import { COLOR_STEPS, ALPHA_STEPS, generateRamp } from '../lib/palette-generator';
-import { mapTheme } from '../lib/theme-mapper';
 import FontPicker from 'react-fontpicker-ts';
 import 'react-fontpicker-ts/dist/index.css';
-
-const MD3_TYPOGRAPHY_SCALE = [
-    { name: 'Display Large', desktop: { size: '57px', line: '64px', tracking: '-0.25px' }, mobile: { size: '45px', line: '52px', tracking: '0px' } },
-    { name: 'Display Medium', desktop: { size: '45px', line: '52px', tracking: '0px' }, mobile: { size: '36px', line: '44px', tracking: '0px' } },
-    { name: 'Display Small', desktop: { size: '36px', line: '44px', tracking: '0px' }, mobile: { size: '36px', line: '44px', tracking: '0px' } },
-    { name: 'Headline Large', desktop: { size: '32px', line: '40px', tracking: '0px' }, mobile: { size: '32px', line: '40px', tracking: '0px' } },
-    { name: 'Headline Medium', desktop: { size: '28px', line: '36px', tracking: '0px' }, mobile: { size: '28px', line: '36px', tracking: '0px' } },
-    { name: 'Headline Small', desktop: { size: '24px', line: '32px', tracking: '0px' }, mobile: { size: '24px', line: '32px', tracking: '0px' } },
-    { name: 'Title Large', desktop: { size: '22px', line: '28px', tracking: '0px' }, mobile: { size: '22px', line: '28px', tracking: '0px' } },
-    { name: 'Title Medium', desktop: { size: '16px', line: '24px', tracking: '0.15px', weight: 500 }, mobile: { size: '16px', line: '24px', tracking: '0.15px', weight: 500 } },
-    { name: 'Title Small', desktop: { size: '14px', line: '20px', tracking: '0.1px', weight: 500 }, mobile: { size: '14px', line: '20px', tracking: '0.1px', weight: 500 } },
-    { name: 'Body Large', desktop: { size: '16px', line: '24px', tracking: '0.5px' }, mobile: { size: '16px', line: '24px', tracking: '0.5px' } },
-    { name: 'Body Medium', desktop: { size: '14px', line: '20px', tracking: '0.25px' }, mobile: { size: '14px', line: '20px', tracking: '0.25px' } },
-    { name: 'Body Small', desktop: { size: '12px', line: '16px', tracking: '0.4px' }, mobile: { size: '12px', line: '16px', tracking: '0.4px' } },
-    { name: 'Label Large', desktop: { size: '14px', line: '20px', tracking: '0.1px', weight: 500 }, mobile: { size: '14px', line: '20px', tracking: '0.1px', weight: 500 } },
-    { name: 'Label Medium', desktop: { size: '12px', line: '16px', tracking: '0.5px', weight: 500 }, mobile: { size: '12px', line: '16px', tracking: '0.5px', weight: 500 } },
-    { name: 'Label Small', desktop: { size: '11px', line: '16px', tracking: '0.5px', weight: 500 }, mobile: { size: '11px', line: '16px', tracking: '0.5px', weight: 500 } },
-];
 
 const ThemeNameEditor: React.FC<{ initialName: string, themeId: string, onRename: (id: string, newName: string) => void, isDarkMode: boolean }> = ({ initialName, themeId, onRename, isDarkMode }) => {
     const [isEditing, setIsEditing] = React.useState(false);
@@ -96,8 +77,6 @@ const buttonStyle = {
     color: 'inherit'
 };
 
-
-
 export const ThemeControls: React.FC<{
     isDarkMode?: boolean;
     isMobile?: boolean;
@@ -126,7 +105,6 @@ export const ThemeControls: React.FC<{
     const [activeTab, setActiveTab] = React.useState<'colors' | 'geometry' | 'semantic'>('colors');
     const [expandedSemanticCategories, setExpandedSemanticCategories] = React.useState<Record<string, boolean>>({});
     const [isPresetsExpanded, setIsPresetsExpanded] = React.useState(false);
-    const [scaleMode, setScaleMode] = React.useState<'desktop' | 'mobile'>('desktop');
 
     const hasAllPresets = FULL_GLOBAL_PRESET.every(fp => globalColors.some(gc => gc.id === fp.id));
 
@@ -229,7 +207,6 @@ export const ThemeControls: React.FC<{
             borderRadius: '8px',
             padding: '1.5rem',
             marginBottom: '1.5rem',
-            // Will use inline override for the specific color tint
             backgroundColor: isDarkMode ? '#1a1a1a' : '#f9fafb'
         }
     };
@@ -244,14 +221,8 @@ export const ThemeControls: React.FC<{
             <style>{`
                 .no-scrollbar::-webkit-scrollbar { display: none; }
                 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-
-                /* CSS Reset for hover desync */
-                .btn-remove { 
-                    transition: color 0.2s ease;
-                    color: inherit !important;
-                }
+                .btn-remove { transition: color 0.2s ease; color: inherit !important; }
                 .btn-remove:hover { color: #ef4444 !important; }
-
                 .btn-action { transition: all 0.2s ease; }
                 .btn-action:hover {
                     border-color: ${isDarkMode ? '#C3E835' : '#0142FE'} !important;
@@ -274,26 +245,14 @@ export const ThemeControls: React.FC<{
                 )}
             </div>
 
-            {/* TAB SELECTOR */}
-            <div style={{
-                display: 'flex',
-                gap: '1.5rem',
-                marginBottom: '1.5rem',
-                borderBottom: `1px solid ${isDarkMode ? '#333' : '#eee'}`,
-                paddingBottom: '0'
-            }}>
+            <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '1.5rem', borderBottom: `1px solid ${isDarkMode ? '#333' : '#eee'}`, paddingBottom: '0' }}>
                 <button
                     onClick={() => setActiveTab('colors')}
                     style={{
-                        background: 'transparent',
-                        border: 'none',
+                        background: 'transparent', border: 'none',
                         color: activeTab === 'colors' ? (isDarkMode ? '#C3E835' : '#0142FE') : (isDarkMode ? '#888' : '#666'),
                         borderBottom: activeTab === 'colors' ? `2px solid ${isDarkMode ? '#C3E835' : '#0142FE'}` : '2px solid transparent',
-                        padding: '0.5rem 0.25rem',
-                        fontSize: '0.875rem',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
+                        padding: '0.5rem 0.25rem', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s ease',
                     }}
                 >
                     Colors
@@ -301,17 +260,11 @@ export const ThemeControls: React.FC<{
                 <button
                     onClick={() => setActiveTab('geometry')}
                     style={{
-                        background: 'transparent',
-                        border: 'none',
+                        background: 'transparent', border: 'none',
                         color: activeTab === 'geometry' ? (isDarkMode ? '#C3E835' : '#0142FE') : (isDarkMode ? '#888' : '#666'),
                         borderBottom: activeTab === 'geometry' ? `2px solid ${isDarkMode ? '#C3E835' : '#0142FE'}` : '2px solid transparent',
-                        padding: '0.5rem 0.25rem',
-                        fontSize: '0.875rem',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                        marginBottom: '-1px',
-                        whiteSpace: isMobile ? 'normal' : 'nowrap'
+                        padding: '0.5rem 0.25rem', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s ease',
+                        marginBottom: '-1px', whiteSpace: isMobile ? 'normal' : 'nowrap'
                     }}
                 >
                     Type & Size
@@ -319,15 +272,10 @@ export const ThemeControls: React.FC<{
                 <button
                     onClick={() => setActiveTab('semantic')}
                     style={{
-                        background: 'transparent',
-                        border: 'none',
+                        background: 'transparent', border: 'none',
                         color: activeTab === 'semantic' ? (isDarkMode ? '#C3E835' : '#0142FE') : (isDarkMode ? '#888' : '#666'),
                         borderBottom: activeTab === 'semantic' ? `2px solid ${isDarkMode ? '#C3E835' : '#0142FE'}` : '2px solid transparent',
-                        padding: '0.5rem 0.25rem',
-                        fontSize: '0.875rem',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
+                        padding: '0.5rem 0.25rem', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s ease',
                         marginBottom: '-1px'
                     }}
                 >
@@ -337,7 +285,7 @@ export const ThemeControls: React.FC<{
 
             {activeTab === 'colors' && (
                 <>
-                    {/* BETA PRESETS (COLLAPSIBLE) */}
+                    {/* Theme Presets */}
                     <div style={{ ...styles.themeBox, padding: '1rem', marginBottom: '1.5rem', marginTop: 0 }}>
                         <div
                             style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
@@ -347,79 +295,36 @@ export const ThemeControls: React.FC<{
                                 Theme Presets
                                 <span style={{ fontSize: '0.65rem', background: '#eab308', color: '#000', padding: '0.125rem 0.375rem', borderRadius: '4px', verticalAlign: 'middle', marginLeft: '0.5rem' }}>BETA</span>
                             </h3>
-                            <svg
-                                width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-                                style={{ transform: isPresetsExpanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s', color: isDarkMode ? '#aaa' : '#666' }}
-                            >
-                                <polyline points="6 9 12 15 18 9"></polyline>
-                            </svg>
+                            <ChevronDown size={16} style={{ transform: isPresetsExpanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s', color: isDarkMode ? '#aaa' : '#666' }} />
                         </div>
-
                         {isPresetsExpanded && (
                             <div style={{ marginTop: '1rem' }}>
-                                <p style={{ fontSize: '0.75rem', color: isDarkMode ? '#aaa' : '#666', marginBottom: '1rem', marginTop: 0 }}>
-                                    Instantly apply curated color scales to your current active theme (AAA Contrast).
-                                </p>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.5rem' }}>
                                     {[
-                                        { name: "Midnight Forest", colors: ['#143524', '#f59e0b'] }, // Darker green
+                                        { name: "Midnight Forest", colors: ['#143524', '#f59e0b'] },
                                         { name: "Corporate Blue", colors: ['#0f172a', '#1d4ed8', '#0ea5e9'] },
-                                        { name: "Stripe Purple", colors: ['#312e81', '#0ea5e9'] }, // Indigo 900 for AAA
+                                        { name: "Stripe Purple", colors: ['#312e81', '#0ea5e9'] },
                                         { name: "Vercel Black", colors: ['#000000', '#0070f3'] },
-                                        { name: "Linear Indigo", colors: ['#3730A3', '#eab308'] } // Even darker indigo
+                                        { name: "Linear Indigo", colors: ['#3730A3', '#eab308'] }
                                     ].map(preset => (
                                         <button
                                             key={preset.name}
                                             onClick={() => {
-                                                // Actually, Vercel Light and Dark are just variants of the seed.
-                                                // The active theme is just a collection of seeds. The "DarkMode" toggle is global.
-                                                // So applying "Vercel Dark" just sets the primary seed to white (or very light gray).
                                                 if (themes.length === 0) return;
                                                 const themeId = themes[0].id;
-
-                                                const newColors = preset.colors.map((seed, idx) => {
-                                                    let colorName = 'brand';
-                                                    if (idx === 1) colorName = 'accent';
-                                                    if (idx === 2) colorName = 'support';
-                                                    if (idx === 3) colorName = 'tertiary';
-                                                    return { name: colorName, seed };
-                                                });
-
-                                                // Ensure the theme has exactly the right number of colors to match the preset length
-                                                themes[0].colors.forEach(existingColor => {
-                                                    // Remove any existing colors not covered by the preset length immediately
-                                                    if (themes[0].colors.indexOf(existingColor) >= preset.colors.length) {
-                                                        removeThemeColor(themeId, existingColor.id);
-                                                    }
-                                                });
-
-                                                newColors.forEach((nc, idx) => {
+                                                preset.colors.forEach((seed, idx) => {
+                                                    const colorName = idx === 0 ? 'brand' : idx === 1 ? 'accent' : 'support';
                                                     if (idx < themes[0].colors.length) {
-                                                        updateThemeColor(themeId, themes[0].colors[idx].id, nc.name, nc.seed);
+                                                        updateThemeColor(themeId, themes[0].colors[idx].id, colorName, seed);
                                                     } else {
-                                                        // Fallback for missing slots: add them. 
-                                                        // Note: addThemeColor is async relative to state, so we trigger a global add but we can't reliably name it yet without context support.
-                                                        // As a workaround, we dispatch addThemeColor but user will have to name it. 
-                                                        // For now this works for Corporate Blue since usually users have 2 or 3 colors already.
                                                         addThemeColor(themeId);
                                                     }
                                                 });
-
                                                 updateThemeName(themeId, preset.name);
                                             }}
-                                            style={{
-                                                ...actionButtonStyle,
-                                                justifyContent: 'flex-start',
-                                                background: isDarkMode ? '#222' : '#f0f0f0',
-                                                border: '1px solid transparent',
-                                                position: 'relative',
-                                                overflow: 'hidden'
-                                            }}
+                                            style={{ ...actionButtonStyle, justifyContent: 'flex-start', background: isDarkMode ? '#222' : '#f0f0f0', border: '1px solid transparent', position: 'relative', overflow: 'hidden' }}
                                         >
-                                            <div style={{
-                                                position: 'absolute', left: 0, top: 0, bottom: 0, width: '4px',
-                                                background: `linear-gradient(to bottom, ${preset.colors[0]}, ${preset.colors[1] || preset.colors[0]})`
-                                            }} />
+                                            <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '4px', background: `linear-gradient(to bottom, ${preset.colors[0]}, ${preset.colors[1] || preset.colors[0]})` }} />
                                             <span style={{ paddingLeft: '0.5rem' }}>{preset.name}</span>
                                         </button>
                                     ))}
@@ -428,334 +333,73 @@ export const ThemeControls: React.FC<{
                         )}
                     </div>
 
-                    {/* THEMES SECTION */}
-                    <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-                        <div>
-                            {themes.map((theme, index) => {
-                                // Default background
-                                let bgStyle = isDarkMode ? '#1a1a1a' : '#f9fafb';
-                                // If the theme has colors, use the 50 step of the first color for light mode
-                                if (theme.colors.length > 0) {
-                                    try {
-                                        const gen = generateRamp(theme.colors[0].seed);
-                                        bgStyle = isDarkMode ? '#1a1a1a' : gen.ramp[50];
-                                    } catch (e) { /* ignore */ }
-                                }
-
-                                return (
-                                    <div key={theme.id} style={{ ...styles.themeBox, backgroundColor: bgStyle }}>
-                                        <div style={{ ...styles.sectionTitle, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: 'none', paddingBottom: 0 }}>
-                                            <div style={{ flex: 1, marginRight: '1rem' }}>
-                                                <ThemeNameEditor
-                                                    initialName={theme.name || theme.id}
-                                                    themeId={theme.id}
-                                                    onRename={updateThemeName}
-                                                    isDarkMode={isDarkMode}
-                                                />
-                                            </div>
-                                            {index > 0 && (
-                                                <button
-                                                    className="btn-remove"
-                                                    onClick={() => removeTheme(theme.id)}
-                                                    style={buttonStyle}
-                                                >
-                                                    Remove
-                                                </button>
-                                            )}
-                                        </div>
-
-                                        {/* Map exactly over the N colors the user defines for the Theme */}
-                                        {theme.colors.map((color, cIdx) => (
-                                            <div key={color.id} style={styles.group}>
-                                                <label style={styles.label}>
-                                                    {color.name} Color
-                                                    {theme.colors.length > 1 && (
-                                                        <button
-                                                            className="btn-remove"
-                                                            onClick={() => removeThemeColor(theme.id, color.id)}
-                                                            style={{ ...buttonStyle, padding: '0 0.25rem' }}
-                                                            title="Remove Color"
-                                                        >
-                                                            ✕
-                                                        </button>
-                                                    )}
-                                                </label>
-
-                                                <ColorPickerMenu
-                                                    name={color.name}
-                                                    seed={color.seed}
-                                                    isDarkMode={isDarkMode}
-                                                    existingColors={allExistingColors}
-                                                    onUpdate={(newName, newSeed) => {
-                                                        updateThemeColor(theme.id, color.id, newName, newSeed);
-                                                    }}
-                                                />
-                                            </div>
-                                        ))}
-
-                                        <button
-                                            className="btn-action"
-                                            onClick={() => addThemeColor(theme.id)}
-                                            style={{ ...actionButtonStyle, marginTop: '0.5rem' }}
-                                        >
-                                            + Add theme color
-                                        </button>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                        <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: `1px solid ${isDarkMode ? '#fff' : '#000'}`, marginBottom: '1.5rem' }}>
-                            <button
-                                className="btn-action"
-                                onClick={addTheme}
-                                style={actionButtonStyle}
-                            >
-                                + Add New Theme
-                            </button>
-                        </div>
-
-                    </div>
-
-                    {/* GLOBAL PRESETS */}
-                    <div>
-                        <div style={styles.themeBox}>
-                            <h3 style={{ ...styles.sectionTitle, borderBottom: 'none', paddingBottom: 0, marginTop: 0 }}>Global Action States</h3>
-
-                            {globalColors.map(color => {
-                                // Lock names like 'neutral', 'success', 'error' because mapTheme structurally requires them
-                                const isCore = ['neutral', 'success', 'error'].includes(color.id.toLowerCase());
-                                return (
-                                    <div key={color.id} style={styles.group}>
-                                        <label style={styles.label}>
-                                            {color.name}
-                                            {!isCore && (
-                                                <button
-                                                    className="btn-remove"
-                                                    onClick={() => removeGlobalColor(color.id)}
-                                                    style={buttonStyle}
-                                                >
-                                                    Remove
-                                                </button>
-                                            )}
-                                        </label>
-
-                                        <ColorPickerMenu
-                                            name={color.name}
-                                            seed={color.seed}
-                                            isDarkMode={isDarkMode}
-                                            existingColors={allExistingColors}
-                                            onUpdate={(newName, newSeed) => {
-                                                updateGlobalColor(color.id, newName, newSeed);
-                                            }}
-                                        />
-                                    </div>
-                                );
-                            })}
-
-                            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
-                                <button
-                                    className="btn-action"
-                                    onClick={addRandomGlobalColor}
-                                    style={{ ...actionButtonStyle, flex: 1 }}
-                                >
-                                    + Add color
-                                </button>
-                                {!hasAllPresets && (
-                                    <button
-                                        className="btn-action"
-                                        onClick={addGlobalColorsPreset}
-                                        style={{ ...actionButtonStyle, flex: 2 }}
-                                    >
-                                        + Add standard set
-                                    </button>
-                                )}
+                    {/* Themes Mapping */}
+                    {themes.map((theme, index) => (
+                        <div key={theme.id} style={{ ...styles.themeBox }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                <ThemeNameEditor initialName={theme.name || theme.id} themeId={theme.id} onRename={updateThemeName} isDarkMode={isDarkMode} />
+                                {index > 0 && <button className="btn-remove" onClick={() => removeTheme(theme.id)} style={buttonStyle}>Remove</button>}
                             </div>
+                            {theme.colors.map((color) => (
+                                <div key={color.id} style={styles.group}>
+                                    <label style={styles.label}>{color.name} Color <button className="btn-remove" onClick={() => removeThemeColor(theme.id, color.id)} style={{ ...buttonStyle, padding: '0 0.25rem' }}>✕</button></label>
+                                    <ColorPickerMenu name={color.name} seed={color.seed} isDarkMode={isDarkMode} existingColors={allExistingColors} onUpdate={(newName, newSeed) => updateThemeColor(theme.id, color.id, newName, newSeed)} />
+                                </div>
+                            ))}
+                            <button className="btn-action" onClick={() => addThemeColor(theme.id)} style={{ ...actionButtonStyle, marginTop: '0.5rem' }}>+ Add theme color</button>
+                        </div>
+                    ))}
+                    <button className="btn-action" onClick={addTheme} style={{ ...actionButtonStyle, marginBottom: '1.5rem' }}>+ Add New Theme</button>
+
+                    {/* Global States */}
+                    <div style={styles.themeBox}>
+                        <h3 style={{ ...styles.sectionTitle, borderBottom: 'none', paddingBottom: 0, marginTop: 0 }}>Global States</h3>
+                        {globalColors.map(color => (
+                            <div key={color.id} style={styles.group}>
+                                <label style={styles.label}>{color.name} {!['neutral', 'success', 'error'].includes(color.id) && <button className="btn-remove" onClick={() => removeGlobalColor(color.id)} style={buttonStyle}>Remove</button>}</label>
+                                <ColorPickerMenu name={color.name} seed={color.seed} isDarkMode={isDarkMode} existingColors={allExistingColors} onUpdate={(newName, newSeed) => updateGlobalColor(color.id, newName, newSeed)} />
+                            </div>
+                        ))}
+                        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
+                            <button className="btn-action" onClick={addRandomGlobalColor} style={{ ...actionButtonStyle, flex: 1 }}>+ Add color</button>
+                            {!hasAllPresets && <button className="btn-action" onClick={addGlobalColorsPreset} style={{ ...actionButtonStyle, flex: 2 }}>+ Add standard set</button>}
                         </div>
                     </div>
                 </>
-            )
-            }
+            )}
 
-            {
-                activeTab === 'geometry' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, gap: '1.5rem' }}>
-                        {themes.map((theme, index) => {
-                            const geometry = theme.geometry || { radiusBase: 4, includeRadius: true, includeBorders: true, borderWidth: 'small' };
-
-                            return (
-                                <div key={`geo-${theme.id}`} style={styles.themeBox}>
-                                    <div style={{ ...styles.sectionTitle, borderBottom: 'none', paddingBottom: 0, marginTop: 0 }}>
-                                        <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: 0 }}>Typography Setting</h3>
+            {activeTab === 'geometry' && (
+                <div style={{ display: 'flex', flexDirection: 'column', flex: 1, gap: '1.5rem' }}>
+                    {themes.map((theme) => {
+                        const geometry = theme.geometry || { radiusBase: 4, includeRadius: true, includeBorders: true, borderWidth: 'small' };
+                        return (
+                            <div key={`geo-${theme.id}`} style={styles.themeBox}>
+                                <div style={styles.group}>
+                                    <label style={styles.label}>Global Font</label>
+                                    <div style={{ border: `1px solid ${isDarkMode ? '#F8F8F8' : '#1F1F1F'}`, padding: '0.25rem', background: 'transparent' }}>
+                                        <FontPicker defaultValue={theme.fontFamily || 'Inter'} value={(val: any) => updateThemeFont(theme.id, val)} autoLoad={true} />
                                     </div>
+                                </div>
+                                <div style={{ marginTop: '2rem' }}>
+                                    <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: '0 0 1rem 0' }}>Geometry</h3>
                                     <div style={styles.group}>
-                                        <label style={styles.label}>Global Font</label>
-                                        <div style={{
-                                            border: `1px solid ${isDarkMode ? '#F8F8F8' : '#1F1F1F'}`,
-                                            padding: '0.25rem',
-                                            background: 'transparent',
-                                            color: isDarkMode ? '#F8F8F8' : '#1F1F1F'
-                                        }}>
-                                            <FontPicker
-                                                defaultValue={theme.fontFamily || 'Inter'}
-                                                value={(val) => updateThemeFont(theme.id, val)}
-                                                autoLoad={true}
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div style={{ ...styles.sectionTitle, borderBottom: 'none', paddingBottom: 0, marginTop: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: 0 }}>Scale Preview</h3>
-                                        <div style={{
-                                            display: 'flex',
-                                            background: isDarkMode ? '#2A2A2A' : '#E5E5E5',
-                                            borderRadius: '999px',
-                                            padding: '2px',
-                                        }}>
-                                            <button
-                                                onClick={() => setScaleMode('desktop')}
-                                                style={{
-                                                    background: scaleMode === 'desktop' ? (isDarkMode ? '#F8F8F8' : '#FFFFFF') : 'transparent',
-                                                    color: scaleMode === 'desktop' ? (isDarkMode ? '#000000' : '#000000') : (isDarkMode ? '#888888' : '#666666'),
-                                                    border: 'none',
-                                                    borderRadius: '999px',
-                                                    padding: '4px 12px',
-                                                    fontSize: '0.75rem',
-                                                    fontWeight: 600,
-                                                    cursor: 'pointer',
-                                                    transition: 'all 0.2s',
-                                                    boxShadow: scaleMode === 'desktop' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
-                                                }}
-                                            >
-                                                Desktop
-                                            </button>
-                                            <button
-                                                onClick={() => setScaleMode('mobile')}
-                                                style={{
-                                                    background: scaleMode === 'mobile' ? (isDarkMode ? '#F8F8F8' : '#FFFFFF') : 'transparent',
-                                                    color: scaleMode === 'mobile' ? (isDarkMode ? '#000000' : '#000000') : (isDarkMode ? '#888888' : '#666666'),
-                                                    border: 'none',
-                                                    borderRadius: '999px',
-                                                    padding: '4px 12px',
-                                                    fontSize: '0.75rem',
-                                                    fontWeight: 600,
-                                                    cursor: 'pointer',
-                                                    transition: 'all 0.2s',
-                                                    boxShadow: scaleMode === 'mobile' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
-                                                }}
-                                            >
-                                                Mobile
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div style={{
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        gap: '1rem',
-                                        maxHeight: '400px',
-                                        overflowY: 'auto',
-                                        overflowX: 'hidden',
-                                        paddingRight: '0.5rem',
-                                        background: isDarkMode ? '#1E1E1E' : '#F5F5F5',
-                                        padding: '1rem',
-                                        borderRadius: '8px',
-                                        border: `1px solid ${isDarkMode ? '#333' : '#E5E5E5'}`
-                                    }}>
-                                        {MD3_TYPOGRAPHY_SCALE.map((item) => {
-                                            const specs = item[scaleMode];
-                                            return (
-                                                <div key={item.name} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: isDarkMode ? '#888' : '#666', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{item.name}</span>
-                                                        <span style={{ fontSize: '0.75rem', color: isDarkMode ? '#666' : '#888' }}>{specs.size} / {specs.line}</span>
-                                                    </div>
-                                                    <div style={{
-                                                        fontFamily: theme.fontFamily ? `"${theme.fontFamily}", sans-serif` : 'var(--theme-font-family)',
-                                                        fontSize: specs.size,
-                                                        lineHeight: specs.line,
-                                                        fontWeight: specs.weight || 400,
-                                                        letterSpacing: specs.tracking,
-                                                        color: isDarkMode ? '#F8F8F8' : '#1F1F1F',
-                                                        whiteSpace: 'nowrap',
-                                                        overflow: 'hidden',
-                                                        textOverflow: 'ellipsis'
-                                                    }}>
-                                                        Almost before we knew it
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-
-                                    <div style={{ ...styles.sectionTitle, borderBottom: 'none', paddingBottom: 0, marginTop: '2rem' }}>
-                                        <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: 0 }}>Geometry</h3>
-                                    </div>
-
-                                    <div style={styles.group}>
-                                        <label style={{ ...styles.label, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '0.5rem', cursor: 'pointer', marginBottom: '0.25rem' }}>
-                                            <input
-                                                type="checkbox"
-                                                checked={geometry.includeRadius}
-                                                onChange={(e) => updateThemeGeometryValue(theme.id, 'includeRadius', e.target.checked)}
-                                                style={{
-                                                    width: '16px',
-                                                    height: '16px',
-                                                    accentColor: isDarkMode ? '#C3E835' : '#0142FE',
-                                                    cursor: 'pointer'
-                                                }}
-                                            />
-                                            <span style={{ textTransform: 'uppercase' }}>Include Border Radius</span>
+                                        <label style={{ ...styles.label, display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', textTransform: 'none' }}>
+                                            <input type="checkbox" checked={geometry.includeRadius} onChange={(e) => updateThemeGeometryValue(theme.id, 'includeRadius', e.target.checked)} style={{ accentColor: isDarkMode ? '#C3E835' : '#0142FE' }} />
+                                            Include Border Radius
                                         </label>
-                                        <label style={{ ...styles.label, marginTop: '0.5rem', opacity: geometry.includeRadius ? 1 : 0.5 }}>Radius Base Scale (px)</label>
-                                        <input
-                                            type="number"
-                                            min="0"
-                                            max="64"
-                                            value={geometry.radiusBase}
-                                            disabled={!geometry.includeRadius}
-                                            onChange={(e) => updateThemeGeometryValue(theme.id, 'radiusBase', Number(e.target.value))}
-                                            style={{
-                                                ...actionButtonStyle,
-                                                justifyContent: 'flex-start',
-                                                padding: '0.5rem',
-                                                display: 'block',
-                                                width: '100%',
-                                                boxSizing: 'border-box',
-                                                opacity: geometry.includeRadius ? 1 : 0.5,
-                                                cursor: geometry.includeRadius ? 'auto' : 'not-allowed'
-                                            }}
-                                        />
+                                        <label style={{ ...styles.label, marginTop: '0.5rem', opacity: geometry.includeRadius ? 1 : 0.5 }}>Radius Base (px)</label>
+                                        <input type="number" min="0" max="64" value={geometry.radiusBase} disabled={!geometry.includeRadius} onChange={(e) => updateThemeGeometryValue(theme.id, 'radiusBase', Number(e.target.value))} style={{ ...actionButtonStyle, opacity: geometry.includeRadius ? 1 : 0.5 }} />
                                     </div>
-
                                     <div style={{ ...styles.group, marginTop: '1.5rem' }}>
-                                        <label style={{ ...styles.label, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '0.5rem', cursor: 'pointer' }}>
-                                            <input
-                                                type="checkbox"
-                                                checked={geometry.includeBorders}
-                                                onChange={(e) => updateThemeGeometryValue(theme.id, 'includeBorders', e.target.checked)}
-                                                style={{
-                                                    width: '16px',
-                                                    height: '16px',
-                                                    accentColor: isDarkMode ? '#C3E835' : '#0142FE',
-                                                    cursor: 'pointer'
-                                                }}
-                                            />
-                                            <span style={{ textTransform: 'uppercase' }}>Include Borders</span>
+                                        <label style={{ ...styles.label, display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', textTransform: 'none' }}>
+                                            <input type="checkbox" checked={geometry.includeBorders} onChange={(e) => updateThemeGeometryValue(theme.id, 'includeBorders', e.target.checked)} style={{ accentColor: isDarkMode ? '#C3E835' : '#0142FE' }} />
+                                            Include Borders
                                         </label>
                                     </div>
-
                                     {geometry.includeBorders && (
                                         <div style={styles.group}>
                                             <label style={styles.label}>Border Width</label>
-                                            <select
-                                                value={geometry.borderWidth}
-                                                onChange={(e) => updateThemeGeometryValue(theme.id, 'borderWidth', e.target.value as 'small' | 'medium' | 'large')}
-                                                style={{
-                                                    ...actionButtonStyle,
-                                                    justifyContent: 'flex-start',
-                                                    padding: '0.5rem',
-                                                    appearance: 'auto'
-                                                }}
-                                            >
+                                            <select value={geometry.borderWidth} onChange={(e) => updateThemeGeometryValue(theme.id, 'borderWidth', e.target.value as any)} style={{ ...actionButtonStyle, appearance: 'auto' }}>
                                                 <option value="small">Small (1px)</option>
                                                 <option value="medium">Medium (2px)</option>
                                                 <option value="large">Large (3px)</option>
@@ -763,180 +407,79 @@ export const ThemeControls: React.FC<{
                                         </div>
                                     )}
                                 </div>
-                            );
-                        })}
-                    </div>
-                )
-            }
-            {
-                activeTab === 'semantic' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, gap: '0.5rem' }}>
-                        {Object.entries(tokenCategories).map(([category, paths]) => (
-                            <div key={category} style={{
-                                background: isDarkMode ? 'var(--color-surface-default, #1a1a1a)' : '#f8fafc',
-                                borderRadius: '12px',
-                                padding: '1rem 0.5rem',
-                            }}>
-                                <div
-                                    style={{ ...styles.sectionTitle, borderBottom: 'none', paddingBottom: 0, marginTop: 0, marginBottom: 0, display: 'flex', alignItems: 'center', cursor: 'pointer', gap: '0.5rem' }}
-                                    onClick={() => setExpandedSemanticCategories(prev => ({ ...prev, [category]: !prev[category] }))}
-                                >
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '16   px', height: '16px' }}>
-                                        {expandedSemanticCategories[category] ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                                    </div>
-                                    <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: 0, textTransform: 'capitalize' }}>{category} Tokens</h3>
-                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
 
-                                {expandedSemanticCategories[category] && (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.5rem' }}>
-                                        {paths.map(path => {
-                                            // "category.item" e.g., "background.default"
-                                            const isLightOverridden = activeTheme.semanticOverrides?.[path] !== undefined;
-                                            const darkPath = `darkTheme.${path}`;
-                                            const isDarkOverridden = activeTheme.semanticOverrides?.[darkPath] !== undefined;
+            {activeTab === 'semantic' && (
+                <div style={{ display: 'flex', flexDirection: 'column', flex: 1, gap: '0.5rem' }}>
+                    {Object.entries(tokenCategories).map(([category, paths]) => (
+                        <div key={category} style={{ background: isDarkMode ? '#1a1a1a' : '#f8fafc', borderRadius: '12px', padding: '1rem 0.5rem' }}>
+                            <div style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }} onClick={() => setExpandedSemanticCategories(prev => ({ ...prev, [category]: !prev[category] }))}>
+                                {expandedSemanticCategories[category] ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                                <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: 0, textTransform: 'capitalize' }}>{category} Tokens</h3>
+                            </div>
+                            {expandedSemanticCategories[category] && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.5rem' }}>
+                                    {paths.map(path => {
+                                        const isLightOverridden = activeTheme.semanticOverrides?.[path] !== undefined;
+                                        const darkPath = `darkTheme.${path}`;
+                                        const isDarkOverridden = activeTheme.semanticOverrides?.[darkPath] !== undefined;
+                                        
+                                        const getValStr = (obj: any, p: string) => {
+                                            let cur = obj;
+                                            for (const part of p.split('.')) {
+                                                if (cur && cur[part] !== undefined) cur = cur[part];
+                                                else return null;
+                                            }
+                                            return cur?.$value || null;
+                                        };
 
-                                            const currentLightVal = isLightOverridden ? activeTheme.semanticOverrides![path] : null;
-                                            const currentDarkVal = isDarkOverridden ? activeTheme.semanticOverrides![darkPath] : null;
+                                        const lightVal = activeTheme.semanticOverrides?.[path] || getValStr(defaultTheme?.theme || {}, path);
+                                        const darkVal = activeTheme.semanticOverrides?.[darkPath] || getValStr(defaultTheme?.darkTheme || defaultTheme?.theme || {}, path);
 
-                                            const getHexVal = (valStr: string | null) => {
-                                                if (!valStr) return null;
-                                                const clean = valStr.replace(/[{}]/g, '').replace('color.', '');
-                                                const [palette, step] = clean.split('.');
-                                                return activeThemePayloadWithOptions?.color?.[palette]?.[step]?.$value || null;
-                                            };
-
-                                            const getDefValStr = (obj: any, defPath: string) => {
-                                                let current = obj;
-                                                const pathParts = defPath.split('.');
-                                                for (const p of pathParts) {
-                                                    if (current && current[p] !== undefined) current = current[p];
-                                                    else return null;
-                                                }
-                                                return current?.$value || null;
-                                            };
-
-                                            const calculatedLightVal = currentLightVal || getDefValStr(defaultTheme?.theme || {}, path);
-                                            const calculatedDarkVal = currentDarkVal || getDefValStr(defaultTheme?.darkTheme || defaultTheme?.theme || {}, path);
-
-                                            const lightHex = getHexVal(calculatedLightVal);
-                                            const darkHex = getHexVal(calculatedDarkVal);
-
-                                            const renderSelectOptions = () => {
-                                                if (!activeThemePayloadWithOptions) return null;
-                                                const exportedPalettes = Object.keys(activeThemePayloadWithOptions.color);
-
-                                                return (
-                                                    <>
-                                                        {exportedPalettes.map(paletteName => {
-                                                            const isAlpha = paletteName === 'white' || paletteName === 'black';
-                                                            const steps = isAlpha ? ALPHA_STEPS : COLOR_STEPS;
-                                                            const labelSuffix = isAlpha ? ' (Alpha)' : ' Palette';
-                                                            const formattedName = paletteName.charAt(0).toUpperCase() + paletteName.slice(1);
-
-                                                            return (
-                                                                <optgroup key={paletteName} label={`${formattedName}${labelSuffix}`}>
-                                                                    {steps.map((step: any) => (
-                                                                        <option key={`${paletteName}-${step}`} value={`{color.${paletteName}.${step}}`}>
-                                                                            {paletteName}-{step}{isAlpha ? '%' : ''}
-                                                                        </option>
+                                        return (
+                                            <div key={path} style={{ padding: '0.5rem', background: isDarkMode ? '#222' : '#fff', borderRadius: '6px', border: `1px solid ${isDarkMode ? '#333' : '#eee'}` }}>
+                                                <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>{path.split('.').slice(1).join(' ')}</div>
+                                                <div style={{ display: 'grid', gap: '0.5rem', marginTop: '0.5rem' }}>
+                                                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                                        <span style={{ fontSize: '0.75rem', width: '30px' }}>L</span>
+                                                        <select value={lightVal || ''} onChange={(e) => updateThemeSemanticOverride(activeTheme.id, path, e.target.value)} style={{ flex: 1, fontSize: '0.75rem', padding: '2px', background: isDarkMode ? '#111' : '#fff', color: 'inherit' }}>
+                                                            {Object.keys(activeThemePayloadWithOptions?.color || {}).map(p => (
+                                                                <optgroup key={p} label={p}>
+                                                                    {(p === 'white' || p === 'black' ? ALPHA_STEPS : COLOR_STEPS).map(s => (
+                                                                        <option key={s} value={`{color.${p}.${s}}`}>{p}-{s}</option>
                                                                     ))}
                                                                 </optgroup>
-                                                            );
-                                                        })}
-                                                    </>
-                                                );
-                                            };
-
-                                            return (
-                                                <div key={path} style={{
-                                                    display: 'flex',
-                                                    flexDirection: 'column',
-                                                    gap: '0.25rem',
-                                                    padding: '0.5rem',
-                                                    background: isDarkMode ? '#222' : '#f8fafc',
-                                                    borderRadius: '6px',
-                                                    border: `1px solid ${isDarkMode ? '#333' : '#e2e8f0'}`,
-                                                }}>
-                                                    <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>{formatPathLabel(path)}</div>
-                                                    <div style={{ fontSize: '0.75rem', color: isDarkMode ? '#94a3b8' : '#64748b', marginBottom: '0.5rem' }}>{path}</div>
-
-                                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.5rem' }}>
-                                                        {/* Light Mode Picker */}
-                                                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', position: 'relative' }}>
-                                                            <span style={{ fontSize: '0.75rem', width: '40px' }}>Light</span>
-                                                            <div style={{ width: '20px', height: '20px', borderRadius: '4px', backgroundColor: lightHex || 'transparent', border: `1px solid ${isDarkMode ? '#444' : '#ccc'}`, flexShrink: 0 }} />
-                                                            <select
-                                                                value={calculatedLightVal || ''}
-                                                                onChange={(e) => updateThemeSemanticOverride(activeTheme.id, path, e.target.value)}
-                                                                style={{
-                                                                    flex: 1,
-                                                                    padding: '0.25rem 0.5rem',
-                                                                    borderRadius: '4px',
-                                                                    border: `1px solid ${isLightOverridden ? '#3b82f6' : (isDarkMode ? '#444' : '#ccc')}`,
-                                                                    background: isDarkMode ? '#111' : '#fff',
-                                                                    color: 'inherit',
-                                                                    fontSize: '0.75rem',
-                                                                    width: '100%',
-                                                                    appearance: 'auto'
-                                                                }}
-                                                            >
-                                                                {!isLightOverridden && (
-                                                                    <option value={calculatedLightVal || ''}>
-                                                                        Auto ({calculatedLightVal?.replace(/[{}]/g, '').replace('color.', '').replace('darkTheme.', '')})
-                                                                    </option>
-                                                                )}
-                                                                {renderSelectOptions()}
-                                                            </select>
-                                                            {isLightOverridden && (
-                                                                <button onClick={() => updateThemeSemanticOverride(activeTheme.id, path, undefined)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }} title="Revert to Default">
-                                                                    <RotateCcw size={14} />
-                                                                </button>
-                                                            )}
-                                                        </div>
-
-                                                        {/* Dark Mode Picker */}
-                                                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', position: 'relative' }}>
-                                                            <span style={{ fontSize: '0.75rem', width: '40px' }}>Dark</span>
-                                                            <div style={{ width: '20px', height: '20px', borderRadius: '4px', backgroundColor: darkHex || 'transparent', border: `1px solid ${isDarkMode ? '#444' : '#ccc'}`, flexShrink: 0 }} />
-                                                            <select
-                                                                value={calculatedDarkVal || ''}
-                                                                onChange={(e) => updateThemeSemanticOverride(activeTheme.id, darkPath, e.target.value)}
-                                                                style={{
-                                                                    flex: 1,
-                                                                    padding: '0.25rem 0.5rem',
-                                                                    borderRadius: '4px',
-                                                                    border: `1px solid ${isDarkOverridden ? '#3b82f6' : (isDarkMode ? '#444' : '#ccc')}`,
-                                                                    background: isDarkMode ? '#111' : '#fff',
-                                                                    color: 'inherit',
-                                                                    fontSize: '0.75rem',
-                                                                    width: '100%',
-                                                                    appearance: 'auto'
-                                                                }}
-                                                            >
-                                                                {!isDarkOverridden && (
-                                                                    <option value={calculatedDarkVal || ''}>
-                                                                        Auto ({calculatedDarkVal?.replace(/[{}]/g, '').replace('color.', '').replace('darkTheme.', '')})
-                                                                    </option>
-                                                                )}
-                                                                {renderSelectOptions()}
-                                                            </select>
-                                                            {isDarkOverridden && (
-                                                                <button onClick={() => updateThemeSemanticOverride(activeTheme.id, darkPath, undefined)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }} title="Revert to Default">
-                                                                    <RotateCcw size={14} />
-                                                                </button>
-                                                            )}
-                                                        </div>
+                                                            ))}
+                                                        </select>
+                                                        {isLightOverridden && <button onClick={() => updateThemeSemanticOverride(activeTheme.id, path, undefined)} style={{ background: 'none', border: 'none', color: '#ef4444' }}><RotateCcw size={12} /></button>}
+                                                    </div>
+                                                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                                        <span style={{ fontSize: '0.75rem', width: '30px' }}>D</span>
+                                                        <select value={darkVal || ''} onChange={(e) => updateThemeSemanticOverride(activeTheme.id, darkPath, e.target.value)} style={{ flex: 1, fontSize: '0.75rem', padding: '2px', background: isDarkMode ? '#111' : '#fff', color: 'inherit' }}>
+                                                            {Object.keys(activeThemePayloadWithOptions?.color || {}).map(p => (
+                                                                <optgroup key={p} label={p}>
+                                                                    {(p === 'white' || p === 'black' ? ALPHA_STEPS : COLOR_STEPS).map(s => (
+                                                                        <option key={s} value={`{color.${p}.${s}}`}>{p}-{s}</option>
+                                                                    ))}
+                                                                </optgroup>
+                                                            ))}
+                                                        </select>
+                                                        {isDarkOverridden && <button onClick={() => updateThemeSemanticOverride(activeTheme.id, darkPath, undefined)} style={{ background: 'none', border: 'none', color: '#ef4444' }}><RotateCcw size={12} /></button>}
                                                     </div>
                                                 </div>
-                                            );
-                                        })}
-                                    </div>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                )
-            }
-        </div >
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
     );
 };

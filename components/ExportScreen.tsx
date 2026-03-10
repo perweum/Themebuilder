@@ -126,6 +126,7 @@ export const ExportScreen: React.FC<{
             }
         });
 
+
         let exportData: any = {};
 
         if (exportFormat === 'figma') {
@@ -657,6 +658,7 @@ export const ExportScreen: React.FC<{
                             );
                         });
                     })()}
+
                 </div>
 
                 {/* Footer Controls */}
