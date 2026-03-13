@@ -1,223 +1,54 @@
 import React from 'react';
-import { useTheme, FULL_GLOBAL_PRESET } from '../theme-context';
-import { ColorPickerMenu } from './ColorPickerMenu';
-import { Pencil, RotateCcw, ChevronDown, ChevronRight, X } from 'lucide-react';
-import { COLOR_STEPS, ALPHA_STEPS, generateRamp } from '../lib/palette-generator';
-import FontPicker from 'react-fontpicker-ts';
-import 'react-fontpicker-ts/dist/index.css';
+import { X } from 'lucide-react';
+import { ColorsTab } from './controls/ColorsTab';
+import { GeometryTab } from './controls/GeometryTab';
+import { SemanticTab } from './controls/SemanticTab';
 
-const ThemeNameEditor: React.FC<{ initialName: string, themeId: string, onRename: (id: string, newName: string) => void, isDarkMode: boolean }> = ({ initialName, themeId, onRename, isDarkMode }) => {
-    const [isEditing, setIsEditing] = React.useState(false);
-    const [tempName, setTempName] = React.useState(initialName);
-    const inputRef = React.useRef<HTMLInputElement>(null);
-
-    React.useEffect(() => {
-        if (isEditing && inputRef.current) {
-            inputRef.current.focus();
-        }
-    }, [isEditing]);
-
-    const submit = () => {
-        setIsEditing(false);
-        const finalName = tempName.trim() || themeId; // Fallback to ID if empty
-        setTempName(finalName);
-        if (finalName !== initialName) {
-            onRename(themeId, finalName);
-        }
-    };
-
-    if (isEditing) {
-        return (
-            <input
-                ref={inputRef}
-                value={tempName}
-                onChange={(e) => setTempName(e.target.value)}
-                onBlur={submit}
-                onKeyDown={(e) => {
-                    if (e.key === 'Enter') submit();
-                    if (e.key === 'Escape') {
-                        setTempName(initialName);
-                        setIsEditing(false);
-                    }
-                }}
-                style={{
-                    background: isDarkMode ? '#333' : '#fff',
-                    border: `1px solid ${isDarkMode ? '#555' : '#ccc'}`,
-                    color: 'inherit',
-                    fontSize: '1rem',
-                    fontWeight: 600,
-                    outline: 'none',
-                    padding: '0.25rem 0.5rem',
-                    borderRadius: '4px',
-                    width: '100%',
-                    boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.1)'
-                }}
-            />
-        );
-    }
-
-    return (
-        <div
-            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', padding: '0.25rem 0' }}
-            onClick={() => setIsEditing(true)}
-            title="Edit Theme Name"
-        >
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 600, margin: 0, color: 'inherit' }}>{initialName}</h2>
-            <Pencil size={14} style={{ opacity: 0.5, color: 'inherit' }} />
-        </div>
-    );
-};
-
-const buttonStyle = {
-    background: 'transparent',
-    border: 'none',
-    cursor: 'pointer',
-    padding: '0.25rem',
-    fontSize: '0.875rem',
-    color: 'inherit'
-};
+type ControlTab = 'colors' | 'geometry' | 'semantic';
 
 export const ThemeControls: React.FC<{
     isDarkMode?: boolean;
     isMobile?: boolean;
     onClose?: () => void;
 }> = ({ isDarkMode = false, isMobile = false, onClose }) => {
-    const {
-        themes,
-        addTheme,
-        updateThemeName,
-        removeTheme,
-        addThemeColor,
-        updateThemeColor,
-        removeThemeColor,
-        updateThemeGeometryValue,
-        updateThemeFont,
-        globalColors,
-        addRandomGlobalColor,
-        updateGlobalColor,
-        removeGlobalColor,
-        addGlobalColorsPreset,
-        updateThemeSemanticOverride,
-        resolvedThemes,
-        resolvedDefaultThemes
-    } = useTheme();
+    const [activeTab, setActiveTab] = React.useState<ControlTab>('colors');
 
-    const [activeTab, setActiveTab] = React.useState<'colors' | 'geometry' | 'semantic'>('colors');
-    const [expandedSemanticCategories, setExpandedSemanticCategories] = React.useState<Record<string, boolean>>({});
-    const [isPresetsExpanded, setIsPresetsExpanded] = React.useState(false);
-
-    const hasAllPresets = FULL_GLOBAL_PRESET.every(fp => globalColors.some(gc => gc.id === fp.id));
-
-    const activeTheme = themes[0];
-    const defaultTheme = resolvedDefaultThemes[0];
-    const activeThemePayloadWithOptions = resolvedThemes[0];
-
-    const tokenCategories = React.useMemo(() => {
-        if (!defaultTheme) return {};
-        const cats: Record<string, string[]> = {};
-        const flatten = (obj: any, currentPath = '') => {
-            for (const key in obj) {
-                const newPath = currentPath ? `${currentPath}.${key}` : key;
-                if (typeof obj[key] === 'object' && obj[key] !== null) {
-                    if (obj[key].$value !== undefined) {
-                        if (obj[key].$type === 'color') {
-                            const rootCategory = newPath.split('.')[0];
-                            if (!cats[rootCategory]) cats[rootCategory] = [];
-                            cats[rootCategory].push(newPath);
-                        }
-                    } else {
-                        flatten(obj[key], newPath);
-                    }
-                }
-            }
-        };
-        flatten(defaultTheme.theme);
-        return cats;
-    }, [defaultTheme]);
-
-    const formatPathLabel = (path: string) => {
-        const parts = path.split('.');
-        if (parts.length > 1) {
-            return parts.slice(1).map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
-        }
-        return path;
-    };
-
-    const actionButtonStyle = {
-        background: 'transparent',
-        color: isDarkMode ? '#F8F8F8' : '#1F1F1F',
-        border: `1px solid ${isDarkMode ? '#F8F8F8' : '#1F1F1F'}`,
-        padding: '0.5rem',
-        borderRadius: '0px',
-        cursor: 'pointer',
-        fontSize: '0.875rem',
-        fontWeight: 500,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '0.5rem',
-        transition: 'all 0.2s ease',
-        width: '100%'
-    };
-
-    const styles = {
-        container: {
-            width: isMobile ? '100%' : '320px',
-            height: '100vh',
-            borderRight: `1px solid ${isDarkMode ? '#333' : '#eee'}`,
-            padding: '2rem 1.5rem',
-            overflowY: 'auto' as const,
-            backgroundColor: isDarkMode ? '#111' : '#fff',
-            color: isDarkMode ? '#F8F8F8' : '#1F1F1F',
-            display: 'flex',
-            flexDirection: 'column' as const,
-        },
-        sectionTitle: {
-            fontSize: '1rem',
-            fontWeight: 400,
-            borderBottom: `1px solid ${isDarkMode ? '#333' : '#eee'}`,
-            paddingBottom: '0.5rem',
-            marginBottom: '1rem',
-            color: isDarkMode ? '#eee' : '#111',
-        },
-        group: {
-            display: 'flex',
-            flexDirection: 'column' as const,
-            gap: '0.5rem',
-            marginBottom: '1rem',
-        },
-        label: {
-            fontSize: '0.875rem',
-            fontWeight: 600,
-            color: isDarkMode ? '#C3E835' : '#0142FE',
-            textTransform: 'uppercase' as const,
-            letterSpacing: '0.05em',
-            display: 'flex',
-            justifyContent: 'space-between'
-        },
-        removeBtn: {
-            background: 'transparent',
-            border: 'none',
-            color: '#ef4444',
-            cursor: 'pointer',
-            fontSize: '0.75rem',
-        },
-        themeBox: {
-            border: 'none',
-            borderRadius: '8px',
-            padding: '1.5rem',
-            marginBottom: '1.5rem',
-            backgroundColor: isDarkMode ? '#1a1a1a' : '#f9fafb'
-        }
-    };
-
-    const allExistingColors = [
-        ...themes.flatMap(t => t.colors.map(c => ({ id: c.id, name: c.name, seed: c.seed, themeName: t.name || t.id }))),
-        ...globalColors.map(c => ({ id: c.id, name: c.name, seed: c.seed, themeName: 'Global' }))
-    ];
+    const tabBtn = (tab: ControlTab, label: string) => (
+        <button
+            onClick={() => setActiveTab(tab)}
+            style={{
+                background: 'transparent',
+                border: 'none',
+                color: activeTab === tab ? (isDarkMode ? '#C3E835' : '#0142FE') : (isDarkMode ? '#888' : '#666'),
+                borderBottom: activeTab === tab ? `2px solid ${isDarkMode ? '#C3E835' : '#0142FE'}` : '2px solid transparent',
+                padding: '0.5rem 0.25rem',
+                fontSize: '0.875rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                marginBottom: '-1px',
+                whiteSpace: isMobile ? 'normal' : 'nowrap'
+            }}
+        >
+            {label}
+        </button>
+    );
 
     return (
-        <div style={styles.container} className="no-scrollbar">
+        <div
+            style={{
+                width: isMobile ? '100%' : '320px',
+                height: '100vh',
+                borderRight: `1px solid ${isDarkMode ? '#333' : '#eee'}`,
+                padding: '2rem 1.5rem',
+                overflowY: 'auto',
+                backgroundColor: isDarkMode ? '#111' : '#fff',
+                color: isDarkMode ? '#F8F8F8' : '#1F1F1F',
+                display: 'flex',
+                flexDirection: 'column',
+            }}
+            className="no-scrollbar"
+        >
             <style>{`
                 .no-scrollbar::-webkit-scrollbar { display: none; }
                 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -229,6 +60,8 @@ export const ThemeControls: React.FC<{
                     color: ${isDarkMode ? '#C3E835' : '#0142FE'} !important;
                 }
             `}</style>
+
+            {/* Logo + mobile close button */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 626.59 180" style={{ height: '40px', width: 'auto', display: 'block' }}>
                     <g>
@@ -245,241 +78,16 @@ export const ThemeControls: React.FC<{
                 )}
             </div>
 
+            {/* Tab navigation */}
             <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '1.5rem', borderBottom: `1px solid ${isDarkMode ? '#333' : '#eee'}`, paddingBottom: '0' }}>
-                <button
-                    onClick={() => setActiveTab('colors')}
-                    style={{
-                        background: 'transparent', border: 'none',
-                        color: activeTab === 'colors' ? (isDarkMode ? '#C3E835' : '#0142FE') : (isDarkMode ? '#888' : '#666'),
-                        borderBottom: activeTab === 'colors' ? `2px solid ${isDarkMode ? '#C3E835' : '#0142FE'}` : '2px solid transparent',
-                        padding: '0.5rem 0.25rem', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s ease',
-                    }}
-                >
-                    Colors
-                </button>
-                <button
-                    onClick={() => setActiveTab('geometry')}
-                    style={{
-                        background: 'transparent', border: 'none',
-                        color: activeTab === 'geometry' ? (isDarkMode ? '#C3E835' : '#0142FE') : (isDarkMode ? '#888' : '#666'),
-                        borderBottom: activeTab === 'geometry' ? `2px solid ${isDarkMode ? '#C3E835' : '#0142FE'}` : '2px solid transparent',
-                        padding: '0.5rem 0.25rem', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s ease',
-                        marginBottom: '-1px', whiteSpace: isMobile ? 'normal' : 'nowrap'
-                    }}
-                >
-                    Type & Size
-                </button>
-                <button
-                    onClick={() => setActiveTab('semantic')}
-                    style={{
-                        background: 'transparent', border: 'none',
-                        color: activeTab === 'semantic' ? (isDarkMode ? '#C3E835' : '#0142FE') : (isDarkMode ? '#888' : '#666'),
-                        borderBottom: activeTab === 'semantic' ? `2px solid ${isDarkMode ? '#C3E835' : '#0142FE'}` : '2px solid transparent',
-                        padding: '0.5rem 0.25rem', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s ease',
-                        marginBottom: '-1px'
-                    }}
-                >
-                    Customize
-                </button>
+                {tabBtn('colors', 'Colors')}
+                {tabBtn('geometry', 'Type & Size')}
+                {tabBtn('semantic', 'Customize')}
             </div>
 
-            {activeTab === 'colors' && (
-                <>
-                    {/* Theme Presets */}
-                    <div style={{ ...styles.themeBox, padding: '1rem', marginBottom: '1.5rem', marginTop: 0 }}>
-                        <div
-                            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
-                            onClick={() => setIsPresetsExpanded(!isPresetsExpanded)}
-                        >
-                            <h3 style={{ ...styles.sectionTitle, borderBottom: 'none', paddingBottom: 0, margin: 0 }}>
-                                Theme Presets
-                                <span style={{ fontSize: '0.65rem', background: '#eab308', color: '#000', padding: '0.125rem 0.375rem', borderRadius: '4px', verticalAlign: 'middle', marginLeft: '0.5rem' }}>BETA</span>
-                            </h3>
-                            <ChevronDown size={16} style={{ transform: isPresetsExpanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s', color: isDarkMode ? '#aaa' : '#666' }} />
-                        </div>
-                        {isPresetsExpanded && (
-                            <div style={{ marginTop: '1rem' }}>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.5rem' }}>
-                                    {[
-                                        { name: "Midnight Forest", colors: ['#143524', '#f59e0b'] },
-                                        { name: "Corporate Blue", colors: ['#0f172a', '#1d4ed8', '#0ea5e9'] },
-                                        { name: "Stripe Purple", colors: ['#312e81', '#0ea5e9'] },
-                                        { name: "Vercel Black", colors: ['#000000', '#0070f3'] },
-                                        { name: "Linear Indigo", colors: ['#3730A3', '#eab308'] }
-                                    ].map(preset => (
-                                        <button
-                                            key={preset.name}
-                                            onClick={() => {
-                                                if (themes.length === 0) return;
-                                                const themeId = themes[0].id;
-                                                preset.colors.forEach((seed, idx) => {
-                                                    const colorName = idx === 0 ? 'brand' : idx === 1 ? 'accent' : 'support';
-                                                    if (idx < themes[0].colors.length) {
-                                                        updateThemeColor(themeId, themes[0].colors[idx].id, colorName, seed);
-                                                    } else {
-                                                        addThemeColor(themeId);
-                                                    }
-                                                });
-                                                updateThemeName(themeId, preset.name);
-                                            }}
-                                            style={{ ...actionButtonStyle, justifyContent: 'flex-start', background: isDarkMode ? '#222' : '#f0f0f0', border: '1px solid transparent', position: 'relative', overflow: 'hidden' }}
-                                        >
-                                            <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '4px', background: `linear-gradient(to bottom, ${preset.colors[0]}, ${preset.colors[1] || preset.colors[0]})` }} />
-                                            <span style={{ paddingLeft: '0.5rem' }}>{preset.name}</span>
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Themes Mapping */}
-                    {themes.map((theme, index) => (
-                        <div key={theme.id} style={{ ...styles.themeBox }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                                <ThemeNameEditor initialName={theme.name || theme.id} themeId={theme.id} onRename={updateThemeName} isDarkMode={isDarkMode} />
-                                {index > 0 && <button className="btn-remove" onClick={() => removeTheme(theme.id)} style={buttonStyle}>Remove</button>}
-                            </div>
-                            {theme.colors.map((color) => (
-                                <div key={color.id} style={styles.group}>
-                                    <label style={styles.label}>{color.name} Color <button className="btn-remove" onClick={() => removeThemeColor(theme.id, color.id)} style={{ ...buttonStyle, padding: '0 0.25rem' }}>✕</button></label>
-                                    <ColorPickerMenu name={color.name} seed={color.seed} isDarkMode={isDarkMode} existingColors={allExistingColors} onUpdate={(newName, newSeed) => updateThemeColor(theme.id, color.id, newName, newSeed)} />
-                                </div>
-                            ))}
-                            <button className="btn-action" onClick={() => addThemeColor(theme.id)} style={{ ...actionButtonStyle, marginTop: '0.5rem' }}>+ Add theme color</button>
-                        </div>
-                    ))}
-                    <button className="btn-action" onClick={addTheme} style={{ ...actionButtonStyle, marginBottom: '1.5rem' }}>+ Add New Theme</button>
-
-                    {/* Global States */}
-                    <div style={styles.themeBox}>
-                        <h3 style={{ ...styles.sectionTitle, borderBottom: 'none', paddingBottom: 0, marginTop: 0 }}>Global States</h3>
-                        {globalColors.map(color => (
-                            <div key={color.id} style={styles.group}>
-                                <label style={styles.label}>{color.name} {!['neutral', 'success', 'error'].includes(color.id) && <button className="btn-remove" onClick={() => removeGlobalColor(color.id)} style={buttonStyle}>Remove</button>}</label>
-                                <ColorPickerMenu name={color.name} seed={color.seed} isDarkMode={isDarkMode} existingColors={allExistingColors} onUpdate={(newName, newSeed) => updateGlobalColor(color.id, newName, newSeed)} />
-                            </div>
-                        ))}
-                        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
-                            <button className="btn-action" onClick={addRandomGlobalColor} style={{ ...actionButtonStyle, flex: 1 }}>+ Add color</button>
-                            {!hasAllPresets && <button className="btn-action" onClick={addGlobalColorsPreset} style={{ ...actionButtonStyle, flex: 2 }}>+ Add standard set</button>}
-                        </div>
-                    </div>
-                </>
-            )}
-
-            {activeTab === 'geometry' && (
-                <div style={{ display: 'flex', flexDirection: 'column', flex: 1, gap: '1.5rem' }}>
-                    {themes.map((theme) => {
-                        const geometry = theme.geometry || { radiusBase: 4, includeRadius: true, includeBorders: true, borderWidth: 'small' };
-                        return (
-                            <div key={`geo-${theme.id}`} style={styles.themeBox}>
-                                <div style={styles.group}>
-                                    <label style={styles.label}>Global Font</label>
-                                    <div style={{ border: `1px solid ${isDarkMode ? '#F8F8F8' : '#1F1F1F'}`, padding: '0.25rem', background: 'transparent' }}>
-                                        <FontPicker defaultValue={theme.fontFamily || 'Inter'} value={(val: any) => updateThemeFont(theme.id, val)} autoLoad={true} />
-                                    </div>
-                                </div>
-                                <div style={{ marginTop: '2rem' }}>
-                                    <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: '0 0 1rem 0' }}>Geometry</h3>
-                                    <div style={styles.group}>
-                                        <label style={{ ...styles.label, display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', textTransform: 'none' }}>
-                                            <input type="checkbox" checked={geometry.includeRadius} onChange={(e) => updateThemeGeometryValue(theme.id, 'includeRadius', e.target.checked)} style={{ accentColor: isDarkMode ? '#C3E835' : '#0142FE' }} />
-                                            Include Border Radius
-                                        </label>
-                                        <label style={{ ...styles.label, marginTop: '0.5rem', opacity: geometry.includeRadius ? 1 : 0.5 }}>Radius Base (px)</label>
-                                        <input type="number" min="0" max="64" value={geometry.radiusBase} disabled={!geometry.includeRadius} onChange={(e) => updateThemeGeometryValue(theme.id, 'radiusBase', Number(e.target.value))} style={{ ...actionButtonStyle, opacity: geometry.includeRadius ? 1 : 0.5 }} />
-                                    </div>
-                                    <div style={{ ...styles.group, marginTop: '1.5rem' }}>
-                                        <label style={{ ...styles.label, display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', textTransform: 'none' }}>
-                                            <input type="checkbox" checked={geometry.includeBorders} onChange={(e) => updateThemeGeometryValue(theme.id, 'includeBorders', e.target.checked)} style={{ accentColor: isDarkMode ? '#C3E835' : '#0142FE' }} />
-                                            Include Borders
-                                        </label>
-                                    </div>
-                                    {geometry.includeBorders && (
-                                        <div style={styles.group}>
-                                            <label style={styles.label}>Border Width</label>
-                                            <select value={geometry.borderWidth} onChange={(e) => updateThemeGeometryValue(theme.id, 'borderWidth', e.target.value as any)} style={{ ...actionButtonStyle, appearance: 'auto' }}>
-                                                <option value="small">Small (1px)</option>
-                                                <option value="medium">Medium (2px)</option>
-                                                <option value="large">Large (3px)</option>
-                                            </select>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-            )}
-
-            {activeTab === 'semantic' && (
-                <div style={{ display: 'flex', flexDirection: 'column', flex: 1, gap: '0.5rem' }}>
-                    {Object.entries(tokenCategories).map(([category, paths]) => (
-                        <div key={category} style={{ background: isDarkMode ? '#1a1a1a' : '#f8fafc', borderRadius: '12px', padding: '1rem 0.5rem' }}>
-                            <div style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }} onClick={() => setExpandedSemanticCategories(prev => ({ ...prev, [category]: !prev[category] }))}>
-                                {expandedSemanticCategories[category] ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                                <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: 0, textTransform: 'capitalize' }}>{category} Tokens</h3>
-                            </div>
-                            {expandedSemanticCategories[category] && (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.5rem' }}>
-                                    {paths.map(path => {
-                                        const isLightOverridden = activeTheme.semanticOverrides?.[path] !== undefined;
-                                        const darkPath = `darkTheme.${path}`;
-                                        const isDarkOverridden = activeTheme.semanticOverrides?.[darkPath] !== undefined;
-                                        
-                                        const getValStr = (obj: any, p: string) => {
-                                            let cur = obj;
-                                            for (const part of p.split('.')) {
-                                                if (cur && cur[part] !== undefined) cur = cur[part];
-                                                else return null;
-                                            }
-                                            return cur?.$value || null;
-                                        };
-
-                                        const lightVal = activeTheme.semanticOverrides?.[path] || getValStr(defaultTheme?.theme || {}, path);
-                                        const darkVal = activeTheme.semanticOverrides?.[darkPath] || getValStr(defaultTheme?.darkTheme || defaultTheme?.theme || {}, path);
-
-                                        return (
-                                            <div key={path} style={{ padding: '0.5rem', background: isDarkMode ? '#222' : '#fff', borderRadius: '6px', border: `1px solid ${isDarkMode ? '#333' : '#eee'}` }}>
-                                                <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>{path.split('.').slice(1).join(' ')}</div>
-                                                <div style={{ display: 'grid', gap: '0.5rem', marginTop: '0.5rem' }}>
-                                                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                                                        <span style={{ fontSize: '0.75rem', width: '30px' }}>L</span>
-                                                        <select value={lightVal || ''} onChange={(e) => updateThemeSemanticOverride(activeTheme.id, path, e.target.value)} style={{ flex: 1, fontSize: '0.75rem', padding: '2px', background: isDarkMode ? '#111' : '#fff', color: 'inherit' }}>
-                                                            {Object.keys(activeThemePayloadWithOptions?.color || {}).map(p => (
-                                                                <optgroup key={p} label={p}>
-                                                                    {(p === 'white' || p === 'black' ? ALPHA_STEPS : COLOR_STEPS).map(s => (
-                                                                        <option key={s} value={`{color.${p}.${s}}`}>{p}-{s}</option>
-                                                                    ))}
-                                                                </optgroup>
-                                                            ))}
-                                                        </select>
-                                                        {isLightOverridden && <button onClick={() => updateThemeSemanticOverride(activeTheme.id, path, undefined)} style={{ background: 'none', border: 'none', color: '#ef4444' }}><RotateCcw size={12} /></button>}
-                                                    </div>
-                                                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                                                        <span style={{ fontSize: '0.75rem', width: '30px' }}>D</span>
-                                                        <select value={darkVal || ''} onChange={(e) => updateThemeSemanticOverride(activeTheme.id, darkPath, e.target.value)} style={{ flex: 1, fontSize: '0.75rem', padding: '2px', background: isDarkMode ? '#111' : '#fff', color: 'inherit' }}>
-                                                            {Object.keys(activeThemePayloadWithOptions?.color || {}).map(p => (
-                                                                <optgroup key={p} label={p}>
-                                                                    {(p === 'white' || p === 'black' ? ALPHA_STEPS : COLOR_STEPS).map(s => (
-                                                                        <option key={s} value={`{color.${p}.${s}}`}>{p}-{s}</option>
-                                                                    ))}
-                                                                </optgroup>
-                                                            ))}
-                                                        </select>
-                                                        {isDarkOverridden && <button onClick={() => updateThemeSemanticOverride(activeTheme.id, darkPath, undefined)} style={{ background: 'none', border: 'none', color: '#ef4444' }}><RotateCcw size={12} /></button>}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
-                        </div>
-                    ))}
-                </div>
-            )}
+            {activeTab === 'colors' && <ColorsTab isDarkMode={isDarkMode} isMobile={isMobile} />}
+            {activeTab === 'geometry' && <GeometryTab isDarkMode={isDarkMode} />}
+            {activeTab === 'semantic' && <SemanticTab isDarkMode={isDarkMode} />}
         </div>
     );
 };
