@@ -3,6 +3,7 @@ import { useTheme, ThemeScope } from '../theme-context';
 import { ThemeBlock } from './ThemeBlock';
 import { PaletteViz } from './PaletteViz';
 import { ExportScreen } from './ExportScreen';
+import { ImportScreen } from './ImportScreen';
 import { ContrastChecker } from './ContrastChecker';
 import { TestThemeWebsite } from './TestThemeWebsite';
 import { ThemeToggle } from './ThemeToggle';
@@ -22,6 +23,7 @@ export const KitchenSink: React.FC<{
 }> = ({ isDarkMode, themeMode, setThemeMode, onShowOnboarding, isMobile, onMenuClick, activeThemeId, setActiveThemeId }) => {
     const { themes, globalColors } = useTheme();
     const [isExportOpen, setIsExportOpen] = React.useState(false);
+    const [isImportOpen, setIsImportOpen] = React.useState(false);
     const [isContrastOpen, setIsContrastOpen] = React.useState(false);
     const [isDemoOpen, setIsDemoOpen] = React.useState(false);
 
@@ -185,6 +187,24 @@ export const KitchenSink: React.FC<{
                             </button>
 
                             <button
+                                onClick={() => setIsImportOpen(true)}
+                                style={{
+                                    padding: '0.5rem 1rem',
+                                    fontSize: '1rem',
+                                    borderRadius: '0px',
+                                    background: 'transparent',
+                                    color: isDarkMode ? '#94a3b8' : '#64748b',
+                                    border: `1px solid ${isDarkMode ? '#334155' : '#e2e8f0'}`,
+                                    cursor: 'pointer',
+                                    fontWeight: 400,
+                                    flex: isMobile ? '1 1 100%' : 'none',
+                                    textAlign: 'center'
+                                }}
+                            >
+                                Import
+                            </button>
+
+                            <button
                                 className="header-export-btn"
                                 onClick={() => setIsExportOpen(true)}
                                 style={{
@@ -206,6 +226,9 @@ export const KitchenSink: React.FC<{
 
                     {isExportOpen && (
                         <ExportScreen isDarkMode={isDarkMode} onClose={() => setIsExportOpen(false)} />
+                    )}
+                    {isImportOpen && (
+                        <ImportScreen isDarkMode={isDarkMode} onClose={() => setIsImportOpen(false)} />
                     )}
                     {isContrastOpen && (
                         <ContrastChecker isDarkMode={isDarkMode} onClose={() => setIsContrastOpen(false)} />

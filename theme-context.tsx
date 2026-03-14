@@ -66,6 +66,7 @@ interface ThemeContextType {
     updateThemeFont: (themeId: string, font: string) => void;
 
     removeTheme: (id: string) => void;
+    importThemes: (configs: ThemeConfig[], importedGlobalColors?: GlobalColorConfig[]) => void;
 
     globalColors: GlobalColorConfig[];
     addGlobalColorsPreset: () => void;
@@ -410,6 +411,18 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         setThemes(prev => prev.filter(t => t.id !== id));
     };
 
+    const importThemes = (configs: ThemeConfig[], importedGlobalColors?: GlobalColorConfig[]) => {
+        saveHistory();
+        setThemes(prev => [...prev, ...configs]);
+        if (importedGlobalColors && importedGlobalColors.length > 0) {
+            setGlobalColors(prev => {
+                const existingIds = new Set(prev.map(c => c.id));
+                const toAdd = importedGlobalColors.filter(c => !existingIds.has(c.id));
+                return toAdd.length > 0 ? [...prev, ...toAdd] : prev;
+            });
+        }
+    };
+
     const addGlobalColorsPreset = () => {
         saveHistory();
         setGlobalColors(prev => {
@@ -486,6 +499,7 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         updateThemeGeometryValue,
         updateThemeFont,
         removeTheme,
+        importThemes,
         globalColors,
         addGlobalColorsPreset,
         addRandomGlobalColor,

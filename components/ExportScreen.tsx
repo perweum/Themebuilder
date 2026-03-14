@@ -21,7 +21,7 @@ export const ExportScreen: React.FC<{
     isDarkMode: boolean;
     onClose: () => void;
 }> = ({ isDarkMode, onClose }) => {
-    const { themes, resolvedThemes, resolvedDefaultThemes } = useTheme();
+    const { themes, resolvedThemes, resolvedDefaultThemes, globalColors } = useTheme();
     const activeTheme = themes[0];
     const activeThemePayloadWithOptions = resolvedThemes[0];
 
@@ -63,9 +63,46 @@ export const ExportScreen: React.FC<{
         });
         excludedGeometry.forEach(category => { delete exportPayload.geometry?.[category]; });
 
-        const exportData = exportFormat === 'figma'
-            ? { "Primitives": { color: exportPayload.color, geometry: exportPayload.geometry }, "Light": { color: exportPayload.theme }, "Dark": { color: exportPayload.darkTheme } }
-            : exportPayload;
+        let exportData: any;
+        if (exportFormat === 'figma') {
+            exportData = {
+                "Primitives": { color: exportPayload.color, geometry: exportPayload.geometry },
+                "Light": { color: exportPayload.theme },
+                "Dark": { color: exportPayload.darkTheme },
+                "$themes": [
+                    {
+                        "id": "light",
+                        "name": "Light",
+                        "selectedTokenSets": {
+                            "Primitives": "source",
+                            "Light": "enabled",
+                            "Dark": "disabled"
+                        }
+                    },
+                    {
+                        "id": "dark",
+                        "name": "Dark",
+                        "selectedTokenSets": {
+                            "Primitives": "source",
+                            "Light": "disabled",
+                            "Dark": "enabled"
+                        }
+                    }
+                ],
+                "$metadata": {
+                    "tokenSetOrder": ["Primitives", "Light", "Dark"]
+                }
+            };
+        } else {
+            exportData = {
+                ...exportPayload,
+                "$themebuilder": {
+                    version: "1.0",
+                    theme: activeTheme,
+                    globalColors
+                }
+            };
+        }
 
         const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
