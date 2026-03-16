@@ -21,6 +21,21 @@ function extractHex(token: any): string | null {
 }
 
 /**
+ * Relative luminance of a hex color (WCAG formula).
+ * Returns 0 (black) → 1 (white).
+ */
+function luminance(hex: string): number {
+    const full = hex.length === 4
+        ? `#${hex[1]}${hex[1]}${hex[2]}${hex[2]}${hex[3]}${hex[3]}`
+        : hex;
+    const r = parseInt(full.slice(1, 3), 16) / 255;
+    const g = parseInt(full.slice(3, 5), 16) / 255;
+    const b = parseInt(full.slice(5, 7), 16) / 255;
+    const lin = (c: number) => c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+}
+
+/**
  * Detect whether an object looks like a color scale (ramp).
  * Accepts any convention: 25-950 (ours), 50-900 (Tailwind), 100-900,
  * 1-10 numeric, A100/A400 (Material), DEFAULT/light/dark pairs, etc.
@@ -32,22 +47,35 @@ function detectScale(obj: any): boolean {
     return hexCount >= 3;
 }
 
-/** Pick the best representative "seed" hex from a scale */
+/**
+ * Pick the best representative "seed" hex from a scale.
+ * Strategy:
+ *   1. Try preferred step names (500, 5, DEFAULT, base, …)
+ *   2. Fall back to luminance-based selection — pick the step whose
+ *      luminance is closest to ~0.18, which corresponds to a mid-tone
+ *      that produces a good ramp at both extremes.
+ */
 function seedFromScale(obj: any): string | null {
     const entries = Object.entries(obj)
         .filter(([k, v]) => !k.startsWith('$') && extractHex(v) !== null) as [string, any][];
 
     if (entries.length === 0) return null;
 
-    // Preferred step names in priority order (covers many conventions)
-    const preferred = ['500', '5', '400', '600', '300', '700', 'DEFAULT', 'base', 'default', 'primary'];
+    // Preferred step names — covers most common conventions
+    const preferred = ['500', '5', '400', '600', 'DEFAULT', 'base', 'default', 'primary', '300', '700', '6', '4'];
     for (const step of preferred) {
         const entry = entries.find(([k]) => k === step);
         if (entry) return extractHex(entry[1]);
     }
-    // Fall back to the entry closest to the middle of the sorted list
-    const sorted = [...entries].sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }));
-    return extractHex(sorted[Math.floor(sorted.length / 2)][1]);
+
+    // Luminance-based fallback: target ~0.18 (perceptual midpoint)
+    const TARGET_LUMINANCE = 0.18;
+    const withLum = entries.map(([k, v]) => {
+        const hex = extractHex(v)!;
+        return { key: k, hex, dist: Math.abs(luminance(hex) - TARGET_LUMINANCE) };
+    });
+    withLum.sort((a, b) => a.dist - b.dist);
+    return withLum[0]?.hex ?? null;
 }
 
 /**
@@ -332,12 +360,30 @@ export const ImportScreen: React.FC<{ isDarkMode: boolean; onClose: () => void }
 
                             {parseResult.themeConfigs.map(theme => (
                                 <div key={theme.id} style={{ padding: '1rem', background: cardBg, border: `1px solid ${border}`, borderRadius: '6px', marginBottom: '0.875rem' }}>
-                                    <div style={{ fontWeight: 600, color: fg, marginBottom: '0.625rem', fontSize: '0.9375rem' }}>{theme.name}</div>
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
+                                    <div style={{ fontWeight: 600, color: fg, marginBottom: '0.25rem', fontSize: '0.9375rem' }}>{theme.name}</div>
+                                    <div style={{ fontSize: '0.75rem', color: subtle, marginBottom: '0.75rem' }}>
+                                        A new 12-step ramp will be generated from each extracted seed color
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                                         {theme.colors.map(c => (
-                                            <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.3125rem 0.625rem', background: chipBg, borderRadius: '99px', fontSize: '0.8125rem' }}>
-                                                <span style={{ width: 11, height: 11, borderRadius: '50%', background: c.seed, display: 'inline-block', flexShrink: 0, border: `1px solid rgba(0,0,0,0.1)` }} />
-                                                <span style={{ color: fg }}>{c.name}</span>
+                                            <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                                {/* Seed swatch */}
+                                                <span style={{ width: 28, height: 28, borderRadius: '4px', background: c.seed, display: 'inline-block', flexShrink: 0, border: `1px solid rgba(0,0,0,0.12)` }} />
+                                                {/* Mini generated ramp preview */}
+                                                <div style={{ display: 'flex', gap: 2, flex: 1 }}>
+                                                    {[10, 20, 30, 40, 50, 60, 70, 80, 90].map(pct => (
+                                                        <span key={pct} style={{
+                                                            flex: 1, height: 14, borderRadius: '2px',
+                                                            background: `color-mix(in oklch, ${c.seed} ${pct}%, white)`,
+                                                            display: 'inline-block'
+                                                        }} />
+                                                    ))}
+                                                </div>
+                                                {/* Name + seed hex */}
+                                                <div style={{ flexShrink: 0, textAlign: 'right' }}>
+                                                    <div style={{ fontWeight: 600, fontSize: '0.8125rem', color: fg }}>{c.name}</div>
+                                                    <div style={{ fontSize: '0.75rem', color: subtle, fontFamily: 'monospace' }}>{c.seed}</div>
+                                                </div>
                                             </div>
                                         ))}
                                     </div>
