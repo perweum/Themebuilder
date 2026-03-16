@@ -3,32 +3,71 @@ import { useTheme, ThemeConfig, GlobalColorConfig } from '../theme-context';
 import { SystemicModal } from './SystemicModal';
 import { X, Upload, CheckCircle, AlertCircle } from 'lucide-react';
 
+// ─── Parsing utilities ────────────────────────────────────────────────────────
+
 const KNOWN_GLOBAL_IDS = new Set(['neutral', 'success', 'error', 'warning', 'info', 'caution', 'critical']);
-const RAMP_STEPS = new Set(['25', '50', '100', '200', '300', '400', '500', '600', '700', '800', '900', '950']);
 
-function isColorRamp(obj: any): boolean {
+function isHex(s: string): boolean {
+    return /^#[0-9a-fA-F]{3,8}$/.test(s.trim());
+}
+
+/** Extract a raw hex string from a token in any known format */
+function extractHex(token: any): string | null {
+    if (typeof token === 'string' && isHex(token)) return token.trim();
+    if (typeof token !== 'object' || !token) return null;
+    const v = token.$value ?? token.value;
+    if (typeof v === 'string' && isHex(v.trim()) && !v.includes('{')) return v.trim();
+    return null;
+}
+
+/**
+ * Detect whether an object looks like a color scale (ramp).
+ * Accepts any convention: 25-950 (ours), 50-900 (Tailwind), 100-900,
+ * 1-10 numeric, A100/A400 (Material), DEFAULT/light/dark pairs, etc.
+ * Only requires 3+ direct children that are extractable hex values.
+ */
+function detectScale(obj: any): boolean {
     if (typeof obj !== 'object' || !obj) return false;
-    return Object.keys(obj).filter(k => RAMP_STEPS.has(k)).length >= 5;
+    const hexCount = Object.entries(obj).filter(([k, v]) => !k.startsWith('$') && extractHex(v) !== null).length;
+    return hexCount >= 3;
 }
 
-function extractSeed(ramp: any): string | null {
-    const step = ramp['500'];
-    if (!step) return null;
-    const val = typeof step === 'string' ? step : (step.$value ?? step.value);
-    if (!val || typeof val !== 'string' || val.startsWith('{')) return null;
-    return val;
+/** Pick the best representative "seed" hex from a scale */
+function seedFromScale(obj: any): string | null {
+    const entries = Object.entries(obj)
+        .filter(([k, v]) => !k.startsWith('$') && extractHex(v) !== null) as [string, any][];
+
+    if (entries.length === 0) return null;
+
+    // Preferred step names in priority order (covers many conventions)
+    const preferred = ['500', '5', '400', '600', '300', '700', 'DEFAULT', 'base', 'default', 'primary'];
+    for (const step of preferred) {
+        const entry = entries.find(([k]) => k === step);
+        if (entry) return extractHex(entry[1]);
+    }
+    // Fall back to the entry closest to the middle of the sorted list
+    const sorted = [...entries].sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }));
+    return extractHex(sorted[Math.floor(sorted.length / 2)][1]);
 }
 
-function collectRamps(obj: any, depth = 0): Map<string, string> {
+/**
+ * Recursively mine color scales from any JSON structure.
+ * Returns Map<name, seedHex>.
+ * Deduplicates by name — first occurrence wins.
+ */
+function mineScales(obj: any, depth = 0): Map<string, string> {
     const result = new Map<string, string>();
-    if (depth > 4 || typeof obj !== 'object' || !obj) return result;
+    if (depth > 6 || typeof obj !== 'object' || !obj) return result;
+
     for (const [key, value] of Object.entries(obj)) {
         if (key.startsWith('$')) continue;
-        if (isColorRamp(value)) {
-            const seed = extractSeed(value as any);
-            if (seed) result.set(key, seed);
-        } else if (typeof value === 'object') {
-            for (const [k, s] of collectRamps(value, depth + 1)) {
+        if (typeof value !== 'object' || !value) continue;
+
+        if (detectScale(value)) {
+            const seed = seedFromScale(value);
+            if (seed && !result.has(key)) result.set(key, seed);
+        } else {
+            for (const [k, s] of mineScales(value as any, depth + 1)) {
                 if (!result.has(k)) result.set(k, s);
             }
         }
@@ -36,26 +75,71 @@ function collectRamps(obj: any, depth = 0): Map<string, string> {
     return result;
 }
 
+/**
+ * Last-resort: find any individually-named hex color tokens anywhere in the tree.
+ * Returns Map<name, hex>.
+ */
+function mineIndividual(obj: any, depth = 0): Map<string, string> {
+    const result = new Map<string, string>();
+    if (depth > 6 || typeof obj !== 'object' || !obj) return result;
+
+    for (const [key, value] of Object.entries(obj)) {
+        if (key.startsWith('$')) continue;
+        const hex = extractHex(value);
+        if (hex) {
+            if (!result.has(key)) result.set(key, hex);
+        } else if (typeof value === 'object') {
+            for (const [k, s] of mineIndividual(value as any, depth + 1)) {
+                if (!result.has(k)) result.set(k, s);
+            }
+        }
+    }
+    return result;
+}
+
+function categorise(ramps: Map<string, string>): { themeColors: ThemeColorConfig[]; globalColors: GlobalColorConfig[] } {
+    const themeColors: ThemeColorConfig[] = [];
+    const globalColors: GlobalColorConfig[] = [];
+    let idx = 0;
+    for (const [name, seed] of ramps) {
+        if (name === 'white' || name === 'black') continue;
+        if (KNOWN_GLOBAL_IDS.has(name)) {
+            globalColors.push({ id: name, name, seed });
+        } else {
+            themeColors.push({ id: `c-${Date.now()}-${idx++}`, name, seed });
+        }
+    }
+    return { themeColors, globalColors };
+}
+
+function buildThemeConfig(themeColors: ThemeColorConfig[], name = 'Imported Theme'): ThemeConfig {
+    return {
+        id: `imported-${Date.now()}`,
+        name,
+        colors: themeColors.length > 0 ? themeColors : [{ id: `c-${Date.now()}`, name: 'primary', seed: '#4f46e5' }],
+        geometry: { radiusBase: 4, includeRadius: true, includeBorders: true, borderWidth: 'small' },
+        fontFamily: 'Inter'
+    };
+}
+
+// ─── Format detection + top-level parse ──────────────────────────────────────
+
 interface ParseResult {
     themeConfigs: ThemeConfig[];
     globalColors: GlobalColorConfig[];
-    format: 'themebuilder-v1' | 'themebuilder-raw' | 'token-studio' | 'unknown';
+    format: 'themebuilder-v1' | 'themebuilder-raw' | 'token-studio' | 'generic';
     warnings: string[];
 }
 
 function parseJson(json: any): ParseResult {
-    // Case 1: Themebuilder v1 with embedded metadata — perfect round-trip
+    // 1. Themebuilder v1 with metadata — perfect round-trip
     if (json['$themebuilder']?.version === '1.0') {
         const meta = json['$themebuilder'];
         const theme: ThemeConfig = meta.theme;
         const gcs: GlobalColorConfig[] = meta.globalColors || [];
         if (theme?.colors?.length > 0) {
             return {
-                themeConfigs: [{
-                    ...theme,
-                    id: `imported-${Date.now()}`,
-                    name: theme.name ? `${theme.name} (imported)` : 'Imported Theme'
-                }],
+                themeConfigs: [{ ...theme, id: `imported-${Date.now()}`, name: theme.name ? `${theme.name} (imported)` : 'Imported Theme' }],
                 globalColors: gcs,
                 format: 'themebuilder-v1',
                 warnings: []
@@ -63,70 +147,47 @@ function parseJson(json: any): ParseResult {
         }
     }
 
-    // Case 2: Token Studio format (has $themes)
-    if (json['$themes']) {
-        const ramps = collectRamps(json);
-        const themeColors: ThemeColorConfig[] = [];
-        const globalColors: GlobalColorConfig[] = [];
-        let idx = 0;
-        for (const [name, seed] of ramps) {
-            if (name === 'white' || name === 'black') continue;
-            if (KNOWN_GLOBAL_IDS.has(name)) {
-                globalColors.push({ id: name, name, seed });
-            } else {
-                themeColors.push({ id: `c-${Date.now()}-${idx++}`, name, seed });
-            }
-        }
-        if (themeColors.length === 0 && globalColors.length === 0) {
-            return { themeConfigs: [], globalColors: [], format: 'token-studio', warnings: ['No color palettes found in this Token Studio JSON.'] };
-        }
-        const fallbackColor = themeColors[0] ?? { id: `c-${Date.now()}`, name: globalColors[0]?.name ?? 'primary', seed: globalColors[0]?.seed ?? '#4f46e5' };
-        return {
-            themeConfigs: [{
-                id: `imported-${Date.now()}`,
-                name: 'Imported Theme',
-                colors: themeColors.length > 0 ? themeColors : [fallbackColor],
-                geometry: { radiusBase: 4, includeRadius: true, includeBorders: true, borderWidth: 'small' },
-                fontFamily: 'Inter'
-            }],
-            globalColors,
-            format: 'token-studio',
-            warnings: []
-        };
-    }
+    // 2–4. Mine color scales from the whole file — works for Token Studio,
+    //      Themebuilder raw, Style Dictionary, custom formats, etc.
+    const scales = mineScales(json);
 
-    // Case 3: Themebuilder standard JSON without metadata (has color + theme/darkTheme keys)
-    if (json.color && (json.theme || json.darkTheme)) {
-        const ramps = collectRamps(json.color);
-        const themeColors: ThemeColorConfig[] = [];
-        const globalColors: GlobalColorConfig[] = [];
-        let idx = 0;
-        for (const [name, seed] of ramps) {
-            if (name === 'white' || name === 'black') continue;
-            if (KNOWN_GLOBAL_IDS.has(name)) {
-                globalColors.push({ id: name, name, seed });
-            } else {
-                themeColors.push({ id: `c-${Date.now()}-${idx++}`, name, seed });
-            }
-        }
-        const warnings = themeColors.length === 0
-            ? ['No theme-specific color palettes found — color seeds are approximate (extracted from ramp step 500).']
-            : ['Color seeds are approximate (extracted from ramp step 500). Minor hue shifts may occur.'];
+    if (scales.size > 0) {
+        const { themeColors, globalColors } = categorise(scales);
+        const isTokenStudio = !!json['$themes'];
+        const isThemebuilderRaw = !!json.color && !!(json.theme || json.darkTheme);
+        const format = isTokenStudio ? 'token-studio' : isThemebuilderRaw ? 'themebuilder-raw' : 'generic';
+        const warnings = format === 'generic'
+            ? ['Unrecognised token format — extracted color palettes automatically.']
+            : format === 'themebuilder-raw'
+            ? ['Color seeds are approximate (extracted from ramp midpoint).']
+            : [];
+
         return {
-            themeConfigs: [{
-                id: `imported-${Date.now()}`,
-                name: 'Imported Theme',
-                colors: themeColors.length > 0 ? themeColors : [{ id: `c-${Date.now()}`, name: 'primary', seed: '#4f46e5' }],
-                geometry: { radiusBase: 4, includeRadius: true, includeBorders: true, borderWidth: 'small' },
-                fontFamily: 'Inter'
-            }],
+            themeConfigs: [buildThemeConfig(themeColors)],
             globalColors,
-            format: 'themebuilder-raw',
+            format,
             warnings
         };
     }
 
-    return { themeConfigs: [], globalColors: [], format: 'unknown', warnings: ['Unrecognized format. Expected a Themebuilder or Token Studio JSON file.'] };
+    // 5. Last resort: find any individual hex tokens
+    const individuals = mineIndividual(json);
+    if (individuals.size > 0) {
+        const { themeColors, globalColors } = categorise(individuals);
+        return {
+            themeConfigs: [buildThemeConfig(themeColors)],
+            globalColors,
+            format: 'generic',
+            warnings: [`No color palettes detected — imported ${individuals.size} individual color value${individuals.size !== 1 ? 's' : ''} as seeds.`]
+        };
+    }
+
+    return {
+        themeConfigs: [],
+        globalColors: [],
+        format: 'generic',
+        warnings: ['No color values found in this file.']
+    };
 }
 
 type ThemeColorConfig = { id: string; name: string; seed: string };
@@ -135,6 +196,7 @@ const FORMAT_LABELS: Record<string, string> = {
     'themebuilder-v1': 'Themebuilder export — full fidelity',
     'themebuilder-raw': 'Themebuilder export — approximate seeds',
     'token-studio': 'Token Studio JSON',
+    'generic': 'Custom token format',
 };
 
 export const ImportScreen: React.FC<{ isDarkMode: boolean; onClose: () => void }> = ({ isDarkMode, onClose }) => {
@@ -146,25 +208,21 @@ export const ImportScreen: React.FC<{ isDarkMode: boolean; onClose: () => void }
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const processFile = (file: File) => {
-        if (!file.name.endsWith('.json')) {
-            setError('Please upload a .json file.');
-            setStatus('error');
-            return;
-        }
         const reader = new FileReader();
         reader.onload = (e) => {
             try {
                 const json = JSON.parse(e.target?.result as string);
                 const result = parseJson(json);
-                if (result.format === 'unknown') {
-                    setError(result.warnings[0] || 'Could not parse this file.');
+                // Only hard-fail if zero colors were found at all
+                if (result.themeConfigs.length === 0 && result.globalColors.length === 0) {
+                    setError(result.warnings[0] || 'No color values found in this file.');
                     setStatus('error');
                 } else {
                     setParseResult(result);
                     setStatus('parsed');
                 }
             } catch {
-                setError('Invalid JSON — could not parse the file.');
+                setError('Could not parse this file — make sure it is valid JSON.');
                 setStatus('error');
             }
         };
@@ -236,7 +294,7 @@ export const ImportScreen: React.FC<{ isDarkMode: boolean; onClose: () => void }
                                 <Upload size={28} style={{ color: subtle, marginBottom: '0.75rem' }} />
                                 <p style={{ margin: 0, fontWeight: 600, color: fg, fontSize: '0.9375rem' }}>Drop a JSON file here</p>
                                 <p style={{ margin: '0.375rem 0 0', fontSize: '0.875rem', color: subtle }}>or click to browse</p>
-                                <input ref={fileInputRef} type="file" accept=".json" onChange={handleFileChange} style={{ display: 'none' }} />
+                                <input ref={fileInputRef} type="file" accept=".json,.tokens,.tokens.json" onChange={handleFileChange} style={{ display: 'none' }} />
                             </div>
 
                             {status === 'error' && (
@@ -252,6 +310,7 @@ export const ImportScreen: React.FC<{ isDarkMode: boolean; onClose: () => void }
                                     {[
                                         { label: 'Themebuilder JSON', desc: 'Any JSON exported from this app — seeds preserved exactly' },
                                         { label: 'Token Studio / Figma Tokens', desc: 'Files from the Token Studio or Figma Tokens plugin' },
+                                        { label: 'Style Dictionary, Tailwind, or custom', desc: 'Any JSON with named color scales or hex values' },
                                     ].map(item => (
                                         <div key={item.label} style={{ padding: '0.75rem 1rem', background: cardBg, border: `1px solid ${border}`, borderRadius: '6px' }}>
                                             <div style={{ fontWeight: 600, fontSize: '0.875rem', color: fg }}>{item.label}</div>
