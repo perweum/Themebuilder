@@ -36,24 +36,44 @@ function luminance(hex: string): number {
 }
 
 /**
+ * True if a scale-entry key looks like a "step indicator" rather than a
+ * semantic name. Numeric keys (25, 100, 500…), Material A-variants,
+ * and recognised lightness-axis words all qualify.
+ * Semantic names like "error", "primary", "success" do NOT.
+ */
+const STEP_WORDS = new Set([
+    'default', 'base', 'light', 'lighter', 'lightest',
+    'dark', 'darker', 'darkest', 'mid', 'medium',
+    'pale', 'deep', 'bold', 'soft', 'subtle', 'vivid', 'muted',
+]);
+function isStepKey(key: string): boolean {
+    if (/^\d+$/.test(key)) return true;       // 25, 100, 500, 950
+    if (/^A\d+$/i.test(key)) return true;     // A100, A700
+    return STEP_WORDS.has(key.toLowerCase());
+}
+
+/**
  * Detect whether an object looks like a color scale (ramp).
- * Accepts any convention: 25-950 (ours), 50-900 (Tailwind), 100-900,
- * 1-10 numeric, A100/A400 (Material), DEFAULT/light/dark pairs, etc.
- * Only requires 3+ direct children that are extractable hex values.
+ * Requires 3+ direct hex children AND at least half the keys must
+ * look like step indicators — this prevents groups of semantically-named
+ * tokens (e.g. { error, success, warning }) from being mistaken for scales.
  */
 function detectScale(obj: any): boolean {
     if (typeof obj !== 'object' || !obj) return false;
-    const hexCount = Object.entries(obj).filter(([k, v]) => !k.startsWith('$') && extractHex(v) !== null).length;
-    return hexCount >= 3;
+    const hexEntries = Object.entries(obj).filter(([k, v]) => !k.startsWith('$') && extractHex(v) !== null);
+    if (hexEntries.length < 3) return false;
+    const stepLike = hexEntries.filter(([k]) => isStepKey(k)).length;
+    return stepLike >= Math.ceil(hexEntries.length / 2);
 }
 
 /**
  * Pick the best representative "seed" hex from a scale.
  * Strategy:
- *   1. Try preferred step names (500, 5, DEFAULT, base, …)
- *   2. Fall back to luminance-based selection — pick the step whose
- *      luminance is closest to ~0.18, which corresponds to a mid-tone
- *      that produces a good ramp at both extremes.
+ *   1. Try preferred step names (500, DEFAULT, base, …) but only accept
+ *      if the colour isn't too light (luminance < 0.5). A very light step
+ *      like Radix step-5 or Tailwind-100 makes a poor seed.
+ *   2. Luminance-based fallback — pick the step whose luminance is
+ *      closest to ~0.18 (perceptual mid-tone, good ramp anchor).
  */
 function seedFromScale(obj: any): string | null {
     const entries = Object.entries(obj)
@@ -61,18 +81,20 @@ function seedFromScale(obj: any): string | null {
 
     if (entries.length === 0) return null;
 
-    // Preferred step names — covers most common conventions
-    const preferred = ['500', '5', '400', '600', 'DEFAULT', 'base', 'default', 'primary', '300', '700', '6', '4'];
+    const preferred = ['500', '400', '600', 'DEFAULT', 'base', 'default', '300', '700', '5', '6', '4'];
     for (const step of preferred) {
         const entry = entries.find(([k]) => k === step);
-        if (entry) return extractHex(entry[1]);
+        if (entry) {
+            const hex = extractHex(entry[1])!;
+            if (luminance(hex) < 0.5) return hex; // only accept non-washed-out steps
+        }
     }
 
     // Luminance-based fallback: target ~0.18 (perceptual midpoint)
     const TARGET_LUMINANCE = 0.18;
-    const withLum = entries.map(([k, v]) => {
+    const withLum = entries.map(([, v]) => {
         const hex = extractHex(v)!;
-        return { key: k, hex, dist: Math.abs(luminance(hex) - TARGET_LUMINANCE) };
+        return { hex, dist: Math.abs(luminance(hex) - TARGET_LUMINANCE) };
     });
     withLum.sort((a, b) => a.dist - b.dist);
     return withLum[0]?.hex ?? null;
