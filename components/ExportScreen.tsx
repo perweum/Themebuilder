@@ -40,6 +40,18 @@ export const ExportScreen: React.FC<{
 
     if (!activeTheme || !resolvedDefaultThemes[0] || !activeThemePayloadWithOptions) return null;
 
+    const pruneEmpty = (obj: any): any => {
+        if (typeof obj !== 'object' || obj === null || Array.isArray(obj)) return obj;
+        if ('$value' in obj) return obj;
+        for (const key of Object.keys(obj)) {
+            obj[key] = pruneEmpty(obj[key]);
+            if (typeof obj[key] === 'object' && obj[key] !== null && !Array.isArray(obj[key]) && !('$value' in obj[key]) && Object.keys(obj[key]).length === 0) {
+                delete obj[key];
+            }
+        }
+        return obj;
+    };
+
     const handleExport = () => {
         const exportPayload = JSON.parse(JSON.stringify(activeThemePayloadWithOptions));
 
@@ -62,6 +74,11 @@ export const ExportScreen: React.FC<{
             if (exportPayload.darkTheme) deleteNested(exportPayload.darkTheme);
         });
         excludedGeometry.forEach(category => { delete exportPayload.geometry?.[category]; });
+
+        pruneEmpty(exportPayload.theme);
+        pruneEmpty(exportPayload.darkTheme);
+        pruneEmpty(exportPayload.color);
+        pruneEmpty(exportPayload.geometry);
 
         let exportData: any;
         if (exportFormat === 'figma') {

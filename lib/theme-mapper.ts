@@ -350,7 +350,6 @@ export function mapTheme(
         theme.background[cName] = { $value: `{color.${aliasName}.25}`, $type: "color" };
 
         theme.surface[cName] = {
-            subtle: { $value: `color-mix(in srgb, {color.${aliasName}.${lightBaseStep}} 10%, transparent)`, $type: "color" },
             default: { $value: `{color.${aliasName}.50}`, $type: "color" },
             hover: { $value: `{color.${aliasName}.100}`, $type: "color" },
             active: { $value: `{color.${aliasName}.200}`, $type: "color" },
@@ -386,7 +385,6 @@ export function mapTheme(
         darkTheme.background[cName] = { $value: `{color.${aliasName}.900}`, $type: "color" };
 
         darkTheme.surface[cName] = {
-            subtle: { $value: `color-mix(in srgb, {color.${aliasName}.${darkBaseStep}} 15%, transparent)`, $type: "color" },
             default: { $value: `{color.${aliasName}.900}`, $type: "color" },
             hover: { $value: `{color.${aliasName}.800}`, $type: "color" },
             active: { $value: `{color.${aliasName}.700}`, $type: "color" },

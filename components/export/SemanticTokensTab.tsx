@@ -1,7 +1,7 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useTheme } from '../../theme-context';
 import { COLOR_STEPS, ALPHA_STEPS } from '../../lib/palette-generator';
-import { RotateCcw } from 'lucide-react';
+import { ChevronDown, ChevronRight, RotateCcw } from 'lucide-react';
 
 interface SemanticTokensTabProps {
     isDarkMode: boolean;
@@ -20,6 +20,8 @@ export const SemanticTokensTab: React.FC<SemanticTokensTabProps> = ({
     const activeTheme = themes[0];
     const activeThemePayloadWithOptions = resolvedThemes[0];
     const defaultTheme = resolvedDefaultThemes[0];
+
+    const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
 
     const tokenCategories = useMemo(() => {
         if (!defaultTheme) return {};
@@ -101,26 +103,39 @@ export const SemanticTokensTab: React.FC<SemanticTokensTabProps> = ({
                 ))}
             </div>
 
-            {Object.entries(tokenCategories).map(([category, paths]) => (
+            {Object.entries(tokenCategories).map(([category, paths]) => {
+                const isExpanded = !!expandedCategories[category];
+                const isExcluded = excludedSemanticCategories.has(category);
+                return (
                 <div key={category}>
-                    {/* Category header with include/exclude toggle */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', borderBottom: `1px solid ${isDarkMode ? '#334155' : '#e2e8f0'}`, paddingTop: '0.5rem', paddingBottom: '1rem', marginBottom: '0.75rem' }}>
+                    {/* Category header with collapse toggle + include/exclude checkbox */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: `1px solid ${isDarkMode ? '#334155' : '#e2e8f0'}`, paddingTop: '0.5rem', paddingBottom: '1rem', marginBottom: isExpanded ? '0.75rem' : 0 }}>
+                        <button
+                            onClick={() => setExpandedCategories(prev => ({ ...prev, [category]: !prev[category] }))}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', color: isDarkMode ? '#94a3b8' : '#64748b', display: 'flex', alignItems: 'center', flexShrink: 0 }}
+                        >
+                            {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                        </button>
+                        <h3
+                            onClick={() => setExpandedCategories(prev => ({ ...prev, [category]: !prev[category] }))}
+                            style={{ textTransform: 'capitalize', fontSize: '1rem', margin: 0, color: isDarkMode ? '#f8fafc' : '#0f172a', opacity: isExcluded ? 0.5 : 1, cursor: 'pointer', flex: 1 }}
+                        >
+                            {category} Tokens
+                        </h3>
                         <input
                             type="checkbox"
-                            checked={!excludedSemanticCategories.has(category)}
+                            checked={!isExcluded}
                             onChange={(e) => {
                                 const next = new Set(excludedSemanticCategories);
                                 e.target.checked ? next.delete(category) : next.add(category);
                                 setExcludedSemanticCategories(next);
                             }}
-                            style={{ accentColor: isDarkMode ? '#C3E835' : '#0142FE', cursor: 'pointer', width: '16px', height: '16px' }}
+                            style={{ accentColor: isDarkMode ? '#C3E835' : '#0142FE', cursor: 'pointer', width: '16px', height: '16px', flexShrink: 0 }}
                         />
-                        <h3 style={{ textTransform: 'capitalize', fontSize: '1rem', margin: 0, color: isDarkMode ? '#f8fafc' : '#0f172a', opacity: excludedSemanticCategories.has(category) ? 0.5 : 1 }}>
-                            {category} Tokens
-                        </h3>
                     </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', opacity: excludedSemanticCategories.has(category) ? 0.3 : 1, pointerEvents: excludedSemanticCategories.has(category) ? 'none' : 'auto' }}>
+                    {isExpanded && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', opacity: isExcluded ? 0.3 : 1, pointerEvents: isExcluded ? 'none' : 'auto', marginBottom: '0.75rem' }}>
                         {paths.map(path => {
                             const lightOverridePath = path;
                             const darkOverridePath = `darkTheme.${path}`;
@@ -189,8 +204,10 @@ export const SemanticTokensTab: React.FC<SemanticTokensTabProps> = ({
                             );
                         })}
                     </div>
+                    )}
                 </div>
-            ))}
+                );
+            })}
         </>
     );
 };
