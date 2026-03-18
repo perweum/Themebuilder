@@ -181,6 +181,68 @@ interface ParseResult {
     warnings: string[];
 }
 
+/**
+ * Parse Token Studio `$themes` array into ThemeConfigs.
+ * Each theme entry lists which token sets are active ("source" or "enabled").
+ * Source sets contain actual hex values; enabled sets typically hold alias references.
+ * We mine scales only from "source" sets to get the real palette, then deduplicate
+ * themes that share identical source sets (e.g. Light and Dark over the same Primitives).
+ */
+function parseTokenStudioThemes(json: any): { themeConfigs: ThemeConfig[]; globalColors: GlobalColorConfig[] } | null {
+    const themes: any[] = json['$themes'];
+    if (!Array.isArray(themes) || themes.length === 0) return null;
+
+    // Build a ThemeConfig per unique "source" set fingerprint
+    const seen = new Map<string, { names: string[]; themeColors: ThemeColorConfig[]; globalColors: GlobalColorConfig[] }>();
+
+    for (const theme of themes) {
+        const { name, selectedTokenSets } = theme;
+        if (!name || typeof selectedTokenSets !== 'object') continue;
+
+        // Collect all token sets with status "source" for this theme (these have real hex values)
+        const sourceSetNames = Object.entries(selectedTokenSets as Record<string, string>)
+            .filter(([, status]) => status === 'source')
+            .map(([setName]) => setName)
+            .sort();
+
+        // Fingerprint the source sets so we can deduplicate
+        const fingerprint = sourceSetNames.join('|');
+
+        if (!seen.has(fingerprint)) {
+            // Merge all source token set objects into one for mining
+            const merged: any = {};
+            for (const setName of sourceSetNames) {
+                if (json[setName] && typeof json[setName] === 'object') {
+                    Object.assign(merged, json[setName]);
+                }
+            }
+
+            const scales = mineScales(merged);
+            if (scales.size === 0) continue;
+
+            const { themeColors, globalColors: gc } = categorise(scales);
+            seen.set(fingerprint, { names: [name], themeColors, globalColors: gc });
+        } else {
+            // Same source sets — just record the additional theme name
+            seen.get(fingerprint)!.names.push(name);
+        }
+    }
+
+    if (seen.size === 0) return null;
+
+    const themeConfigs: ThemeConfig[] = [];
+    const globalColors: GlobalColorConfig[] = [];
+
+    for (const { names, themeColors, globalColors: gc } of seen.values()) {
+        themeConfigs.push(buildThemeConfig(themeColors, names.join(' / ')));
+        for (const g of gc) {
+            if (!globalColors.find(x => x.id === g.id)) globalColors.push(g);
+        }
+    }
+
+    return { themeConfigs, globalColors };
+}
+
 function parseJson(json: any): ParseResult {
     // 1. Themebuilder v1 with metadata — perfect round-trip
     if (json['$themebuilder']?.version === '1.0') {
@@ -197,20 +259,30 @@ function parseJson(json: any): ParseResult {
         }
     }
 
-    // 2–4. Mine color scales from the whole file — works for Token Studio,
-    //      Themebuilder raw, Style Dictionary, custom formats, etc.
+    // 2. Token Studio format — use $themes to drive per-theme extraction
+    if (json['$themes']) {
+        const tsResult = parseTokenStudioThemes(json);
+        if (tsResult && tsResult.themeConfigs.length > 0) {
+            return {
+                ...tsResult,
+                format: 'token-studio',
+                warnings: []
+            };
+        }
+        // Fell through (no source sets found) — fall back to generic mining below
+    }
+
+    // 3–5. Mine color scales from the whole file — works for Themebuilder raw,
+    //       Style Dictionary, custom formats, etc.
     const scales = mineScales(json);
 
     if (scales.size > 0) {
         const { themeColors, globalColors } = categorise(scales);
-        const isTokenStudio = !!json['$themes'];
         const isThemebuilderRaw = !!json.color && !!(json.theme || json.darkTheme);
-        const format = isTokenStudio ? 'token-studio' : isThemebuilderRaw ? 'themebuilder-raw' : 'generic';
+        const format = isThemebuilderRaw ? 'themebuilder-raw' : 'generic';
         const warnings = format === 'generic'
             ? ['Unrecognised token format — extracted color palettes automatically.']
-            : format === 'themebuilder-raw'
-            ? ['Color seeds are approximate (extracted from ramp midpoint).']
-            : [];
+            : ['Color seeds are approximate (extracted from ramp midpoint).'];
 
         return {
             themeConfigs: [buildThemeConfig(themeColors)],
