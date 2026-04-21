@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import JSZip from 'jszip';
 import { useTheme } from '../theme-context';
 import { X, Download } from 'lucide-react';
 import { SystemicModal } from './SystemicModal';
@@ -7,7 +8,7 @@ import { PrimitiveTokensTab } from './export/PrimitiveTokensTab';
 import { GeometryTokensTab } from './export/GeometryTokensTab';
 
 type ExportTab = 'semantic' | 'primitive' | 'geometry';
-type ExportFormat = 'figma' | 'json';
+type ExportFormat = 'tokensync' | 'figma' | 'json';
 
 const parseSetFromStorage = (key: string): Set<string> => {
     try {
@@ -26,7 +27,7 @@ export const ExportScreen: React.FC<{
     const activeThemePayloadWithOptions = resolvedThemes[0];
 
     const [activeTab, setActiveTab] = useState<ExportTab>('semantic');
-    const [exportFormat, setExportFormat] = useState<ExportFormat>('json');
+    const [exportFormat, setExportFormat] = useState<ExportFormat>('tokensync');
 
     const [excludedPalettes, setExcludedPalettes] = useState<Set<string>>(() => parseSetFromStorage('sys_ex_palettes'));
     const [excludedSemanticCategories, setExcludedSemanticCategories] = useState<Set<string>>(() => parseSetFromStorage('sys_ex_sem_cats'));
@@ -52,7 +53,7 @@ export const ExportScreen: React.FC<{
         return obj;
     };
 
-    const handleExport = () => {
+    const handleExport = async () => {
         const exportPayload = JSON.parse(JSON.stringify(activeThemePayloadWithOptions));
 
         excludedPalettes.forEach(name => { delete exportPayload.color?.[name]; });
@@ -80,9 +81,36 @@ export const ExportScreen: React.FC<{
         pruneEmpty(exportPayload.color);
         pruneEmpty(exportPayload.geometry);
 
-        let exportData: any;
-        if (exportFormat === 'figma') {
-            exportData = {
+        const json = (obj: any) => JSON.stringify(obj, null, 2);
+        const download = (blob: Blob, filename: string) => {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        };
+
+        if (exportFormat === 'tokensync') {
+            const themeName = (activeTheme as any).name
+                ? (activeTheme as any).name.toLowerCase().replace(/\s+/g, '-')
+                : 'original';
+
+            const zip = new JSZip();
+            zip.file('primitives/color.json',      json({ color:     exportPayload.color }));
+            zip.file('primitives/geometry.json',   json({ geometry:  exportPayload.geometry }));
+            zip.file('primitives/typography.json', json({ typography: exportPayload.typography }));
+            zip.file(`semantic/themes/${themeName}.json`, json({
+                light: exportPayload.theme,
+                dark:  exportPayload.darkTheme,
+            }));
+
+            const blob = await zip.generateAsync({ type: 'blob' });
+            download(blob, `tokens-${themeName}.zip`);
+        } else if (exportFormat === 'figma') {
+            const exportData = {
                 "Primitives": { color: exportPayload.color, geometry: exportPayload.geometry },
                 "Light": { color: exportPayload.theme },
                 "Dark": { color: exportPayload.darkTheme },
@@ -90,46 +118,24 @@ export const ExportScreen: React.FC<{
                     {
                         "id": "light",
                         "name": "Light",
-                        "selectedTokenSets": {
-                            "Primitives": "source",
-                            "Light": "enabled",
-                            "Dark": "disabled"
-                        }
+                        "selectedTokenSets": { "Primitives": "source", "Light": "enabled", "Dark": "disabled" }
                     },
                     {
                         "id": "dark",
                         "name": "Dark",
-                        "selectedTokenSets": {
-                            "Primitives": "source",
-                            "Light": "disabled",
-                            "Dark": "enabled"
-                        }
+                        "selectedTokenSets": { "Primitives": "source", "Light": "disabled", "Dark": "enabled" }
                     }
                 ],
-                "$metadata": {
-                    "tokenSetOrder": ["Primitives", "Light", "Dark"]
-                }
+                "$metadata": { "tokenSetOrder": ["Primitives", "Light", "Dark"] }
             };
+            download(new Blob([json(exportData)], { type: 'application/json' }), 'theme-figma.json');
         } else {
-            exportData = {
+            const exportData = {
                 ...exportPayload,
-                "$themebuilder": {
-                    version: "1.0",
-                    theme: activeTheme,
-                    globalColors
-                }
+                "$themebuilder": { version: "1.0", theme: activeTheme, globalColors }
             };
+            download(new Blob([json(exportData)], { type: 'application/json' }), 'theme-json.json');
         }
-
-        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `theme-${exportFormat}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
     };
 
     const tabBtn = (tab: ExportTab, label: string) => (
@@ -213,8 +219,9 @@ export const ExportScreen: React.FC<{
                             onChange={(e: any) => setExportFormat(e.target.value)}
                             style={{ padding: '0.5rem 1rem', borderRadius: '4px', border: `1px solid ${isDarkMode ? '#334155' : '#e2e8f0'}`, background: isDarkMode ? '#0f172a' : '#fff', color: 'inherit' }}
                         >
-                            <option value="json">Clean JSON (Standard)</option>
+                            <option value="tokensync">Token Sync (ZIP)</option>
                             <option value="figma">Figma Variables (Tokens Studio)</option>
+                            <option value="json">Clean JSON (Standard)</option>
                         </select>
                     </div>
                     <button

@@ -13,8 +13,29 @@ useMode(modeOklch);
 export type ColorStep = 25 | 50 | 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900 | 950;
 export const COLOR_STEPS: ColorStep[] = [25, 50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950];
 
-export type AlphaStep = 100 | 90 | 80 | 70 | 60 | 50 | 40 | 30 | 20 | 10 | 5;
-export const ALPHA_STEPS: AlphaStep[] = [100, 90, 80, 70, 60, 50, 40, 30, 20, 10, 5];
+/**
+ * Alpha steps use the same 25-950 scale as colour ramps, matching Token Sync's
+ * primitives/color.json. Step 950 = fully opaque (solid hex). All other steps
+ * produce rgba() values at the corresponding opacity.
+ */
+export type AlphaStep = ColorStep;
+export const ALPHA_STEPS: AlphaStep[] = COLOR_STEPS;
+
+/** Opacity value for each alpha step. null = solid (950). */
+const ALPHA_OPACITIES: Record<ColorStep, number | null> = {
+    25:  0.04,
+    50:  0.05,
+    100: 0.10,
+    200: 0.20,
+    300: 0.30,
+    400: 0.40,
+    500: 0.50,
+    600: 0.60,
+    700: 0.70,
+    800: 0.80,
+    900: 0.90,
+    950: null,  // solid
+};
 
 // Luminosity targets from Palette-Logic.md
 export const LUMINOSITY_TARGETS: Record<ColorStep, number> = {
@@ -98,11 +119,7 @@ export function generateRamp(seedHex: string): GeneratedRamp {
         ramp[step] = formatHex(color);
     });
 
-    // We skip the collision check hardcoding here, as mapTheme handles dynamic token assignments now.
-
-    // Return the generated ramp and the dynamically identified step
-    // The closestStep is EXACTLY the step the seed represents in the L-curve
-    ramp[closestStep] = seedHex; // Overwrite the exact closest step with the *true* exact seed color to avoid imperceptible rounding errors
+    ramp[closestStep] = seedHex; // Overwrite the exact closest step with the *true* exact seed color
 
     return {
         ramp: ramp as Record<ColorStep, string>,
@@ -110,8 +127,12 @@ export function generateRamp(seedHex: string): GeneratedRamp {
     };
 }
 
+/**
+ * Generates a 12-step alpha ramp using the same 25-950 scale as colour ramps.
+ * Step 950 is solid (the base hex). Steps 25-900 are rgba() at the corresponding opacity.
+ * This matches Token Sync's primitives/color.json white/black scale exactly.
+ */
 export function generateAlphaRamp(seedHex: string): Record<AlphaStep, string> {
-    // Simple hex to RGB parser for reliable 6-digit hex parsing without relying on external lib formats
     const hex = seedHex.replace(/^#/, '');
     if (hex.length !== 6) {
         throw new Error(`Invalid seed hex for alpha ramp (must be 6 digits): ${seedHex}`);
@@ -121,9 +142,13 @@ export function generateAlphaRamp(seedHex: string): Record<AlphaStep, string> {
     const b = parseInt(hex.substring(4, 6), 16);
     const ramp: Partial<Record<AlphaStep, string>> = {};
 
-    ALPHA_STEPS.forEach(step => {
-        const decimalAlpha = step / 100;
-        ramp[step] = `rgba(${r}, ${g}, ${b}, ${decimalAlpha})`;
+    COLOR_STEPS.forEach(step => {
+        const alpha = ALPHA_OPACITIES[step];
+        if (alpha === null) {
+            ramp[step] = seedHex; // solid
+        } else {
+            ramp[step] = `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        }
     });
 
     return ramp as Record<AlphaStep, string>;
@@ -170,10 +195,53 @@ export function getAdaptivePrimary(seedHex: string, fallbackHex: string): Adapti
 }
 
 /**
- * Finds the nearest step in a color ramp that provides at least a 4.5:1 contrast ratio 
- * against the provided background color. If no step provides 4.5:1, returns the step 
+ * Returns the accessible text colour token for a given background hex.
+ * Uses white.950 (solid white) or black.950 (solid black) — matching Token Sync alpha scale.
+ */
+export const getBestTextForBg = (bgHex: string) => {
+    const onWhite = wcagContrast(bgHex, '#ffffff');
+    const onBlack = wcagContrast(bgHex, '#000000');
+    // onWhite > onBlack means bg is dark → use white text
+    return onWhite > onBlack
+        ? { hex: '#ffffff', token: '{color.white.950}' }
+        : { hex: '#000000', token: '{color.black.950}' };
+};
+
+export function getAccessibleBaseStep(ramp: Record<ColorStep, string>, startStep: ColorStep): { bgStep: ColorStep; textToken: string; textHex: string } {
+    let currentStep = startStep;
+    const res = getBestTextForBg(ramp[currentStep]);
+    if (wcagContrast(ramp[currentStep], res.hex) >= 4.5) {
+        return { bgStep: currentStep, textToken: res.token, textHex: res.hex };
+    }
+
+    // Search neighbors
+    const neighbors: ColorStep[] = [500, 600, 400, 700, 300, 800, 200, 900, 100, 950, 50];
+    for (const step of neighbors) {
+        const textRes = getBestTextForBg(ramp[step]);
+        if (wcagContrast(ramp[step], textRes.hex) >= 4.5) {
+            return { bgStep: step, textToken: textRes.token, textHex: textRes.hex };
+        }
+    }
+    return { bgStep: startStep, textToken: res.token, textHex: res.hex };
+}
+
+function getOffsetStep(base: ColorStep, offset: number): ColorStep {
+    const idx = COLOR_STEPS.indexOf(base);
+    const newIdx = Math.max(0, Math.min(COLOR_STEPS.length - 1, idx + offset));
+    return COLOR_STEPS[newIdx];
+}
+
+export interface NamedColorRamp {
+    id?: string;       // Stable ID for core tracking
+    name: string;      // The actual mapped name, like 'master' or 'secondary'
+    gen: GeneratedRamp;
+}
+
+/**
+ * Finds the nearest step in a color ramp that provides at least a 4.5:1 contrast ratio
+ * against the provided background color. If no step provides 4.5:1, returns the step
  * with the absolute highest contrast.
- * 
+ *
  * Used for Ghost/Outline text where the brand color must be legible against Light/Dark backgrounds.
  */
 export function getAccessibleForeground(ramp: Record<ColorStep, string>, bgHex: string): ColorStep {

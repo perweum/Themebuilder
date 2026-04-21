@@ -127,18 +127,24 @@ export const ThemeScope: React.FC<ThemeScopeProps> = ({
             }));
 
             const generatedTheme = mapTheme(
-                mappedColors, // Passes [brand, accent, master, etc...]
+                mappedColors,
                 mappedGlobal,
                 themeConfig.semanticOverrides,
                 themeConfig.primitiveOverrides,
-                themeConfig.geometry
+                themeConfig.geometry,
+                themeConfig.fontFamily,
             );
 
             const resolveAlias = (val: string) => {
                 if (typeof val !== 'string') return val;
-                // Replace all occurrences of {path.to.token} with var(--path-to-token)
+                // {light.text.default} and {dark.text.default} are within-theme refs in Token Sync
+                // format. Strip the scheme prefix so they resolve to --color-text-default, which
+                // is the CSS variable set by setVariables(theme, 'color') or setVariables(darkTheme, 'color').
                 return val.replace(/\{([^{}]+)\}/g, (match, path) => {
-                    return `var(--${path.replace(/\./g, '-')})`;
+                    const cleanPath = (path.startsWith('light.') || path.startsWith('dark.'))
+                        ? `color.${path.replace(/^(light|dark)\./, '')}`
+                        : path;
+                    return `var(--${cleanPath.replace(/\./g, '-')})`;
                 });
             };
 

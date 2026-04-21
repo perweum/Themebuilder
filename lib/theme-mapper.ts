@@ -1,4 +1,4 @@
-import { ColorStep, COLOR_STEPS, getAccessibleForeground, GeneratedRamp, getColorName, generateAlphaRamp, AlphaStep, getClosestLuminosityStep, generateRamp } from './palette-generator';
+import { ColorStep, COLOR_STEPS, getAccessibleForeground, GeneratedRamp, getColorName, generateAlphaRamp, AlphaStep, getClosestLuminosityStep, generateRamp, getBestTextForBg, getAccessibleBaseStep } from './palette-generator';
 import { wcagContrast } from 'culori';
 
 export interface Token<T = string> {
@@ -11,9 +11,10 @@ export type AlphaRampTokens = Record<AlphaStep, Token<string>>;
 
 export interface ThemeTokensPayload {
     color: Record<string, any>;
-    theme: Record<string, any>;
-    darkTheme: Record<string, any>;
+    theme: Record<string, any>;      // light semantic tokens — becomes "light" in theme file export
+    darkTheme: Record<string, any>;  // dark semantic tokens  — becomes "dark" in theme file export
     geometry: Record<string, any>;
+    typography: Record<string, any>;
 }
 
 // Helper to convert a raw ramp (keys 25-950) into Token format
@@ -41,29 +42,10 @@ function toAlphaTokenRamp(ramp: Record<AlphaStep, string>): AlphaRampTokens {
     return tokens;
 }
 
-// Simple logic to find a step with enough contrast
-export const getBestTextForBg = (bgHex: string) => {
-    const onWhite = wcagContrast(bgHex, '#ffffff');
-    const onBlack = wcagContrast(bgHex, '#000000');
-    return onWhite > onBlack ? { hex: '#ffffff', token: '{color.white.100}' } : { hex: '#000000', token: '{color.black.100}' };
-};
-
-export function getAccessibleBaseStep(ramp: Record<ColorStep, string>, startStep: ColorStep): { bgStep: ColorStep; textToken: string; textHex: string } {
-    let currentStep = startStep;
-    const res = getBestTextForBg(ramp[currentStep]);
-    if (wcagContrast(ramp[currentStep], res.hex) >= 4.5) {
-        return { bgStep: currentStep, textToken: res.token, textHex: res.hex };
-    }
-
-    // Search neighbors
-    const neighbors: ColorStep[] = [500, 600, 400, 700, 300, 800, 200, 900, 100, 950, 50];
-    for (const step of neighbors) {
-        const textRes = getBestTextForBg(ramp[step]);
-        if (wcagContrast(ramp[step], textRes.hex) >= 4.5) {
-            return { bgStep: step, textToken: textRes.token, textHex: textRes.hex };
-        }
-    }
-    return { bgStep: startStep, textToken: res.token, textHex: res.hex };
+export interface NamedColorRamp {
+    id?: string;       // Stable ID for core tracking
+    name: string;      // The actual mapped name, like 'master' or 'secondary'
+    gen: GeneratedRamp;
 }
 
 function getOffsetStep(base: ColorStep, offset: number): ColorStep {
@@ -72,437 +54,500 @@ function getOffsetStep(base: ColorStep, offset: number): ColorStep {
     return COLOR_STEPS[newIdx];
 }
 
-export interface NamedColorRamp {
-    id?: string;       // Stable ID for core tracking
-    name: string;      // The actual mapped name, like 'master' or 'secondary'
-    gen: GeneratedRamp;
-}
-
 /**
- * Maps generated ramps to the semantic token structure.
- * Implements W3C Design Token aliasing {namespace.path}.
+ * Maps generated ramps to the semantic token structure, aligned with Token Sync's
+ * Primitives → Themes → Semantic three-layer architecture.
+ *
+ * Output:
+ *   payload.color     → primitives/color.json  { color: {...} }
+ *   payload.theme     → semantic/themes/{name}.json "light" section
+ *   payload.darkTheme → semantic/themes/{name}.json "dark" section
+ *   payload.geometry  → primitives/geometry.json { geometry: {...} }
+ *   payload.typography → primitives/typography.json { typography: {...} }
+ *
+ * Icon tokens in theme/darkTheme use {light.text.*}/{dark.text.*} refs, matching
+ * the Token Sync within-file reference format. ThemeScope's resolveAlias strips the
+ * scheme prefix so these resolve correctly in the live preview.
  */
 export function mapTheme(
     themeColors: NamedColorRamp[],
     globalColors: NamedColorRamp[],
     semanticOverrides?: Record<string, string>,
     primitiveOverrides?: Record<string, string>,
-    geometryConfig?: { radiusBase: number; includeRadius: boolean; includeBorders: boolean; borderWidth: 'small' | 'medium' | 'large' }
+    geometryConfig?: { radiusBase: number; includeRadius: boolean; includeBorders: boolean; borderWidth: 'small' | 'medium' | 'large' },
+    fontFamily?: string,
 ): ThemeTokensPayload {
 
-    // Lookup core semantics by stable ID so renaming them doesn't drop their required mapping
+    // Lookup core semantics by stable ID
     const neutralRamp = globalColors.find(c => c.id === 'neutral');
     const successRamp = globalColors.find(c => c.id === 'success');
-    const errorRamp = globalColors.find(c => c.id === 'error' || c.id === 'critical');
+    const errorRamp   = globalColors.find(c => c.id === 'error' || c.id === 'critical');
 
-    // Extract default fallbacks if somehow missing
     const fallbackNeutral = generateRamp('#64748b');
     const fallbackSuccess = generateRamp('#22c55e');
-    const fallbackError = generateRamp('#ef4444');
+    const fallbackError   = generateRamp('#ef4444');
 
     const neutralGen = neutralRamp ? neutralRamp.gen : fallbackNeutral;
     const successGen = successRamp ? successRamp.gen : fallbackSuccess;
-    const errorGen = errorRamp ? errorRamp.gen : fallbackError;
+    const errorGen   = errorRamp   ? errorRamp.gen   : fallbackError;
 
     const neutralKey = neutralRamp ? neutralRamp.name.toLowerCase().replace(/\s+/g, '-') : 'neutral';
     const successKey = successRamp ? successRamp.name.toLowerCase().replace(/\s+/g, '-') : 'success';
-    const errorKey = errorRamp ? errorRamp.name.toLowerCase().replace(/\s+/g, '-') : 'error';
+    const errorKey   = errorRamp   ? errorRamp.name.toLowerCase().replace(/\s+/g, '-')   : 'error';
+
+    // ---------------------------------------------------------------------------
+    // Primitive colour tokens
+    // ---------------------------------------------------------------------------
 
     const colors: Record<string, any> = {
-        white: toAlphaTokenRamp(generateAlphaRamp('#ffffff')),
-        black: toAlphaTokenRamp(generateAlphaRamp('#000000')),
-        [neutralKey]: toTokenRamp(neutralGen.ramp),
-        [successKey]: toTokenRamp(successGen.ramp),
-        [errorKey]: toTokenRamp(errorGen.ramp),
+        white:         toAlphaTokenRamp(generateAlphaRamp('#ffffff')),
+        black:         toAlphaTokenRamp(generateAlphaRamp('#000000')),
+        [neutralKey]:  toTokenRamp(neutralGen.ramp),
+        [successKey]:  toTokenRamp(successGen.ramp),
+        [errorKey]:    toTokenRamp(errorGen.ramp),
     };
 
-    // Initialize root objects
+    // ---------------------------------------------------------------------------
+    // Light semantic token skeleton
+    // Ref format: {light.text.X} for within-theme refs (icon → text aliases).
+    // Primitive refs: {color.paletteName.step} — become cross-collection aliases in Figma.
+    // ---------------------------------------------------------------------------
+
     const theme: Record<string, any> = {
         background: {
-            default: {},
-            [successKey]: { $value: `{color.${successKey}.25}`, $type: "color" },
-            [errorKey]: { $value: `{color.${errorKey}.25}`, $type: "color" }
+            default:    {},                                                                     // set below
+            subtle:     {},                                                                     // set below
+            [successKey]: { $value: `{color.${successKey}.25}`,  $type: 'color' },
+            [errorKey]:   { $value: `{color.${errorKey}.25}`,    $type: 'color' },
         },
         surface: {
-            default: { $value: `{color.white.100}`, $type: "color" },
-            disabled: { $value: `{color.${neutralKey}.50}`, $type: "color" },
+            default:    { $value: `{color.white.950}`,           $type: 'color' },
+            raised:     { $value: `{color.white.950}`,           $type: 'color' },
+            overlay:    { $value: `{color.white.950}`,           $type: 'color' },
+            disabled:   { $value: `{color.${neutralKey}.50}`,    $type: 'color' },
             [successKey]: {
-                default: { $value: `{color.${successKey}.50}`, $type: "color" },
-                hover: { $value: `{color.${successKey}.100}`, $type: "color" },
-                active: { $value: `{color.${successKey}.200}`, $type: "color" }
+                default: { $value: `{color.${successKey}.50}`,   $type: 'color' },
+                hover:   { $value: `{color.${successKey}.100}`,  $type: 'color' },
+                active:  { $value: `{color.${successKey}.200}`,  $type: 'color' },
             },
             [errorKey]: {
-                default: { $value: `{color.${errorKey}.50}`, $type: "color" },
-                hover: { $value: `{color.${errorKey}.100}`, $type: "color" },
-                active: { $value: `{color.${errorKey}.200}`, $type: "color" }
-            }
+                default: { $value: `{color.${errorKey}.50}`,     $type: 'color' },
+                hover:   { $value: `{color.${errorKey}.100}`,    $type: 'color' },
+                active:  { $value: `{color.${errorKey}.200}`,    $type: 'color' },
+            },
+            neutral: {
+                default: { $value: `{color.${neutralKey}.50}`,   $type: 'color' },
+                hover:   { $value: `{color.${neutralKey}.100}`,  $type: 'color' },
+                active:  { $value: `{color.${neutralKey}.200}`,  $type: 'color' },
+            },
         },
         border: {
-            subtle: { $value: `{color.${neutralKey}.200}`, $type: "color" },
-            default: { $value: `{color.${neutralKey}.300}`, $type: "color" },
-            disabled: { $value: `{color.${neutralKey}.200}`, $type: "color" },
-            focus: {},
+            subtle:     { $value: `{color.${neutralKey}.100}`,   $type: 'color' },
+            default:    { $value: `{color.${neutralKey}.200}`,   $type: 'color' },
+            strong:     { $value: `{color.${neutralKey}.400}`,   $type: 'color' },
+            disabled:   { $value: `{color.${neutralKey}.200}`,   $type: 'color' },
+            focus:      {},                                                                     // set below
             [successKey]: {
-                default: { $value: `{color.${successKey}.300}`, $type: "color" },
-                hover: { $value: `{color.${successKey}.400}`, $type: "color" }
+                default: { $value: `{color.${successKey}.300}`,  $type: 'color' },
+                hover:   { $value: `{color.${successKey}.400}`,  $type: 'color' },
             },
             [errorKey]: {
-                default: { $value: `{color.${errorKey}.300}`, $type: "color" },
-                hover: { $value: `{color.${errorKey}.400}`, $type: "color" }
-            }
+                default: { $value: `{color.${errorKey}.300}`,    $type: 'color' },
+                hover:   { $value: `{color.${errorKey}.400}`,    $type: 'color' },
+            },
+            neutral: {
+                default: { $value: `{color.${neutralKey}.200}`,  $type: 'color' },
+                hover:   { $value: `{color.${neutralKey}.400}`,  $type: 'color' },
+            },
         },
         base: {
-            disabled: { $value: `{color.${neutralKey}.200}`, $type: "color" },
+            disabled:   { $value: `{color.${neutralKey}.200}`,   $type: 'color' },
             [successKey]: {
-                default: { $value: `{color.${successKey}.500}`, $type: "color" },
-                hover: { $value: `{color.${successKey}.600}`, $type: "color" },
-                active: { $value: `{color.${successKey}.700}`, $type: "color" },
+                default: { $value: `{color.${successKey}.500}`,  $type: 'color' },
+                hover:   { $value: `{color.${successKey}.600}`,  $type: 'color' },
+                active:  { $value: `{color.${successKey}.700}`,  $type: 'color' },
             },
             [errorKey]: {
-                default: { $value: `{color.${errorKey}.500}`, $type: "color" },
-                hover: { $value: `{color.${errorKey}.600}`, $type: "color" },
-                active: { $value: `{color.${errorKey}.700}`, $type: "color" },
-            }
+                default: { $value: `{color.${errorKey}.500}`,    $type: 'color' },
+                hover:   { $value: `{color.${errorKey}.600}`,    $type: 'color' },
+                active:  { $value: `{color.${errorKey}.700}`,    $type: 'color' },
+            },
+            neutral: {
+                default: { $value: `{color.${neutralKey}.600}`,  $type: 'color' },
+                hover:   { $value: `{color.${neutralKey}.700}`,  $type: 'color' },
+                active:  { $value: `{color.${neutralKey}.800}`,  $type: 'color' },
+            },
         },
         text: {
-            default: { $value: `{color.${neutralKey}.950}`, $type: "color" },
-            subtle: { $value: `{color.${neutralKey}.500}`, $type: "color" },
-            disabled: { $value: `{color.${neutralKey}.400}`, $type: "color" },
+            default:    { $value: `{color.${neutralKey}.950}`,   $type: 'color' },
+            subtle:     { $value: `{color.${neutralKey}.600}`,   $type: 'color' },
+            disabled:   { $value: `{color.${neutralKey}.400}`,   $type: 'color' },
+            inverse:    { $value: `{color.white.950}`,           $type: 'color' },
             [successKey]: {
-                default: { $value: `{color.${successKey}.600}`, $type: "color" },
-                contrast: { $value: `{color.white.100}`, $type: "color" }
+                default:  { $value: `{color.${successKey}.600}`, $type: 'color' },
+                contrast: { $value: `{color.white.950}`,         $type: 'color' },
             },
             [errorKey]: {
-                default: { $value: `{color.${errorKey}.600}`, $type: "color" },
-                contrast: { $value: `{color.white.100}`, $type: "color" }
-            }
+                default:  { $value: `{color.${errorKey}.600}`,   $type: 'color' },
+                contrast: { $value: `{color.white.950}`,         $type: 'color' },
+            },
+            neutral: {
+                default:  { $value: `{color.${neutralKey}.600}`, $type: 'color' },
+                contrast: { $value: `{color.white.950}`,         $type: 'color' },
+            },
         },
         icon: {
-            default: { $value: `{color.text.default}`, $type: "color" },
-            subtle: { $value: `{color.text.subtle}`, $type: "color" },
+            default:    { $value: `{light.text.default}`,        $type: 'color' },
+            subtle:     { $value: `{light.text.subtle}`,         $type: 'color' },
+            disabled:   { $value: `{light.text.disabled}`,       $type: 'color' },
+            inverse:    { $value: `{light.text.inverse}`,        $type: 'color' },
             [successKey]: {
-                default: { $value: `{color.text.${successKey}.default}`, $type: "color" },
-                contrast: { $value: `{color.text.${successKey}.contrast}`, $type: "color" }
+                default:  { $value: `{light.text.${successKey}.default}`,  $type: 'color' },
+                contrast: { $value: `{light.text.${successKey}.contrast}`, $type: 'color' },
             },
             [errorKey]: {
-                default: { $value: `{color.text.${errorKey}.default}`, $type: "color" },
-                contrast: { $value: `{color.text.${errorKey}.contrast}`, $type: "color" }
-            }
+                default:  { $value: `{light.text.${errorKey}.default}`,    $type: 'color' },
+                contrast: { $value: `{light.text.${errorKey}.contrast}`,   $type: 'color' },
+            },
+            neutral: {
+                default:  { $value: `{light.text.neutral.default}`,        $type: 'color' },
+                contrast: { $value: `{light.text.neutral.contrast}`,       $type: 'color' },
+            },
         },
-        shadow: {
-            color: { $value: `{color.black.30}`, $type: "color" },
-            1: { $value: `0 1px 2px color-mix(in srgb, {color.shadow.color} 5%, transparent), 0 1px 3px color-mix(in srgb, {color.shadow.color} 10%, transparent)`, $type: "shadow" },
-            2: { $value: `0 4px 6px -1px color-mix(in srgb, {color.shadow.color} 10%, transparent), 0 2px 4px -2px color-mix(in srgb, {color.shadow.color} 5%, transparent)`, $type: "shadow" },
-            3: { $value: `0 10px 15px -3px color-mix(in srgb, {color.shadow.color} 10%, transparent), 0 4px 6px -4px color-mix(in srgb, {color.shadow.color} 5%, transparent)`, $type: "shadow" },
-            4: { $value: `0 20px 25px -5px color-mix(in srgb, {color.shadow.color} 10%, transparent), 0 10px 10px -5px color-mix(in srgb, {color.shadow.color} 5%, transparent)`, $type: "shadow" },
-        }
+        elevation: {
+            '1': { $value: `0 1px 2px {color.black.50}, 0 1px 3px {color.black.100}`,      $type: 'shadow' },
+            '2': { $value: `0 4px 6px {color.black.100}, 0 2px 4px {color.black.50}`,      $type: 'shadow' },
+            '3': { $value: `0 10px 15px {color.black.100}, 0 4px 6px {color.black.50}`,    $type: 'shadow' },
+            '4': { $value: `0 20px 25px {color.black.100}, 0 8px 10px {color.black.50}`,   $type: 'shadow' },
+        },
+        overlay: {
+            default: { $value: `{color.black.300}`, $type: 'color' },
+        },
     };
+
+    // ---------------------------------------------------------------------------
+    // Dark semantic token skeleton
+    // ---------------------------------------------------------------------------
 
     const darkTheme: Record<string, any> = {
         background: {
-            default: {},
-            [successKey]: { $value: `{color.${successKey}.900}`, $type: "color" },
-            [errorKey]: { $value: `{color.${errorKey}.900}`, $type: "color" }
+            default:    {},                                                                     // set below
+            subtle:     {},                                                                     // set below
+            [successKey]: { $value: `{color.${successKey}.900}`, $type: 'color' },
+            [errorKey]:   { $value: `{color.${errorKey}.900}`,   $type: 'color' },
         },
         surface: {
-            default: { $value: `{color.${neutralKey}.900}`, $type: "color" },
-            disabled: { $value: `{color.${neutralKey}.900}`, $type: "color" },
+            default:    { $value: `{color.${neutralKey}.900}`,   $type: 'color' },
+            raised:     { $value: `{color.${neutralKey}.800}`,   $type: 'color' },
+            overlay:    { $value: `{color.${neutralKey}.800}`,   $type: 'color' },
+            disabled:   { $value: `{color.${neutralKey}.800}`,   $type: 'color' },
             [successKey]: {
-                default: { $value: `{color.${successKey}.900}`, $type: "color" },
-                hover: { $value: `{color.${successKey}.800}`, $type: "color" },
-                active: { $value: `{color.${successKey}.700}`, $type: "color" }
+                default: { $value: `{color.${successKey}.900}`,  $type: 'color' },
+                hover:   { $value: `{color.${successKey}.800}`,  $type: 'color' },
+                active:  { $value: `{color.${successKey}.700}`,  $type: 'color' },
             },
             [errorKey]: {
-                default: { $value: `{color.${errorKey}.900}`, $type: "color" },
-                hover: { $value: `{color.${errorKey}.800}`, $type: "color" },
-                active: { $value: `{color.${errorKey}.700}`, $type: "color" }
-            }
+                default: { $value: `{color.${errorKey}.900}`,    $type: 'color' },
+                hover:   { $value: `{color.${errorKey}.800}`,    $type: 'color' },
+                active:  { $value: `{color.${errorKey}.700}`,    $type: 'color' },
+            },
+            neutral: {
+                default: { $value: `{color.${neutralKey}.800}`,  $type: 'color' },
+                hover:   { $value: `{color.${neutralKey}.700}`,  $type: 'color' },
+                active:  { $value: `{color.${neutralKey}.600}`,  $type: 'color' },
+            },
         },
         border: {
-            subtle: { $value: `{color.${neutralKey}.700}`, $type: "color" },
-            default: { $value: `{color.${neutralKey}.500}`, $type: "color" },
-            disabled: { $value: `{color.${neutralKey}.700}`, $type: "color" },
-            focus: {},
+            subtle:     { $value: `{color.${neutralKey}.800}`,   $type: 'color' },
+            default:    { $value: `{color.${neutralKey}.700}`,   $type: 'color' },
+            strong:     { $value: `{color.${neutralKey}.500}`,   $type: 'color' },
+            disabled:   { $value: `{color.${neutralKey}.700}`,   $type: 'color' },
+            focus:      {},                                                                     // set below
             [successKey]: {
-                default: { $value: `{color.${successKey}.500}`, $type: "color" },
-                hover: { $value: `{color.${successKey}.400}`, $type: "color" }
+                default: { $value: `{color.${successKey}.500}`,  $type: 'color' },
+                hover:   { $value: `{color.${successKey}.400}`,  $type: 'color' },
             },
             [errorKey]: {
-                default: { $value: `{color.${errorKey}.500}`, $type: "color" },
-                hover: { $value: `{color.${errorKey}.400}`, $type: "color" }
-            }
+                default: { $value: `{color.${errorKey}.500}`,    $type: 'color' },
+                hover:   { $value: `{color.${errorKey}.400}`,    $type: 'color' },
+            },
+            neutral: {
+                default: { $value: `{color.${neutralKey}.700}`,  $type: 'color' },
+                hover:   { $value: `{color.${neutralKey}.500}`,  $type: 'color' },
+            },
         },
         base: {
-            disabled: { $value: `{color.${neutralKey}.800}`, $type: "color" },
+            disabled:   { $value: `{color.${neutralKey}.700}`,   $type: 'color' },
             [successKey]: {
-                default: { $value: `{color.${successKey}.400}`, $type: "color" },
-                hover: { $value: `{color.${successKey}.300}`, $type: "color" },
-                active: { $value: `{color.${successKey}.200}`, $type: "color" },
+                default: { $value: `{color.${successKey}.400}`,  $type: 'color' },
+                hover:   { $value: `{color.${successKey}.300}`,  $type: 'color' },
+                active:  { $value: `{color.${successKey}.200}`,  $type: 'color' },
             },
             [errorKey]: {
-                default: { $value: `{color.${errorKey}.400}`, $type: "color" },
-                hover: { $value: `{color.${errorKey}.300}`, $type: "color" },
-                active: { $value: `{color.${errorKey}.200}`, $type: "color" },
-            }
+                default: { $value: `{color.${errorKey}.400}`,    $type: 'color' },
+                hover:   { $value: `{color.${errorKey}.300}`,    $type: 'color' },
+                active:  { $value: `{color.${errorKey}.200}`,    $type: 'color' },
+            },
+            neutral: {
+                default: { $value: `{color.${neutralKey}.500}`,  $type: 'color' },
+                hover:   { $value: `{color.${neutralKey}.400}`,  $type: 'color' },
+                active:  { $value: `{color.${neutralKey}.300}`,  $type: 'color' },
+            },
         },
         text: {
-            default: { $value: `{color.${neutralKey}.50}`, $type: "color" },
-            subtle: { $value: `{color.${neutralKey}.400}`, $type: "color" },
-            disabled: { $value: `{color.${neutralKey}.500}`, $type: "color" },
+            default:    { $value: `{color.${neutralKey}.50}`,    $type: 'color' },
+            subtle:     { $value: `{color.${neutralKey}.400}`,   $type: 'color' },
+            disabled:   { $value: `{color.${neutralKey}.600}`,   $type: 'color' },
+            inverse:    { $value: `{color.${neutralKey}.950}`,   $type: 'color' },
             [successKey]: {
-                default: { $value: `{color.${successKey}.400}`, $type: "color" },
-                contrast: { $value: `{color.white.100}`, $type: "color" }
+                default:  { $value: `{color.${successKey}.400}`, $type: 'color' },
+                contrast: { $value: `{color.${neutralKey}.950}`, $type: 'color' },
             },
             [errorKey]: {
-                default: { $value: `{color.${errorKey}.400}`, $type: "color" },
-                contrast: { $value: `{color.white.100}`, $type: "color" }
-            }
+                default:  { $value: `{color.${errorKey}.400}`,   $type: 'color' },
+                contrast: { $value: `{color.${neutralKey}.950}`, $type: 'color' },
+            },
+            neutral: {
+                default:  { $value: `{color.${neutralKey}.400}`, $type: 'color' },
+                contrast: { $value: `{color.${neutralKey}.950}`, $type: 'color' },
+            },
         },
         icon: {
-            default: { $value: `{color.text.default}`, $type: "color" },
-            subtle: { $value: `{color.text.subtle}`, $type: "color" },
+            default:    { $value: `{dark.text.default}`,         $type: 'color' },
+            subtle:     { $value: `{dark.text.subtle}`,          $type: 'color' },
+            disabled:   { $value: `{dark.text.disabled}`,        $type: 'color' },
+            inverse:    { $value: `{dark.text.inverse}`,         $type: 'color' },
             [successKey]: {
-                default: { $value: `{color.text.${successKey}.default}`, $type: "color" },
-                contrast: { $value: `{color.text.${successKey}.contrast}`, $type: "color" }
+                default:  { $value: `{dark.text.${successKey}.default}`,  $type: 'color' },
+                contrast: { $value: `{dark.text.${successKey}.contrast}`, $type: 'color' },
             },
             [errorKey]: {
-                default: { $value: `{color.text.${errorKey}.default}`, $type: "color" },
-                contrast: { $value: `{color.text.${errorKey}.contrast}`, $type: "color" }
-            }
+                default:  { $value: `{dark.text.${errorKey}.default}`,    $type: 'color' },
+                contrast: { $value: `{dark.text.${errorKey}.contrast}`,   $type: 'color' },
+            },
+            neutral: {
+                default:  { $value: `{dark.text.neutral.default}`,        $type: 'color' },
+                contrast: { $value: `{dark.text.neutral.contrast}`,       $type: 'color' },
+            },
         },
-        shadow: {
-            color: { $value: `{color.white.30}`, $type: "color" },
-            1: { $value: `0 1px 2px color-mix(in srgb, {color.shadow.color} 50%, transparent), 0 0 0 1px {color.white.5}`, $type: "shadow" },
-            2: { $value: `0 4px 6px -1px color-mix(in srgb, {color.shadow.color} 50%, transparent), 0 0 0 1px {color.white.5}`, $type: "shadow" },
-            3: { $value: `0 10px 15px -3px color-mix(in srgb, {color.shadow.color} 60%, transparent), 0 0 0 1px {color.white.5}`, $type: "shadow" },
-            4: { $value: `0 20px 25px -5px color-mix(in srgb, {color.shadow.color} 70%, transparent), 0 0 0 1px {color.white.10}`, $type: "shadow" },
-        }
+        elevation: {
+            '1': { $value: `0 1px 2px {color.black.200}, 0 1px 3px {color.black.300}`,     $type: 'shadow' },
+            '2': { $value: `0 4px 6px {color.black.300}, 0 2px 4px {color.black.200}`,     $type: 'shadow' },
+            '3': { $value: `0 10px 15px {color.black.300}, 0 4px 6px {color.black.200}`,   $type: 'shadow' },
+            '4': { $value: `0 20px 25px {color.black.300}, 0 8px 10px {color.black.200}`,  $type: 'shadow' },
+        },
+        overlay: {
+            default: { $value: `{color.black.300}`, $type: 'color' },
+        },
     };
 
-    // Grab the first color in the array to act as the primary structural background driver
-    const primaryColor = themeColors.length > 0 ? themeColors[0] : null;
+    // ---------------------------------------------------------------------------
+    // Static neutral background values (set after skeleton to use neutralKey)
+    // ---------------------------------------------------------------------------
 
-    // Force default backgrounds to absolute extremes for clean contrast
-    theme.background.default = { $value: `{color.white.100}`, $type: "color" };
-    darkTheme.background.default = { $value: `{color.black.100}`, $type: "color" };
+    theme.background.default    = { $value: `{color.white.950}`,          $type: 'color' };
+    theme.background.subtle     = { $value: `{color.${neutralKey}.25}`,   $type: 'color' };
+    darkTheme.background.default = { $value: `{color.${neutralKey}.950}`, $type: 'color' };
+    darkTheme.background.subtle  = { $value: `{color.${neutralKey}.900}`, $type: 'color' };
 
-    if (primaryColor) {
-        // Also the global focus ring
-        theme.border.focus = { $value: `{color.${primaryColor.name}.600}`, $type: "color" };
-        darkTheme.border.focus = { $value: `{color.${primaryColor.name}.400}`, $type: "color" };
-    } else {
-        theme.border.focus = { $value: `{color.neutral.600}`, $type: "color" };
-        darkTheme.border.focus = { $value: `{color.neutral.400}`, $type: "color" };
-    }
-
+    // ---------------------------------------------------------------------------
     // Deduplication registry: prevents exporting identical primitive ramps.
+    // ---------------------------------------------------------------------------
+
     const canonicalSeeds = new Map<string, string>();
 
-    // First, register all explicit global colors as canonical 
-    // This allows "Water" to be used as a brand seed, and correctly alias to "water.X" 
-    // instead of exploding the css payload with "brand.X" copies.
+    // Register all global colors as canonical
     globalColors.forEach(gc => {
-        const seedStr = gc.gen.ramp[500].toLowerCase();
+        const seedStr  = gc.gen.ramp[500].toLowerCase();
         const safeName = gc.name.toLowerCase().replace(/\s+/g, '-');
-
-        // Only insert if missing, global colors are considered canonical.
         if (!canonicalSeeds.has(seedStr)) {
             canonicalSeeds.set(seedStr, safeName);
-            // Non-core global colors aren't currently automatically exported to CSS globally, 
-            // but if a theme needs them, they will be referenced!
             if (!['neutral', 'success', 'error', 'critical'].includes(safeName)) {
                 colors[safeName] = toTokenRamp(gc.gen.ramp);
             }
         }
     });
 
-    // Ensure core colors are registered in case globalColors lacked them
+    // Ensure core colors are registered even if globalColors omits them
     if (!canonicalSeeds.has(neutralGen.ramp[500].toLowerCase())) canonicalSeeds.set(neutralGen.ramp[500].toLowerCase(), 'neutral');
     if (!canonicalSeeds.has(successGen.ramp[500].toLowerCase())) canonicalSeeds.set(successGen.ramp[500].toLowerCase(), 'success');
-    if (!canonicalSeeds.has(errorGen.ramp[500].toLowerCase())) canonicalSeeds.set(errorGen.ramp[500].toLowerCase(), 'error');
+    if (!canonicalSeeds.has(errorGen.ramp[500].toLowerCase()))   canonicalSeeds.set(errorGen.ramp[500].toLowerCase(), 'error');
 
-    // Now map every single color the user defined dynamically!
+    // Focus ring defaults to neutral until a primary brand color is found
+    theme.border.focus     = { $value: `{color.${neutralKey}.600}`, $type: 'color' };
+    darkTheme.border.focus = { $value: `{color.${neutralKey}.400}`, $type: 'color' };
+
+    // ---------------------------------------------------------------------------
+    // Map each theme color (brand, accent, …)
+    // ---------------------------------------------------------------------------
+
     themeColors.forEach((config) => {
-        const cName = config.name; // user-defined string like "master" or "brand"
-        const gen = config.gen;
+        const cName   = config.name;
+        const gen     = config.gen;
         const seedStr = gen.ramp[500].toLowerCase();
 
         let aliasName = cName;
-
-        // If this seed is identical to a canonical global color, alias to it instead of duplicating the primitive tokens.
         if (canonicalSeeds.has(seedStr)) {
             aliasName = canonicalSeeds.get(seedStr)!;
         } else {
-            // First time seeing this generated primitive ramp, add it to export and register it as canonical.
             canonicalSeeds.set(seedStr, cName);
             colors[cName] = toTokenRamp(gen.ramp);
         }
 
         const rest = gen.closestStep;
 
-        // --- LIGHT THEME TOKENS ---
-        const preferredLightStep = Math.max(rest, 200) as import('./palette-generator').ColorStep;
+        // ── Light ──────────────────────────────────────────────────────────────
+        const preferredLightStep = Math.max(rest, 200) as ColorStep;
         const lightBaseAccess = getAccessibleBaseStep(gen.ramp, preferredLightStep);
-        const lightBaseStep = lightBaseAccess.bgStep;
-        const hover = getOffsetStep(lightBaseStep, lightBaseStep >= 600 ? -1 : 1);
-        const press = getOffsetStep(lightBaseStep, lightBaseStep >= 600 ? -2 : 2);
+        const lightBaseStep   = lightBaseAccess.bgStep;
+        const hover  = getOffsetStep(lightBaseStep, lightBaseStep >= 600 ? -1 : 1);
+        const press  = getOffsetStep(lightBaseStep, lightBaseStep >= 600 ? -2 : 2);
 
-        theme.background[cName] = { $value: `{color.${aliasName}.25}`, $type: "color" };
+        // First theme color overrides the focus ring
+        if (themeColors.indexOf(config) === 0) {
+            theme.border.focus     = { $value: `{color.${aliasName}.600}`, $type: 'color' };
+            darkTheme.border.focus = { $value: `{color.${aliasName}.400}`, $type: 'color' };
+        }
 
+        theme.background[cName] = { $value: `{color.${aliasName}.25}`,            $type: 'color' };
         theme.surface[cName] = {
-            default: { $value: `{color.${aliasName}.50}`, $type: "color" },
-            hover: { $value: `{color.${aliasName}.100}`, $type: "color" },
-            active: { $value: `{color.${aliasName}.200}`, $type: "color" },
+            default: { $value: `{color.${aliasName}.50}`,                          $type: 'color' },
+            hover:   { $value: `{color.${aliasName}.100}`,                         $type: 'color' },
+            active:  { $value: `{color.${aliasName}.200}`,                         $type: 'color' },
         };
-
         theme.border[cName] = {
-            default: { $value: `{color.${aliasName}.300}`, $type: "color" },
-            hover: { $value: `{color.${aliasName}.400}`, $type: "color" },
+            default: { $value: `{color.${aliasName}.200}`,                         $type: 'color' },
+            hover:   { $value: `{color.${aliasName}.400}`,                         $type: 'color' },
         };
-
         theme.base = theme.base || {};
         theme.base[cName] = {
-            default: { $value: `{color.${aliasName}.${lightBaseStep}}`, $type: "color" },
-            hover: { $value: `{color.${aliasName}.${hover}}`, $type: "color" },
-            active: { $value: `{color.${aliasName}.${press}}`, $type: "color" },
+            default: { $value: `{color.${aliasName}.${lightBaseStep}}`,            $type: 'color' },
+            hover:   { $value: `{color.${aliasName}.${hover}}`,                    $type: 'color' },
+            active:  { $value: `{color.${aliasName}.${press}}`,                    $type: 'color' },
         };
-
         theme.text[cName] = {
-            default: { $value: `{color.${aliasName}.600}`, $type: "color" },
-            contrast: { $value: lightBaseAccess.textToken, $type: "color" }
+            default:  { $value: `{color.${aliasName}.700}`,                        $type: 'color' },
+            contrast: { $value: lightBaseAccess.textToken,                         $type: 'color' },
         };
-
         theme.icon[cName] = {
-            default: { $value: `{color.text.${cName}.default}`, $type: "color" },
-            contrast: { $value: `{color.text.${cName}.contrast}`, $type: "color" },
+            default:  { $value: `{light.text.${cName}.default}`,                   $type: 'color' },
+            contrast: { $value: `{light.text.${cName}.contrast}`,                  $type: 'color' },
         };
 
-        // --- DARK THEME TOKENS ---
+        // ── Dark ───────────────────────────────────────────────────────────────
         const darkBaseAccess = getAccessibleBaseStep(gen.ramp, 300);
-        const darkBaseStep = darkBaseAccess.bgStep;
-        const darkHover = getOffsetStep(darkBaseStep, -1);
-        const darkPress = getOffsetStep(darkBaseStep, -2);
-        darkTheme.background[cName] = { $value: `{color.${aliasName}.900}`, $type: "color" };
+        const darkBaseStep   = darkBaseAccess.bgStep;
+        const darkHover      = getOffsetStep(darkBaseStep, -1);
+        const darkPress      = getOffsetStep(darkBaseStep, -2);
 
+        darkTheme.background[cName] = { $value: `{color.${aliasName}.950}`,       $type: 'color' };
         darkTheme.surface[cName] = {
-            default: { $value: `{color.${aliasName}.900}`, $type: "color" },
-            hover: { $value: `{color.${aliasName}.800}`, $type: "color" },
-            active: { $value: `{color.${aliasName}.700}`, $type: "color" },
+            default: { $value: `{color.${aliasName}.900}`,                         $type: 'color' },
+            hover:   { $value: `{color.${aliasName}.800}`,                         $type: 'color' },
+            active:  { $value: `{color.${aliasName}.700}`,                         $type: 'color' },
         };
-
         darkTheme.border[cName] = {
-            default: { $value: `{color.${aliasName}.500}`, $type: "color" },
-            hover: { $value: `{color.${aliasName}.400}`, $type: "color" },
+            default: { $value: `{color.${aliasName}.700}`,                         $type: 'color' },
+            hover:   { $value: `{color.${aliasName}.500}`,                         $type: 'color' },
         };
-
         darkTheme.base = darkTheme.base || {};
         darkTheme.base[cName] = {
-            default: { $value: `{color.${aliasName}.${darkBaseStep}}`, $type: "color" },
-            hover: { $value: `{color.${aliasName}.${darkHover}}`, $type: "color" },
-            active: { $value: `{color.${aliasName}.${darkPress}}`, $type: "color" },
+            default: { $value: `{color.${aliasName}.${darkBaseStep}}`,             $type: 'color' },
+            hover:   { $value: `{color.${aliasName}.${darkHover}}`,                $type: 'color' },
+            active:  { $value: `{color.${aliasName}.${darkPress}}`,                $type: 'color' },
         };
-
-        // Dark text contrast logic
         darkTheme.text[cName] = {
-            default: { $value: `{color.${aliasName}.300}`, $type: "color" },
-            contrast: { $value: darkBaseAccess.textToken, $type: "color" },
+            default:  { $value: `{color.${aliasName}.300}`,                        $type: 'color' },
+            contrast: { $value: darkBaseAccess.textToken,                          $type: 'color' },
         };
-
         darkTheme.icon[cName] = {
-            default: { $value: `{darkTheme.text.${cName}.default}`, $type: "color" },
-            contrast: { $value: `{darkTheme.text.${cName}.contrast}`, $type: "color" },
+            default:  { $value: `{dark.text.${cName}.default}`,                    $type: 'color' },
+            contrast: { $value: `{dark.text.${cName}.contrast}`,                   $type: 'color' },
         };
     });
 
-    // Automatically generate severity-level semantic tokens for ANY global color the user has
-    // that wasn't already mapped as an interactive Theme Color (or core success/error).
+    // ---------------------------------------------------------------------------
+    // Severity-level semantic tokens for additional global colors (warning, info…)
+    // ---------------------------------------------------------------------------
+
     globalColors.forEach((gc) => {
         const safeName = gc.name.toLowerCase().replace(/\s+/g, '-');
 
-        // Skip if this is a reserved core color, or if the interactive theme loop above already seeded it.
-        // We check against the dynamic keys (successKey, errorKey) in case the user renamed them.
-        if (['white', 'black', 'neutral', successKey, errorKey, 'critical'].includes(safeName) || (theme.surface && theme.surface[safeName])) {
+        // Skip reserved core colors and any already mapped by the theme loop
+        if (['white', 'black', 'neutral', successKey, errorKey, 'critical'].includes(safeName) ||
+            (theme.surface && theme.surface[safeName])) {
             return;
         }
 
-        const gen = gc.gen;
-        const aliasName = safeName; // We guaranteed global colors map their aliases accurately earlier
-
-        // Use generic step offsets for severity semantic mapping
-        const rest = gen.closestStep;
+        const gen       = gc.gen;
+        const aliasName = safeName;
+        const rest      = gen.closestStep;
 
         const lightBaseAccess = getAccessibleBaseStep(gen.ramp, rest);
-        const lightBaseStep = lightBaseAccess.bgStep;
-        const hover = getOffsetStep(lightBaseStep, lightBaseStep >= 600 ? -1 : 1);
-        const press = getOffsetStep(lightBaseStep, lightBaseStep >= 600 ? -2 : 2);
+        const lightBaseStep   = lightBaseAccess.bgStep;
+        const hover  = getOffsetStep(lightBaseStep, lightBaseStep >= 600 ? -1 : 1);
+        const press  = getOffsetStep(lightBaseStep, lightBaseStep >= 600 ? -2 : 2);
 
-        // --- LIGHT THEME TOKENS ---
-        theme.background[safeName] = { $value: `{color.${aliasName}.25}`, $type: "color" };
-
+        // ── Light ──────────────────────────────────────────────────────────────
+        theme.background[safeName] = { $value: `{color.${aliasName}.25}`,              $type: 'color' };
         theme.surface[safeName] = {
-            default: { $value: `{color.${aliasName}.50}`, $type: "color" },
-            hover: { $value: `{color.${aliasName}.100}`, $type: "color" },
-            active: { $value: `{color.${aliasName}.200}`, $type: "color" },
+            default: { $value: `{color.${aliasName}.50}`,                              $type: 'color' },
+            hover:   { $value: `{color.${aliasName}.100}`,                             $type: 'color' },
+            active:  { $value: `{color.${aliasName}.200}`,                             $type: 'color' },
         };
-
         theme.border[safeName] = {
-            default: { $value: `{color.${aliasName}.300}`, $type: "color" },
-            hover: { $value: `{color.${aliasName}.400}`, $type: "color" },
+            default: { $value: `{color.${aliasName}.300}`,                             $type: 'color' },
+            hover:   { $value: `{color.${aliasName}.400}`,                             $type: 'color' },
         };
-
         theme.base[safeName] = {
-            default: { $value: `{color.${aliasName}.${lightBaseStep}}`, $type: "color" },
-            hover: { $value: `{color.${aliasName}.${hover}}`, $type: "color" },
-            active: { $value: `{color.${aliasName}.${press}}`, $type: "color" },
+            default: { $value: `{color.${aliasName}.${lightBaseStep}}`,                $type: 'color' },
+            hover:   { $value: `{color.${aliasName}.${hover}}`,                        $type: 'color' },
+            active:  { $value: `{color.${aliasName}.${press}}`,                        $type: 'color' },
         };
-
         theme.text[safeName] = {
-            default: { $value: `{color.${aliasName}.600}`, $type: "color" },
-            contrast: { $value: lightBaseAccess.textToken, $type: "color" },
+            default:  { $value: `{color.${aliasName}.600}`,                            $type: 'color' },
+            contrast: { $value: lightBaseAccess.textToken,                             $type: 'color' },
         };
-
         theme.icon[safeName] = {
-            default: { $value: `{color.text.${safeName}.default}`, $type: "color" },
-            contrast: { $value: `{color.text.${safeName}.contrast}`, $type: "color" },
+            default:  { $value: `{light.text.${safeName}.default}`,                    $type: 'color' },
+            contrast: { $value: `{light.text.${safeName}.contrast}`,                   $type: 'color' },
         };
 
-        // --- DARK THEME TOKENS ---
+        // ── Dark ───────────────────────────────────────────────────────────────
         const darkBaseAccess = getAccessibleBaseStep(gen.ramp, 300);
-        const darkBaseStep = darkBaseAccess.bgStep;
-        const darkHover = getOffsetStep(darkBaseStep, -1);
-        const darkPress = getOffsetStep(darkBaseStep, -2);
+        const darkBaseStep   = darkBaseAccess.bgStep;
+        const darkHover      = getOffsetStep(darkBaseStep, -1);
+        const darkPress      = getOffsetStep(darkBaseStep, -2);
 
-        darkTheme.background[safeName] = { $value: `{color.${aliasName}.900}`, $type: "color" };
-
+        darkTheme.background[safeName] = { $value: `{color.${aliasName}.900}`,        $type: 'color' };
         darkTheme.surface[safeName] = {
-            default: { $value: `{color.${aliasName}.900}`, $type: "color" },
-            hover: { $value: `{color.${aliasName}.800}`, $type: "color" },
-            active: { $value: `{color.${aliasName}.700}`, $type: "color" },
+            default: { $value: `{color.${aliasName}.900}`,                             $type: 'color' },
+            hover:   { $value: `{color.${aliasName}.800}`,                             $type: 'color' },
+            active:  { $value: `{color.${aliasName}.700}`,                             $type: 'color' },
         };
-
         darkTheme.border[safeName] = {
-            default: { $value: `{color.${aliasName}.500}`, $type: "color" },
-            hover: { $value: `{color.${aliasName}.400}`, $type: "color" },
+            default: { $value: `{color.${aliasName}.500}`,                             $type: 'color' },
+            hover:   { $value: `{color.${aliasName}.400}`,                             $type: 'color' },
         };
-
         darkTheme.base[safeName] = {
-            default: { $value: `{color.${aliasName}.${darkBaseStep}}`, $type: "color" },
-            hover: { $value: `{color.${aliasName}.${darkHover}}`, $type: "color" },
-            active: { $value: `{color.${aliasName}.${darkPress}}`, $type: "color" },
+            default: { $value: `{color.${aliasName}.${darkBaseStep}}`,                 $type: 'color' },
+            hover:   { $value: `{color.${aliasName}.${darkHover}}`,                    $type: 'color' },
+            active:  { $value: `{color.${aliasName}.${darkPress}}`,                    $type: 'color' },
         };
-
         darkTheme.text[safeName] = {
-            default: { $value: `{color.${aliasName}.300}`, $type: "color" },
-            contrast: { $value: darkBaseAccess.textToken, $type: "color" },
+            default:  { $value: `{color.${aliasName}.300}`,                            $type: 'color' },
+            contrast: { $value: darkBaseAccess.textToken,                              $type: 'color' },
         };
-
         darkTheme.icon[safeName] = {
-            default: { $value: `{color.text.${safeName}.default}`, $type: "color" },
-            contrast: { $value: `{color.text.${safeName}.contrast}`, $type: "color" },
+            default:  { $value: `{dark.text.${safeName}.default}`,                     $type: 'color' },
+            contrast: { $value: `{dark.text.${safeName}.contrast}`,                    $type: 'color' },
         };
     });
 
-    // --- APPLY PRIMITIVE OVERRIDES ---
+    // ---------------------------------------------------------------------------
+    // Apply primitive overrides
+    // ---------------------------------------------------------------------------
+
     if (primitiveOverrides) {
         for (const [path, overrideHex] of Object.entries(primitiveOverrides)) {
             const [colorName, step] = path.split('.');
@@ -512,50 +557,108 @@ export function mapTheme(
         }
     }
 
+    // ---------------------------------------------------------------------------
+    // Build payload
+    // ---------------------------------------------------------------------------
+
     const payload: ThemeTokensPayload = {
         color: colors,
         theme,
         darkTheme,
-        geometry: {}
+        geometry: {},
+        typography: {},
     };
 
-    // --- GEOMETRY TOKENS ---
-    if (geometryConfig) {
-        const radiusBase = geometryConfig.radiusBase || 4;
-        const includeRadius = geometryConfig.includeRadius;
-        const includeBorders = geometryConfig.includeBorders;
-        const borderWidthType = geometryConfig.borderWidth || 'small';
+    // ---------------------------------------------------------------------------
+    // Geometry tokens — aligned with Token Sync primitives/geometry.json
+    // ---------------------------------------------------------------------------
 
-        const borderWidths: Record<string, string> = {
-            'small': '1px',
-            'medium': '2px',
-            'large': '3px'
-        };
+    const radiusBase   = geometryConfig?.radiusBase ?? 4;
+    const borderAlias  = geometryConfig?.borderWidth === 'large'  ? 'thick'
+                       : geometryConfig?.borderWidth === 'medium' ? 'medium'
+                       : 'thin';
 
-        const radiusMultipliers = [0, 1, 2, 4, 6, 9, 14, 25];
+    // Spacing scale: 4px base × step multipliers matching Token Sync
+    const sizeSteps: Array<[string, number]> = [
+        ['1', 1], ['2', 2], ['3', 3], ['4', 4], ['5', 5],
+        ['6', 6], ['8', 8], ['10', 10], ['12', 12], ['14', 14],
+        ['16', 16], ['20', 20], ['24', 24],
+    ];
 
-        payload.geometry = {
-            radius: {
-                '0': { $value: includeRadius ? `${radiusBase * radiusMultipliers[0]}px` : '0px', $type: "dimension" },
-                '1': { $value: includeRadius ? `${radiusBase * radiusMultipliers[1]}px` : '0px', $type: "dimension" },
-                '2': { $value: includeRadius ? `${radiusBase * radiusMultipliers[2]}px` : '0px', $type: "dimension" },
-                '3': { $value: includeRadius ? `${radiusBase * radiusMultipliers[3]}px` : '0px', $type: "dimension" },
-                '4': { $value: includeRadius ? `${radiusBase * radiusMultipliers[4]}px` : '0px', $type: "dimension" },
-                '5': { $value: includeRadius ? `${radiusBase * radiusMultipliers[5]}px` : '0px', $type: "dimension" },
-                '6': { $value: includeRadius ? `${radiusBase * radiusMultipliers[6]}px` : '0px', $type: "dimension" },
-                '7': { $value: includeRadius ? `${radiusBase * radiusMultipliers[7]}px` : '0px', $type: "dimension" },
-                'full': { $value: includeRadius ? `9999px` : '0px', $type: "dimension" },
-                'none': { $value: '{geometry.radius.0}', $type: "dimension" },
-                'sm': { $value: '{geometry.radius.1}', $type: "dimension" },
-                'md': { $value: '{geometry.radius.2}', $type: "dimension" },
-                'lg': { $value: '{geometry.radius.3}', $type: "dimension" }
-            },
-            borderWidth: {
-                default: { $value: includeBorders ? borderWidths[borderWidthType] : '0px', $type: "dimension" },
-                base: { $value: '{geometry.borderWidth.default}', $type: "dimension" }
-            }
-        };
-    }
+    payload.geometry = {
+        size: Object.fromEntries(
+            sizeSteps.map(([name, mult]) => [name, { $value: `${mult * 4}px`, $type: 'dimension' }])
+        ),
+        radius: {
+            none: { $value: '0px',                        $type: 'dimension' },
+            '1':  { $value: `${radiusBase}px`,            $type: 'dimension' },
+            '2':  { $value: `${radiusBase * 2}px`,        $type: 'dimension' },
+            '3':  { $value: `${radiusBase * 3}px`,        $type: 'dimension' },
+            '4':  { $value: `${radiusBase * 4}px`,        $type: 'dimension' },
+            '5':  { $value: `${radiusBase * 6}px`,        $type: 'dimension' },
+            '6':  { $value: `${radiusBase * 8}px`,        $type: 'dimension' },
+            full: { $value: '9999px',                     $type: 'dimension' },
+            // Semantic aliases kept for Themebuilder live preview (→ var(--geometry-radius-sm) etc.)
+            sm:   { $value: '{geometry.radius.1}',        $type: 'dimension' },
+            md:   { $value: '{geometry.radius.2}',        $type: 'dimension' },
+            lg:   { $value: '{geometry.radius.3}',        $type: 'dimension' },
+        },
+        borderWidth: {
+            thin:    { $value: '1px',                     $type: 'dimension' },
+            medium:  { $value: '1.5px',                   $type: 'dimension' },
+            thick:   { $value: '2px',                     $type: 'dimension' },
+            // Semantic alias kept for Themebuilder live preview (→ var(--geometry-borderWidth-default))
+            default: { $value: `{geometry.borderWidth.${borderAlias}}`, $type: 'dimension' },
+        },
+    };
+
+    // ---------------------------------------------------------------------------
+    // Typography tokens — aligned with Token Sync primitives/typography.json
+    // ---------------------------------------------------------------------------
+
+    const primaryFont = fontFamily || 'Inter';
+
+    payload.typography = {
+        fontFamily: {
+            sans:  { $value: primaryFont,  $type: 'fontFamily' },
+            serif: { $value: 'Georgia',    $type: 'fontFamily' },
+            mono:  { $value: 'Fira Code',  $type: 'fontFamily' },
+        },
+        fontWeight: {
+            regular:  { $value: 'Regular',  $type: 'fontWeight' },
+            medium:   { $value: 'Medium',   $type: 'fontWeight' },
+            semibold: { $value: 'SemiBold', $type: 'fontWeight' },
+            bold:     { $value: 'Bold',     $type: 'fontWeight' },
+        },
+        fontSize: {
+            xs:    { $value: '12', $type: 'dimension' },
+            sm:    { $value: '14', $type: 'dimension' },
+            md:    { $value: '16', $type: 'dimension' },
+            lg:    { $value: '18', $type: 'dimension' },
+            xl:    { $value: '20', $type: 'dimension' },
+            '2xl': { $value: '24', $type: 'dimension' },
+            '3xl': { $value: '30', $type: 'dimension' },
+            '4xl': { $value: '36', $type: 'dimension' },
+            '5xl': { $value: '48', $type: 'dimension' },
+            '6xl': { $value: '60', $type: 'dimension' },
+        },
+        lineHeight: {
+            tight:   { $value: '120', $type: 'number' },
+            snug:    { $value: '135', $type: 'number' },
+            normal:  { $value: '150', $type: 'number' },
+            relaxed: { $value: '165', $type: 'number' },
+        },
+        letterSpacing: {
+            tight:  { $value: '-2', $type: 'number' },
+            normal: { $value: '0',  $type: 'number' },
+            wide:   { $value: '4',  $type: 'number' },
+            wider:  { $value: '8',  $type: 'number' },
+        },
+    };
+
+    // ---------------------------------------------------------------------------
+    // Apply semantic overrides (path relative to payload root)
+    // ---------------------------------------------------------------------------
 
     if (semanticOverrides) {
         Object.entries(semanticOverrides).forEach(([path, value]) => {
@@ -574,9 +677,9 @@ export function mapTheme(
             }
             if (current[parts[parts.length - 1]]) {
                 current[parts[parts.length - 1]].$value = value;
-                current[parts[parts.length - 1]].$type = "color";
+                current[parts[parts.length - 1]].$type  = 'color';
             } else {
-                current[parts[parts.length - 1]] = { $value: value, $type: "color" };
+                current[parts[parts.length - 1]] = { $value: value, $type: 'color' };
             }
         });
     }

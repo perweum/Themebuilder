@@ -1,6 +1,6 @@
 import React from 'react';
 import { generateRamp } from '../lib/palette-generator';
-import { getAccessibleBaseStep } from '../lib/theme-mapper';
+import { getAccessibleBaseStep } from '../lib/palette-generator';
 import { wcagContrast } from 'culori';
 import { FeedbackCard } from './Feedback';
 import { ThemeComponentCard } from './ThemeComponentCard';
