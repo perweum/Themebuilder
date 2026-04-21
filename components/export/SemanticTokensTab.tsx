@@ -17,9 +17,13 @@ export const SemanticTokensTab: React.FC<SemanticTokensTabProps> = ({
     excludedSemanticTokens, setExcludedSemanticTokens
 }) => {
     const { themes, globalColors, resolvedThemes, resolvedDefaultThemes, updateThemeSemanticOverride } = useTheme();
-    const activeTheme = themes[0];
-    const activeThemePayloadWithOptions = resolvedThemes[0];
-    const defaultTheme = resolvedDefaultThemes[0];
+
+    const [selectedThemeIdx, setSelectedThemeIdx] = useState(0);
+    const safeIdx = Math.min(selectedThemeIdx, themes.length - 1);
+
+    const activeTheme = themes[safeIdx];
+    const activeThemePayloadWithOptions = resolvedThemes[safeIdx];
+    const defaultTheme = resolvedDefaultThemes[safeIdx];
 
     const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
 
@@ -41,8 +45,20 @@ export const SemanticTokensTab: React.FC<SemanticTokensTabProps> = ({
             }
         };
         flatten(defaultTheme.theme);
+
+        // Sort within each category: global color tokens always last
+        const globalNames = new Set(globalColors.map(gc => gc.name.toLowerCase().replace(/\s+/g, '-')));
+        for (const cat of Object.keys(cats)) {
+            cats[cat].sort((a, b) => {
+                const aGlobal = globalNames.has(a.split('.')[1] ?? '');
+                const bGlobal = globalNames.has(b.split('.')[1] ?? '');
+                if (aGlobal !== bGlobal) return aGlobal ? 1 : -1;
+                return 0; // preserve original order within each group
+            });
+        }
+
         return cats;
-    }, [defaultTheme]);
+    }, [defaultTheme, globalColors]);
 
     const formatPathLabel = (path: string) =>
         path.split('.').map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
@@ -69,6 +85,16 @@ export const SemanticTokensTab: React.FC<SemanticTokensTabProps> = ({
                     </optgroup>
                 );
             })}
+            <optgroup label="White (Alpha)">
+                {ALPHA_STEPS.map((step: any) => (
+                    <option key={`white-${step}`} value={`{color.white.${step}}`}>white-{step}</option>
+                ))}
+            </optgroup>
+            <optgroup label="Black (Alpha)">
+                {ALPHA_STEPS.map((step: any) => (
+                    <option key={`black-${step}`} value={`{color.black.${step}}`}>black-{step}</option>
+                ))}
+            </optgroup>
             {globalColors.map(gc => {
                 const safeName = gc.name.toLowerCase().replace(/\s+/g, '-');
                 return (
@@ -79,16 +105,6 @@ export const SemanticTokensTab: React.FC<SemanticTokensTabProps> = ({
                     </optgroup>
                 );
             })}
-            <optgroup label="White (Alpha)">
-                {ALPHA_STEPS.map((step: any) => (
-                    <option key={`white-${step}`} value={`{color.white.${step}}`}>white-{step}%</option>
-                ))}
-            </optgroup>
-            <optgroup label="Black (Alpha)">
-                {ALPHA_STEPS.map((step: any) => (
-                    <option key={`black-${step}`} value={`{color.black.${step}}`}>black-{step}%</option>
-                ))}
-            </optgroup>
         </>
     );
 
@@ -96,6 +112,31 @@ export const SemanticTokensTab: React.FC<SemanticTokensTabProps> = ({
 
     return (
         <>
+            {/* Theme switcher — only shown when there are multiple themes */}
+            {themes.length > 1 && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 600, color: isDarkMode ? '#94a3b8' : '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', flexShrink: 0 }}>Theme</span>
+                    {themes.map((t, i) => (
+                        <button
+                            key={t.id}
+                            onClick={() => setSelectedThemeIdx(i)}
+                            style={{
+                                padding: '0.25rem 0.75rem',
+                                borderRadius: '999px',
+                                border: `1px solid ${safeIdx === i ? (isDarkMode ? '#C3E835' : '#0142FE') : (isDarkMode ? '#334155' : '#e2e8f0')}`,
+                                background: safeIdx === i ? (isDarkMode ? '#C3E835' : '#0142FE') : 'transparent',
+                                color: safeIdx === i ? (isDarkMode ? '#000' : '#fff') : (isDarkMode ? '#94a3b8' : '#64748b'),
+                                fontSize: '0.8125rem',
+                                fontWeight: safeIdx === i ? 600 : 400,
+                                cursor: 'pointer',
+                            }}
+                        >
+                            {t.name || t.id}
+                        </button>
+                    ))}
+                </div>
+            )}
+
             {/* Column headers */}
             <div style={{ display: 'grid', gridTemplateColumns: 'minmax(160px, 1fr) 1fr 1fr auto', gap: '0.75rem', padding: '1rem 0.75rem 0.5rem', borderBottom: `1px solid ${isDarkMode ? '#334155' : '#e2e8f0'}`, marginBottom: '-0.75rem', alignItems: 'end' }}>
                 {['Token Name', 'Light Mode', 'Dark Mode', 'Export'].map((h, i) => (

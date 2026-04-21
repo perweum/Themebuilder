@@ -508,9 +508,11 @@ export function mapTheme(
             default:  { $value: `{color.${aliasName}.600}`,                            $type: 'color' },
             contrast: { $value: lightBaseAccess.textToken,                             $type: 'color' },
         };
+        // Severity icon tokens use direct primitive refs — they live in the semantic layer,
+        // not the theme file, so {light.text.*} would be a dangling ref.
         theme.icon[safeName] = {
-            default:  { $value: `{light.text.${safeName}.default}`,                    $type: 'color' },
-            contrast: { $value: `{light.text.${safeName}.contrast}`,                   $type: 'color' },
+            default:  { $value: theme.text[safeName].default.$value,                   $type: 'color' },
+            contrast: { $value: theme.text[safeName].contrast.$value,                  $type: 'color' },
         };
 
         // ── Dark ───────────────────────────────────────────────────────────────
@@ -539,8 +541,8 @@ export function mapTheme(
             contrast: { $value: darkBaseAccess.textToken,                              $type: 'color' },
         };
         darkTheme.icon[safeName] = {
-            default:  { $value: `{dark.text.${safeName}.default}`,                     $type: 'color' },
-            contrast: { $value: `{dark.text.${safeName}.contrast}`,                    $type: 'color' },
+            default:  { $value: darkTheme.text[safeName].default.$value,               $type: 'color' },
+            contrast: { $value: darkTheme.text[safeName].contrast.$value,              $type: 'color' },
         };
     });
 

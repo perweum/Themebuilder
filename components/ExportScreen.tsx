@@ -94,21 +94,120 @@ export const ExportScreen: React.FC<{
         };
 
         if (exportFormat === 'tokensync') {
-            const themeName = (activeTheme as any).name
-                ? (activeTheme as any).name.toLowerCase().replace(/\s+/g, '-')
-                : 'original';
+            // Severity keys = globalColors that aren't neutral; they belong in the
+            // semantic layer with direct primitive refs, not in the per-theme files.
+            const severityKeys = new Set(
+                globalColors
+                    .filter(c => c.id !== 'neutral')
+                    .map(c => c.name.toLowerCase().replace(/\s+/g, '-'))
+            );
+
+            // Apply the same exclusions to every theme payload
+            const applyExclusions = (p: any) => {
+                excludedPalettes.forEach(n => { delete p.color?.[n]; });
+                excludedSemanticCategories.forEach(cat => {
+                    delete p.theme?.[cat];
+                    delete p.darkTheme?.[cat];
+                });
+                excludedSemanticTokens.forEach(path => {
+                    const parts = path.split('.');
+                    const del = (obj: any) => {
+                        let cur = obj;
+                        for (let i = 0; i < parts.length - 1; i++) {
+                            if (!cur?.[parts[i]]) return;
+                            cur = cur[parts[i]];
+                        }
+                        if (cur) delete cur[parts[parts.length - 1]];
+                    };
+                    del(p.theme);
+                    del(p.darkTheme);
+                });
+                excludedGeometry.forEach(cat => { delete p.geometry?.[cat]; });
+                pruneEmpty(p.theme);
+                pruneEmpty(p.darkTheme);
+                pruneEmpty(p.color);
+                pruneEmpty(p.geometry);
+                return p;
+            };
+
+            const payloads = resolvedThemes.map(p => applyExclusions(JSON.parse(JSON.stringify(p))));
+
+            // Merge primitive colors from all themes (each has unique brand palettes)
+            const mergedColors: Record<string, any> = {};
+            payloads.forEach(p => Object.assign(mergedColors, p.color));
+
+            // Strip severity keys from a section — severity lives in semantic, not theme files
+            const stripSeverity = (section: any) => {
+                if (!section) return section;
+                const result: any = {};
+                for (const cat of Object.keys(section)) {
+                    if (typeof section[cat] !== 'object' || section[cat] === null) {
+                        result[cat] = section[cat];
+                        continue;
+                    }
+                    const catObj: any = {};
+                    for (const key of Object.keys(section[cat])) {
+                        if (!severityKeys.has(key)) catObj[key] = section[cat][key];
+                    }
+                    result[cat] = catObj;
+                }
+                return result;
+            };
+
+            // Recursively build {scheme.cat.path} alias tree from a token object
+            const buildAliases = (obj: any, prefix: string): any => {
+                if (!obj || typeof obj !== 'object') return obj;
+                if ('$value' in obj) return { $value: `{${prefix}}`, $type: obj.$type };
+                const result: any = {};
+                for (const key of Object.keys(obj)) {
+                    if (key === '$type') { result.$type = obj[key]; continue; }
+                    if (key.startsWith('$')) continue;
+                    result[key] = buildAliases(obj[key], `${prefix}.${key}`);
+                }
+                return result;
+            };
+
+            // Build semantic/light.json or semantic/dark.json:
+            // theme-specific tokens → {scheme.*} aliases; severity → direct primitive refs
+            const buildSemanticFile = (scheme: 'light' | 'dark') => {
+                const src = scheme === 'light' ? payloads[0].theme : payloads[0].darkTheme;
+                if (!src) return {};
+                const out: any = {
+                    $description: `Semantic colour tokens — ${scheme} mode. Brand/neutral tokens alias into the active Theme via {${scheme}.*}. Severity tokens reference primitives directly (identical across all themes).`
+                };
+                for (const cat of Object.keys(src)) {
+                    if (cat.startsWith('$')) continue;
+                    out[cat] = {};
+                    if (src[cat]?.$type) out[cat].$type = src[cat].$type;
+                    for (const key of Object.keys(src[cat]).filter(k => !k.startsWith('$'))) {
+                        if (severityKeys.has(key)) {
+                            out[cat][key] = src[cat][key]; // direct primitive ref from theme-mapper
+                        } else {
+                            out[cat][key] = buildAliases(src[cat][key], `${scheme}.${cat}.${key}`);
+                        }
+                    }
+                }
+                return out;
+            };
 
             const zip = new JSZip();
-            zip.file('primitives/color.json',      json({ color:     exportPayload.color }));
-            zip.file('primitives/geometry.json',   json({ geometry:  exportPayload.geometry }));
-            zip.file('primitives/typography.json', json({ typography: exportPayload.typography }));
-            zip.file(`semantic/themes/${themeName}.json`, json({
-                light: exportPayload.theme,
-                dark:  exportPayload.darkTheme,
-            }));
+            zip.file('primitives/color.json',      json({ color:      mergedColors }));
+            zip.file('primitives/geometry.json',   json({ geometry:   payloads[0].geometry }));
+            zip.file('primitives/typography.json', json({ typography: payloads[0].typography }));
+            zip.file('semantic/light.json',        json(buildSemanticFile('light')));
+            zip.file('semantic/dark.json',         json(buildSemanticFile('dark')));
 
+            themes.forEach((theme, i) => {
+                const rawName = (theme.name || theme.id || 'default').toLowerCase().replace(/\s+/g, '-');
+                zip.file(`semantic/themes/${rawName}.json`, json({
+                    light: stripSeverity(payloads[i]?.theme),
+                    dark:  stripSeverity(payloads[i]?.darkTheme),
+                }));
+            });
+
+            const firstRaw = (themes[0].name || themes[0].id || 'default').toLowerCase().replace(/\s+/g, '-');
             const blob = await zip.generateAsync({ type: 'blob' });
-            download(blob, `tokens-${themeName}.zip`);
+            download(blob, `tokens-${firstRaw}.zip`);
         } else if (exportFormat === 'figma') {
             const exportData = {
                 "Primitives": { color: exportPayload.color, geometry: exportPayload.geometry },
