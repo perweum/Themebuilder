@@ -1,214 +1,407 @@
-import React, { useState, useEffect } from 'react';
-import { X, ChevronRight, ChevronLeft } from 'lucide-react';
-import { SystemicModal } from './SystemicModal';
+import React, { useState, useEffect, useRef } from 'react';
+import FontPicker from 'react-fontpicker-ts';
+import 'react-fontpicker-ts/dist/index.css';
+import { ArrowRight, ChevronLeft, Shuffle, Check } from 'lucide-react';
+import { oklch, formatHex } from 'culori';
+import { useTheme } from '../theme-context';
+import {
+    ONBOARDING_STEPS, GEOMETRY_RADIUS, SURPRISE_COLORS,
+    type OnboardingAnswers, type GeometryStyle,
+} from '../lib/onboarding-steps';
 
-import imgSlide1 from '../img/people_building.png';
-import imgSlide2 from '../img/man_climbing.png';
-import imgSlide3 from '../img/business_people.png';
-import imgSlide4 from '../img/export.png';
-
-interface OnboardingModalProps {
-    onClose: () => void;
+interface Props {
     isDarkMode: boolean;
+    onClose: () => void;
 }
 
-const UIButton: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'outline' | 'ghost' | 'primary', isDarkMode: boolean }> = ({ variant = 'outline', isDarkMode, style, children, ...props }) => {
-    const isPrimary = variant === 'primary';
-    const isGhost = variant === 'ghost';
+type Phase = 'welcome' | 'steps' | 'generate';
 
-    return (
-        <button
-            {...props}
-            style={{
-                padding: '0.5rem 1rem',
-                fontSize: '1rem',
-                borderRadius: '0px',
-                border: isGhost ? 'none' : (isPrimary ? 'none' : `1px solid ${isDarkMode ? '#fff' : '#000'}`),
-                backgroundColor: isPrimary ? 'var(--color-base-brand-default)' : 'transparent',
-                color: isPrimary ? 'var(--color-text-brand-contrast)' : (isDarkMode ? '#fff' : '#000'),
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                fontWeight: isPrimary ? 600 : 400,
-                opacity: isGhost ? 0.7 : 1,
-                transition: 'all 0.2s ease',
-                ...style
-            }}
-            onMouseEnter={(e) => {
-                if (!isPrimary && !isGhost) {
-                    e.currentTarget.style.borderColor = isDarkMode ? '#C3E835' : '#0142FE';
-                    e.currentTarget.style.color = isDarkMode ? '#C3E835' : '#0142FE';
-                }
-                if (isGhost) e.currentTarget.style.opacity = '1';
-            }}
-            onMouseLeave={(e) => {
-                if (!isPrimary && !isGhost) {
-                    e.currentTarget.style.borderColor = isDarkMode ? '#fff' : '#000';
-                    e.currentTarget.style.color = isDarkMode ? '#fff' : '#000';
-                }
-                if (isGhost) e.currentTarget.style.opacity = '0.7';
-            }}
-        >
-            {children}
-        </button>
-    );
-};
+const PRIMARY = (dark: boolean) => dark ? '#C3E835' : '#0142FE';
+const PRIMARY_TEXT = (dark: boolean) => dark ? '#000' : '#fff';
+const BG = (dark: boolean) => dark ? '#0f172a' : '#ffffff';
+const SURFACE = (dark: boolean) => dark ? '#1e293b' : '#f8fafc';
+const BORDER = (dark: boolean) => dark ? '#334155' : '#e2e8f0';
+const TEXT = (dark: boolean) => dark ? '#f8fafc' : '#0f172a';
+const MUTED = (dark: boolean) => dark ? '#94a3b8' : '#64748b';
 
-export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onClose, isDarkMode }) => {
-    const [currentSlide, setCurrentSlide] = useState(0);
+function shiftHue(hex: string, degrees: number): string {
+    try {
+        const c = oklch(hex);
+        if (!c) return hex;
+        return formatHex({ ...c, h: ((c.h ?? 0) + degrees) % 360 }) ?? hex;
+    } catch {
+        return hex;
+    }
+}
 
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'ArrowRight') nextSlide();
-            if (e.key === 'ArrowLeft') prevSlide();
-        };
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [currentSlide]);
+const GeometryTile: React.FC<{
+    label: string;
+    radius: number;
+    selected: boolean;
+    isDarkMode: boolean;
+    onClick: () => void;
+}> = ({ label, radius, selected, isDarkMode, onClick }) => (
+    <button
+        onClick={onClick}
+        style={{
+            flex: 1,
+            padding: '1.25rem 1rem',
+            borderRadius: '8px',
+            border: `2px solid ${selected ? PRIMARY(isDarkMode) : BORDER(isDarkMode)}`,
+            background: selected ? (isDarkMode ? 'rgba(195,232,53,0.08)' : 'rgba(1,66,254,0.06)') : SURFACE(isDarkMode),
+            cursor: 'pointer',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '0.75rem',
+            transition: 'all 0.15s',
+        }}
+    >
+        {/* Mini button preview */}
+        <div style={{
+            padding: '6px 16px',
+            borderRadius: `${radius}px`,
+            background: PRIMARY(isDarkMode),
+            color: PRIMARY_TEXT(isDarkMode),
+            fontSize: '0.75rem',
+            fontWeight: 600,
+            userSelect: 'none',
+        }}>
+            Button
+        </div>
+        <span style={{ fontSize: '0.8125rem', fontWeight: selected ? 600 : 400, color: selected ? PRIMARY(isDarkMode) : TEXT(isDarkMode) }}>
+            {label}
+        </span>
+    </button>
+);
 
-    const slideCount = 4;
+export const OnboardingModal: React.FC<Props> = ({ isDarkMode, onClose }) => {
+    const { themes, importThemes } = useTheme();
 
-    const handleClose = () => {
-        onClose();
+    const [phase, setPhase] = useState<Phase>('welcome');
+    const [stepIdx, setStepIdx] = useState(0);
+    const [answers, setAnswers] = useState<OnboardingAnswers>({
+        brandColor: '#0142FE',
+        fontFamily: 'Inter',
+        geometry: 'rounded',
+        name: '',
+    });
+    const [generating, setGenerating] = useState(false);
+    const [done, setDone] = useState(false);
+    const generateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const step = ONBOARDING_STEPS[stepIdx];
+    const isLastStep = stepIdx === ONBOARDING_STEPS.length - 1;
+
+    const dismiss = () => {
         localStorage.setItem('systemic_onboarding_completed', 'true');
+        onClose();
     };
 
-    const nextSlide = () => {
-        if (currentSlide < slideCount - 1) {
-            setCurrentSlide(prev => prev + 1);
-        } else {
-            handleClose();
-        }
+    const advance = () => {
+        if (phase === 'welcome') { setPhase('steps'); return; }
+        if (!isLastStep) { setStepIdx(i => i + 1); return; }
+        setPhase('generate');
     };
 
-    const prevSlide = () => {
-        if (currentSlide > 0) {
-            setCurrentSlide(prev => prev - 1);
-        }
+    const back = () => {
+        if (phase === 'steps' && stepIdx > 0) { setStepIdx(i => i - 1); return; }
+        if (phase === 'steps' && stepIdx === 0) { setPhase('welcome'); return; }
+        if (phase === 'generate') { setPhase('steps'); setStepIdx(ONBOARDING_STEPS.length - 1); }
     };
 
+    // Kick off generation when entering the generate phase
+    useEffect(() => {
+        if (phase !== 'generate' || generating || done) return;
+        setGenerating(true);
+        generateTimerRef.current = setTimeout(() => {
+            const resolvedName = answers.name.trim() || 'My Theme';
+            const slug = resolvedName.toLowerCase().replace(/\s+/g, '-');
+            importThemes([{
+                id: slug,
+                name: resolvedName,
+                colors: [
+                    { id: 'brand',  name: 'brand',  seed: answers.brandColor },
+                    { id: 'accent', name: 'accent', seed: shiftHue(answers.brandColor, 60) },
+                ],
+                fontFamily: answers.fontFamily,
+                geometry: {
+                    radiusBase:     GEOMETRY_RADIUS[answers.geometry],
+                    includeRadius:  true,
+                    includeBorders: true,
+                    borderWidth:    'small',
+                },
+            }]);
+            setDone(true);
+        }, 1600);
+        return () => { if (generateTimerRef.current) clearTimeout(generateTimerRef.current); };
+    }, [phase]);
 
+    // Close after done flash
+    useEffect(() => {
+        if (!done) return;
+        const t = setTimeout(dismiss, 600);
+        return () => clearTimeout(t);
+    }, [done]);
 
-    const contentContainerStyle: React.CSSProperties = {
-        display: 'flex',
-        width: `${slideCount * 100}%`,
-        transform: `translateX(-${currentSlide * (100 / slideCount)}%)`,
-        transition: 'transform 0.5s cubic-bezier(0.25, 1, 0.5, 1)',
+    const setAnswer = <K extends keyof OnboardingAnswers>(key: K, val: OnboardingAnswers[K]) =>
+        setAnswers(prev => ({ ...prev, [key]: val }));
+
+    const surprise = () => {
+        const current = answers.brandColor;
+        const pool = SURPRISE_COLORS.filter(c => c !== current);
+        setAnswer('brandColor', pool[Math.floor(Math.random() * pool.length)]);
     };
 
-    const slideStyle: React.CSSProperties = {
-        width: `${100 / slideCount}%`,
-        padding: 0,
-        boxSizing: 'border-box',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        textAlign: 'center',
-        position: 'relative',
-        minHeight: '520px',
-        backgroundColor: isDarkMode ? 'var(--color-surface-default)' : '#FDFCFC',
-    };
-
+    // ─── Overlay ──────────────────────────────────────────────────────────────
     return (
-        <SystemicModal variant="centered" isDarkMode={isDarkMode} onClose={handleClose} maxWidth="600px" noPadding>
-            {/* Header controls (Close button) */}
-            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: '1.5rem', display: 'flex', justifyContent: 'flex-end', zIndex: 10 }}>
-                <UIButton variant="ghost" isDarkMode={isDarkMode} onClick={handleClose} style={{ padding: '0.5rem' }}>
-                    <X size={20} />
-                </UIButton>
-            </div>
+        <div style={{
+            position: 'fixed', inset: 0, zIndex: 9999,
+            background: isDarkMode ? 'rgba(0,0,0,0.7)' : 'rgba(15,23,42,0.5)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '1rem',
+            animation: 'fadeIn 0.2s ease',
+        }}>
+            <div style={{
+                width: '100%', maxWidth: '480px',
+                background: BG(isDarkMode),
+                borderRadius: '12px',
+                boxShadow: '0 24px 64px rgba(0,0,0,0.25)',
+                overflow: 'hidden',
+                animation: 'fadeIn 0.25s ease',
+            }}>
 
-            {/* Slides content */}
-            <div style={{ overflow: 'hidden' }}>
-                <div style={contentContainerStyle}>
-
-                    {/* Slide 1 */}
-                    <div style={slideStyle}>
-                        <div style={{ padding: '3rem 3rem 1rem 3rem', zIndex: 2, position: 'relative' }}>
-                            <h2 style={{ fontSize: '1.75rem', fontWeight: 700, margin: '0 0 0.5rem 0' }}>Welcome to Systemic</h2>
-                            <p style={{ fontSize: '1.125rem', color: isDarkMode ? '#aaa' : '#666', lineHeight: 1.6, maxWidth: '400px', margin: '0 auto' }}>
-                                Generate comprehensive, accessible design systems from a single color seed. Stop guessing hex codes and start building.
+                {/* ── Welcome ─────────────────────────────────────────────── */}
+                {phase === 'welcome' && (
+                    <div style={{ padding: '3rem 2.5rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.25rem' }}>
+                        <div style={{ fontSize: '2rem' }}>🎨</div>
+                        <div>
+                            <h2 style={{ fontSize: '1.5rem', fontWeight: 700, margin: '0 0 0.5rem', color: TEXT(isDarkMode) }}>
+                                Set up your design system
+                            </h2>
+                            <p style={{ fontSize: '0.9375rem', color: MUTED(isDarkMode), margin: 0, lineHeight: 1.6 }}>
+                                Four quick questions to get you started with a working theme.
                             </p>
                         </div>
-                        <img src={imgSlide1} alt="People Building" style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', height: 'calc(100% - 150px)', objectFit: 'contain', objectPosition: 'bottom', zIndex: 1 }} />
+                        <button
+                            onClick={advance}
+                            style={{
+                                width: '100%', padding: '0.875rem 1.5rem',
+                                background: PRIMARY(isDarkMode), color: PRIMARY_TEXT(isDarkMode),
+                                border: 'none', borderRadius: '8px', fontSize: '1rem', fontWeight: 600,
+                                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+                                marginTop: '0.5rem',
+                            }}
+                        >
+                            Quick Setup <ArrowRight size={18} />
+                        </button>
+                        <button
+                            onClick={dismiss}
+                            style={{ background: 'none', border: 'none', color: MUTED(isDarkMode), fontSize: '0.875rem', cursor: 'pointer', padding: '0.25rem' }}
+                        >
+                            Skip for now
+                        </button>
                     </div>
-
-                    {/* Slide 2 */}
-                    <div style={slideStyle}>
-                        <div style={{ padding: '3rem 3rem 1rem 3rem', zIndex: 2, position: 'relative' }}>
-                            <h2 style={{ fontSize: '1.75rem', fontWeight: 700, margin: '0 0 0.5rem 0' }}>The 12-Step Scale</h2>
-                            <p style={{ fontSize: '1rem', color: isDarkMode ? '#aaa' : '#666', lineHeight: 1.6, maxWidth: '440px', margin: '0 auto' }}>
-                                Every color palette expands into exactly 12 luminance steps, ensuring consistent contrast across light and dark modes.
-                            </p>
-                        </div>
-                        <img src={imgSlide2} alt="Man Climbing" style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', height: 'calc(100% - 140px)', objectFit: 'contain', objectPosition: 'bottom', zIndex: 1 }} />
-                    </div>
-
-                    {/* Slide 3 */}
-                    <div style={slideStyle}>
-                        <div style={{ padding: '3rem 3rem 1rem 3rem', zIndex: 2, position: 'relative' }}>
-                            <h2 style={{ fontSize: '1.75rem', fontWeight: 700, margin: '0 0 0.5rem 0' }}>Semantic Architecture</h2>
-                            <p style={{ fontSize: '1rem', color: isDarkMode ? '#aaa' : '#666', lineHeight: 1.6, maxWidth: '440px', margin: '0 auto' }}>
-                                You don't have to memorize the 12 steps. The app automatically maps them into intuitive semantic tokens.
-                            </p>
-                        </div>
-                        <img src={imgSlide3} alt="Business People" style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', height: 'calc(100% - 140px)', objectFit: 'contain', objectPosition: 'bottom', zIndex: 1 }} />
-                    </div>
-
-                    {/* Slide 4 */}
-                    <div style={slideStyle}>
-                        <div style={{ padding: '3rem 3rem 1rem 3rem', zIndex: 2, position: 'relative' }}>
-                            <h2 style={{ fontSize: '1.75rem', fontWeight: 700, margin: '0 0 0.5rem 0' }}>Export Anywhere</h2>
-                            <p style={{ fontSize: '1rem', color: isDarkMode ? '#aaa' : '#666', lineHeight: 1.6, maxWidth: '440px', margin: '0 auto' }}>
-                                Take your theme tokens with you. Export directly to Figma Tokens Studio or as raw CSS variables for modern web frameworks.
-                            </p>
-                        </div>
-                        <img src={imgSlide4} alt="Export Data" style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', height: 'calc(100% - 140px)', objectFit: 'contain', objectPosition: 'bottom', zIndex: 1 }} />
-                    </div>
-                </div>
-            </div>
-
-            {/* Footer Controls */}
-            <div style={{ padding: '1.5rem 3rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: `1px solid ${isDarkMode ? '#333' : '#eee'}`, background: isDarkMode ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.02)' }}>
-
-                {/* Skip or Prev */}
-                {currentSlide === 0 ? (
-                    <UIButton variant="ghost" isDarkMode={isDarkMode} onClick={handleClose}>
-                        Skip intro
-                    </UIButton>
-                ) : (
-                    <UIButton variant="ghost" isDarkMode={isDarkMode} onClick={prevSlide}>
-                        <ChevronLeft size={16} /> Back
-                    </UIButton>
                 )}
 
-                {/* Progress Dots */}
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    {Array.from({ length: slideCount }).map((_, i) => (
-                        <div
-                            key={i}
-                            style={{
-                                width: '8px',
-                                height: '8px',
-                                borderRadius: '50%',
-                                background: i === currentSlide ? 'var(--color-base-brand-default)' : 'var(--color-border-subtle)',
-                                transition: 'background 0.3s ease'
-                            }}
-                        />
-                    ))}
-                </div>
+                {/* ── Steps ───────────────────────────────────────────────── */}
+                {phase === 'steps' && (
+                    <div style={{ padding: '2rem 2.5rem 2.5rem' }}>
+                        {/* Progress dots */}
+                        <div style={{ display: 'flex', gap: '6px', marginBottom: '2rem', justifyContent: 'center' }}>
+                            {ONBOARDING_STEPS.map((_, i) => (
+                                <div key={i} style={{
+                                    width: i === stepIdx ? '20px' : '6px', height: '6px',
+                                    borderRadius: '3px',
+                                    background: i <= stepIdx ? PRIMARY(isDarkMode) : BORDER(isDarkMode),
+                                    transition: 'all 0.2s',
+                                }} />
+                            ))}
+                        </div>
 
-                {/* Next or Finish */}
-                <UIButton
-                    variant={currentSlide === slideCount - 1 ? 'primary' : 'outline'}
-                    isDarkMode={isDarkMode}
-                    onClick={nextSlide}
-                >
-                    {currentSlide === slideCount - 1 ? "Get Started" : "Next"} {currentSlide < slideCount - 1 && <ChevronRight size={16} />}
-                </UIButton>
+                        {/* Step heading */}
+                        <div style={{ marginBottom: '1.75rem' }}>
+                            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '0 0 0.4rem', color: TEXT(isDarkMode) }}>
+                                {step.title}
+                            </h3>
+                            <p style={{ fontSize: '0.875rem', color: MUTED(isDarkMode), margin: 0, lineHeight: 1.5 }}>
+                                {step.description}
+                            </p>
+                        </div>
+
+                        {/* Step input */}
+                        <div style={{ marginBottom: '2rem' }}>
+                            {step.id === 'brandColor' && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                    <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                                        <input
+                                            type="color"
+                                            value={answers.brandColor}
+                                            onChange={e => setAnswer('brandColor', e.target.value)}
+                                            style={{ width: '52px', height: '52px', border: 'none', borderRadius: '8px', cursor: 'pointer', padding: '2px', background: 'none' }}
+                                        />
+                                        <input
+                                            type="text"
+                                            value={answers.brandColor}
+                                            onChange={e => {
+                                                const v = e.target.value;
+                                                if (/^#[0-9a-fA-F]{0,6}$/.test(v)) setAnswer('brandColor', v);
+                                            }}
+                                            style={{
+                                                flex: 1, padding: '0.75rem 1rem', borderRadius: '8px',
+                                                border: `1px solid ${BORDER(isDarkMode)}`,
+                                                background: SURFACE(isDarkMode), color: TEXT(isDarkMode),
+                                                fontSize: '1rem', fontFamily: 'monospace',
+                                            }}
+                                        />
+                                        <button
+                                            onClick={surprise}
+                                            title="Surprise me"
+                                            style={{
+                                                padding: '0.75rem', borderRadius: '8px',
+                                                border: `1px solid ${BORDER(isDarkMode)}`,
+                                                background: SURFACE(isDarkMode), color: MUTED(isDarkMode),
+                                                cursor: 'pointer', display: 'flex', alignItems: 'center', flexShrink: 0,
+                                            }}
+                                        >
+                                            <Shuffle size={18} />
+                                        </button>
+                                    </div>
+                                    {/* Accent preview */}
+                                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                        <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: answers.brandColor, flexShrink: 0 }} />
+                                        <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: shiftHue(answers.brandColor, 60), flexShrink: 0 }} />
+                                        <span style={{ fontSize: '0.8125rem', color: MUTED(isDarkMode) }}>Brand + accent (auto-derived)</span>
+                                    </div>
+                                </div>
+                            )}
+
+                            {step.id === 'fontFamily' && (
+                                <FontPicker
+                                    defaultValue={answers.fontFamily}
+                                    value={(val: string) => setAnswer('fontFamily', val)}
+                                    autoLoad
+                                />
+                            )}
+
+                            {step.id === 'geometry' && (
+                                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                                    {(['sharp', 'rounded', 'pill'] as GeometryStyle[]).map(g => (
+                                        <GeometryTile
+                                            key={g}
+                                            label={g.charAt(0).toUpperCase() + g.slice(1)}
+                                            radius={GEOMETRY_RADIUS[g]}
+                                            selected={answers.geometry === g}
+                                            isDarkMode={isDarkMode}
+                                            onClick={() => setAnswer('geometry', g)}
+                                        />
+                                    ))}
+                                </div>
+                            )}
+
+                            {step.id === 'name' && (
+                                <input
+                                    type="text"
+                                    value={answers.name}
+                                    placeholder={themes[0]?.name || themes[0]?.id || 'My Theme'}
+                                    onChange={e => setAnswer('name', e.target.value)}
+                                    onKeyDown={e => { if (e.key === 'Enter') advance(); }}
+                                    autoFocus
+                                    style={{
+                                        width: '100%', padding: '0.75rem 1rem', borderRadius: '8px',
+                                        border: `1px solid ${BORDER(isDarkMode)}`,
+                                        background: SURFACE(isDarkMode), color: TEXT(isDarkMode),
+                                        fontSize: '1rem', boxSizing: 'border-box',
+                                    }}
+                                />
+                            )}
+                        </div>
+
+                        {/* Navigation */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <button
+                                onClick={back}
+                                style={{
+                                    background: 'none', border: 'none', color: MUTED(isDarkMode),
+                                    cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem',
+                                    fontSize: '0.875rem', padding: '0.5rem 0',
+                                }}
+                            >
+                                <ChevronLeft size={16} /> Back
+                            </button>
+                            <button
+                                onClick={advance}
+                                style={{
+                                    padding: '0.75rem 1.5rem',
+                                    background: PRIMARY(isDarkMode), color: PRIMARY_TEXT(isDarkMode),
+                                    border: 'none', borderRadius: '8px',
+                                    fontSize: '0.9375rem', fontWeight: 600, cursor: 'pointer',
+                                    display: 'flex', alignItems: 'center', gap: '0.5rem',
+                                }}
+                            >
+                                {isLastStep ? 'Create' : 'Continue'} <ArrowRight size={16} />
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* ── Generate ────────────────────────────────────────────── */}
+                {phase === 'generate' && (
+                    <div style={{ padding: '3rem 2.5rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem' }}>
+                        {done ? (
+                            <>
+                                <div style={{
+                                    width: '48px', height: '48px', borderRadius: '50%',
+                                    background: PRIMARY(isDarkMode), display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                }}>
+                                    <Check size={24} color={PRIMARY_TEXT(isDarkMode)} />
+                                </div>
+                                <p style={{ fontSize: '1.125rem', fontWeight: 600, color: TEXT(isDarkMode), margin: 0 }}>Done!</p>
+                            </>
+                        ) : (
+                            <>
+                                {/* Summary */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '100%', textAlign: 'left' }}>
+                                    <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '0 0 0.25rem', color: TEXT(isDarkMode), textAlign: 'center' }}>
+                                        Building your design system
+                                    </h3>
+                                    {[
+                                        { label: 'Brand color', preview: <div style={{ width: '20px', height: '20px', borderRadius: '4px', background: answers.brandColor }} />, value: answers.brandColor },
+                                        { label: 'Typeface', preview: null, value: answers.fontFamily },
+                                        { label: 'Style', preview: null, value: answers.geometry.charAt(0).toUpperCase() + answers.geometry.slice(1) },
+                                        { label: 'Name', preview: null, value: answers.name.trim() || 'My Theme' },
+                                    ].map(({ label, preview, value }) => (
+                                        <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.625rem 0.75rem', background: SURFACE(isDarkMode), borderRadius: '6px' }}>
+                                            <span style={{ fontSize: '0.875rem', color: MUTED(isDarkMode) }}>{label}</span>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                {preview}
+                                                <span style={{ fontSize: '0.875rem', fontWeight: 500, color: TEXT(isDarkMode) }}>{value}</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* Progress bar */}
+                                <div style={{ width: '100%', height: '4px', background: BORDER(isDarkMode), borderRadius: '2px', overflow: 'hidden' }}>
+                                    <div style={{
+                                        height: '100%', background: PRIMARY(isDarkMode),
+                                        borderRadius: '2px',
+                                        animation: 'onboardingProgress 1.5s ease-out forwards',
+                                    }} />
+                                </div>
+                            </>
+                        )}
+                    </div>
+                )}
             </div>
 
-        </SystemicModal>
+            <style>{`
+                @keyframes onboardingProgress {
+                    from { width: 0%; }
+                    to   { width: 100%; }
+                }
+            `}</style>
+        </div>
     );
 };
