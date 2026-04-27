@@ -99,7 +99,7 @@ export const OnboardingModal: React.FC<Props> = ({ isDarkMode, onClose }) => {
     spacing: "default",
     name: "",
   });
-  const [accentAuto, setAccentAuto] = useState(true);
+  const [showAccent, setShowAccent] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [done, setDone] = useState(false);
   const generateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -143,7 +143,8 @@ export const OnboardingModal: React.FC<Props> = ({ isDarkMode, onClose }) => {
     setAnswers((prev) => ({
       ...prev,
       brandColor: hex,
-      accentColor: accentAuto ? shiftHue(hex, 60) : prev.accentColor,
+      // keep accent in sync with brand only when user hasn't added a custom one
+      accentColor: showAccent ? prev.accentColor : shiftHue(hex, 60),
     }));
   };
 
@@ -360,26 +361,59 @@ export const OnboardingModal: React.FC<Props> = ({ isDarkMode, onClose }) => {
 
               {/* ── Brand color ── */}
               {step.id === "brandColor" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
                   {/* Brand row */}
-                  <div>
-                    <div
+                  <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
+                    <input
+                      type="color"
+                      value={answers.brandColor}
+                      onChange={(e) => setBrandColor(e.target.value)}
                       style={{
-                        fontSize: "0.75rem",
-                        fontWeight: 600,
+                        width: "48px",
+                        height: "48px",
+                        border: "none",
+                        borderRadius: "8px",
+                        cursor: "pointer",
+                        padding: "2px",
+                        background: "none",
+                        flexShrink: 0,
+                      }}
+                    />
+                    <input
+                      type="text"
+                      value={answers.brandColor}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        if (/^#[0-9a-fA-F]{0,6}$/.test(v)) setBrandColor(v);
+                      }}
+                      style={colorPickerStyle}
+                    />
+                    <button
+                      onClick={surprise}
+                      title="Surprise me"
+                      style={{
+                        padding: "0.75rem",
+                        borderRadius: "8px",
+                        border: `1px solid ${BORDER(isDarkMode)}`,
+                        background: SURFACE(isDarkMode),
                         color: MUTED(isDarkMode),
-                        textTransform: "uppercase",
-                        letterSpacing: "0.05em",
-                        marginBottom: "0.5rem",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        flexShrink: 0,
                       }}
                     >
-                      Brand
-                    </div>
+                      <Shuffle size={18} />
+                    </button>
+                  </div>
+
+                  {/* Accent row — shown after clicking + Add */}
+                  {showAccent && (
                     <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
                       <input
                         type="color"
-                        value={answers.brandColor}
-                        onChange={(e) => setBrandColor(e.target.value)}
+                        value={answers.accentColor}
+                        onChange={(e) => setAnswer("accentColor", e.target.value)}
                         style={{
                           width: "48px",
                           height: "48px",
@@ -393,16 +427,20 @@ export const OnboardingModal: React.FC<Props> = ({ isDarkMode, onClose }) => {
                       />
                       <input
                         type="text"
-                        value={answers.brandColor}
+                        value={answers.accentColor}
                         onChange={(e) => {
                           const v = e.target.value;
-                          if (/^#[0-9a-fA-F]{0,6}$/.test(v)) setBrandColor(v);
+                          if (/^#[0-9a-fA-F]{0,6}$/.test(v)) setAnswer("accentColor", v);
                         }}
                         style={colorPickerStyle}
+                        placeholder="Accent color"
                       />
                       <button
-                        onClick={surprise}
-                        title="Surprise me"
+                        onClick={() => {
+                          setShowAccent(false);
+                          setAnswer("accentColor", shiftHue(answers.brandColor, 60));
+                        }}
+                        title="Remove accent"
                         style={{
                           padding: "0.75rem",
                           borderRadius: "8px",
@@ -413,129 +451,34 @@ export const OnboardingModal: React.FC<Props> = ({ isDarkMode, onClose }) => {
                           display: "flex",
                           alignItems: "center",
                           flexShrink: 0,
+                          fontSize: "1.125rem",
+                          lineHeight: 1,
                         }}
                       >
-                        <Shuffle size={18} />
+                        ×
                       </button>
                     </div>
-                  </div>
+                  )}
 
-                  {/* Accent row */}
-                  <div>
-                    <div
+                  {/* + Add accent */}
+                  {!showAccent && (
+                    <button
+                      onClick={() => setShowAccent(true)}
                       style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        marginBottom: "0.5rem",
+                        background: "none",
+                        border: `1px dashed ${BORDER(isDarkMode)}`,
+                        borderRadius: "8px",
+                        color: MUTED(isDarkMode),
+                        fontSize: "0.875rem",
+                        cursor: "pointer",
+                        padding: "0.6rem 1rem",
+                        textAlign: "left",
+                        width: "100%",
                       }}
                     >
-                      <span
-                        style={{
-                          fontSize: "0.75rem",
-                          fontWeight: 600,
-                          color: MUTED(isDarkMode),
-                          textTransform: "uppercase",
-                          letterSpacing: "0.05em",
-                        }}
-                      >
-                        Accent
-                      </span>
-                      <button
-                        onClick={() => {
-                          const next = !accentAuto;
-                          setAccentAuto(next);
-                          if (next) {
-                            setAnswer("accentColor", shiftHue(answers.brandColor, 60));
-                          }
-                        }}
-                        style={{
-                          fontSize: "0.75rem",
-                          padding: "0.2rem 0.6rem",
-                          borderRadius: "20px",
-                          border: `1px solid ${accentAuto ? PRIMARY(isDarkMode) : BORDER(isDarkMode)}`,
-                          background: accentAuto
-                            ? isDarkMode
-                              ? "rgba(195,232,53,0.12)"
-                              : "rgba(1,66,254,0.08)"
-                            : "transparent",
-                          color: accentAuto ? PRIMARY(isDarkMode) : MUTED(isDarkMode),
-                          cursor: "pointer",
-                          fontWeight: 500,
-                        }}
-                      >
-                        {accentAuto ? "Auto" : "Custom"}
-                      </button>
-                    </div>
-                    {accentAuto ? (
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "0.75rem",
-                          padding: "0.75rem 1rem",
-                          borderRadius: "8px",
-                          border: `1px solid ${BORDER(isDarkMode)}`,
-                          background: SURFACE(isDarkMode),
-                        }}
-                      >
-                        <div
-                          style={{
-                            width: "24px",
-                            height: "24px",
-                            borderRadius: "50%",
-                            background: answers.accentColor,
-                            flexShrink: 0,
-                          }}
-                        />
-                        <span
-                          style={{
-                            fontSize: "0.9375rem",
-                            fontFamily: "monospace",
-                            color: TEXT(isDarkMode),
-                          }}
-                        >
-                          {answers.accentColor}
-                        </span>
-                        <span
-                          style={{
-                            marginLeft: "auto",
-                            fontSize: "0.75rem",
-                            color: MUTED(isDarkMode),
-                          }}
-                        >
-                          +60° hue shift
-                        </span>
-                      </div>
-                    ) : (
-                      <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
-                        <input
-                          type="color"
-                          value={answers.accentColor}
-                          onChange={(e) => setAnswer("accentColor", e.target.value)}
-                          style={{
-                            width: "48px",
-                            height: "48px",
-                            border: "none",
-                            borderRadius: "8px",
-                            cursor: "pointer",
-                            padding: "2px",
-                            background: "none",
-                            flexShrink: 0,
-                          }}
-                        />
-                        <input
-                          type="text"
-                          value={answers.accentColor}
-                          onChange={(e) => {
-                            const v = e.target.value;
-                            if (/^#[0-9a-fA-F]{0,6}$/.test(v)) setAnswer("accentColor", v);
-                          }}
-                          style={colorPickerStyle}
-                        />
-                      </div>
-                    )}
-                  </div>
+                      + Add accent color
+                    </button>
+                  )}
                 </div>
               )}
 
