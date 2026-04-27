@@ -1,7 +1,7 @@
 import React from "react";
 import { useTheme, FULL_GLOBAL_PRESET } from "../../theme-context";
 import { ColorPickerMenu } from "../ColorPickerMenu";
-import { Pencil, ChevronDown } from "lucide-react";
+import { Pencil } from "lucide-react";
 
 // --- ThemeNameEditor ---
 // Inline editable theme name field, used in the colors tab only.
@@ -96,8 +96,6 @@ export const ColorsTab: React.FC<{ isDarkMode: boolean; isMobile: boolean }> = (
     addGlobalColorsPreset,
   } = useTheme();
 
-  const [isPresetsExpanded, setIsPresetsExpanded] = React.useState(false);
-
   const hasAllPresets = FULL_GLOBAL_PRESET.every((fp) =>
     globalColors.some((gc) => gc.id === fp.id),
   );
@@ -171,95 +169,6 @@ export const ColorsTab: React.FC<{ isDarkMode: boolean; isMobile: boolean }> = (
 
   return (
     <>
-      {/* Theme Presets */}
-      <div style={{ ...themeBox, padding: "1rem", marginTop: 0 }}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            cursor: "pointer",
-          }}
-          onClick={() => setIsPresetsExpanded(!isPresetsExpanded)}
-        >
-          <h3 style={{ ...sectionTitle, borderBottom: "none", paddingBottom: 0, margin: 0 }}>
-            Theme Presets
-            <span
-              style={{
-                fontSize: "0.65rem",
-                background: "#eab308",
-                color: "#000",
-                padding: "0.125rem 0.375rem",
-                borderRadius: "4px",
-                verticalAlign: "middle",
-                marginLeft: "0.5rem",
-              }}
-            >
-              BETA
-            </span>
-          </h3>
-          <ChevronDown
-            size={16}
-            style={{
-              transform: isPresetsExpanded ? "rotate(180deg)" : "rotate(0deg)",
-              transition: "transform 0.2s",
-              color: isDarkMode ? "#aaa" : "#666",
-            }}
-          />
-        </div>
-        {isPresetsExpanded && (
-          <div style={{ marginTop: "1rem" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "0.5rem" }}>
-              {[
-                { name: "Midnight Forest", colors: ["#143524", "#f59e0b"] },
-                { name: "Corporate Blue", colors: ["#0f172a", "#1d4ed8", "#0ea5e9"] },
-                { name: "Stripe Purple", colors: ["#312e81", "#0ea5e9"] },
-                { name: "Vercel Black", colors: ["#000000", "#0070f3"] },
-                { name: "Linear Indigo", colors: ["#3730A3", "#eab308"] },
-              ].map((preset) => (
-                <button
-                  key={preset.name}
-                  className="btn-action"
-                  onClick={() => {
-                    if (themes.length === 0) return;
-                    const themeId = themes[0].id;
-                    preset.colors.forEach((seed, idx) => {
-                      const colorName = idx === 0 ? "brand" : idx === 1 ? "accent" : "support";
-                      if (idx < themes[0].colors.length) {
-                        updateThemeColor(themeId, themes[0].colors[idx].id, colorName, seed);
-                      } else {
-                        addThemeColor(themeId);
-                      }
-                    });
-                    updateThemeName(themeId, preset.name);
-                  }}
-                  style={{
-                    ...actionBtn,
-                    justifyContent: "flex-start",
-                    background: isDarkMode ? "#222" : "#f0f0f0",
-                    border: "1px solid transparent",
-                    position: "relative",
-                    overflow: "hidden",
-                  }}
-                >
-                  <div
-                    style={{
-                      position: "absolute",
-                      left: 0,
-                      top: 0,
-                      bottom: 0,
-                      width: "4px",
-                      background: `linear-gradient(to bottom, ${preset.colors[0]}, ${preset.colors[1] || preset.colors[0]})`,
-                    }}
-                  />
-                  <span style={{ paddingLeft: "0.5rem" }}>{preset.name}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-
       {/* Theme color rows */}
       {themes.map((theme, index) => (
         <div key={theme.id} style={themeBox}>

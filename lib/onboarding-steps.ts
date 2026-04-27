@@ -1,9 +1,12 @@
 export type GeometryStyle = "sharp" | "rounded" | "pill";
+export type SpacingStyle = "compact" | "default" | "spacious";
 
 export interface OnboardingAnswers {
   brandColor: string;
+  accentColor: string;
   fontFamily: string;
   geometry: GeometryStyle;
+  spacing: SpacingStyle;
   name: string;
 }
 
@@ -41,6 +44,12 @@ export const GEOMETRY_RADIUS: Record<GeometryStyle, number> = {
   sharp: 0,
   rounded: 4,
   pill: 16,
+};
+
+export const SPACING_BORDER_WIDTH: Record<SpacingStyle, "small" | "medium" | "large"> = {
+  compact: "small",
+  default: "medium",
+  spacious: "large",
 };
 
 export const SURPRISE_COLORS = [

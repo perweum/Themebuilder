@@ -7,9 +7,11 @@ import { useTheme } from "../theme-context";
 import {
   ONBOARDING_STEPS,
   GEOMETRY_RADIUS,
+  SPACING_BORDER_WIDTH,
   SURPRISE_COLORS,
   type OnboardingAnswers,
   type GeometryStyle,
+  type SpacingStyle,
 } from "../lib/onboarding-steps";
 
 interface Props {
@@ -37,18 +39,19 @@ function shiftHue(hex: string, degrees: number): string {
   }
 }
 
-const GeometryTile: React.FC<{
+const ChoiceTile: React.FC<{
   label: string;
-  radius: number;
+  description?: string;
   selected: boolean;
   isDarkMode: boolean;
   onClick: () => void;
-}> = ({ label, radius, selected, isDarkMode, onClick }) => (
+  children: React.ReactNode;
+}> = ({ label, description, selected, isDarkMode, onClick, children }) => (
   <button
     onClick={onClick}
     style={{
       flex: 1,
-      padding: "1.25rem 1rem",
+      padding: "1rem 0.75rem",
       borderRadius: "8px",
       border: `2px solid ${selected ? PRIMARY(isDarkMode) : BORDER(isDarkMode)}`,
       background: selected
@@ -60,47 +63,43 @@ const GeometryTile: React.FC<{
       display: "flex",
       flexDirection: "column",
       alignItems: "center",
-      gap: "0.75rem",
+      gap: "0.5rem",
       transition: "all 0.15s",
     }}
   >
-    {/* Mini button preview */}
-    <div
-      style={{
-        padding: "6px 16px",
-        borderRadius: `${radius}px`,
-        background: PRIMARY(isDarkMode),
-        color: PRIMARY_TEXT(isDarkMode),
-        fontSize: "0.75rem",
-        fontWeight: 600,
-        userSelect: "none",
-      }}
-    >
-      Button
-    </div>
+    {children}
     <span
       style={{
-        fontSize: "0.8125rem",
+        fontSize: "0.75rem",
         fontWeight: selected ? 600 : 400,
         color: selected ? PRIMARY(isDarkMode) : TEXT(isDarkMode),
+        textAlign: "center",
       }}
     >
       {label}
     </span>
+    {description && (
+      <span style={{ fontSize: "0.6875rem", color: MUTED(isDarkMode), textAlign: "center" }}>
+        {description}
+      </span>
+    )}
   </button>
 );
 
 export const OnboardingModal: React.FC<Props> = ({ isDarkMode, onClose }) => {
-  const { themes, importThemes } = useTheme();
+  const { replaceThemes } = useTheme();
 
   const [phase, setPhase] = useState<Phase>("welcome");
   const [stepIdx, setStepIdx] = useState(0);
   const [answers, setAnswers] = useState<OnboardingAnswers>({
     brandColor: "#0142FE",
+    accentColor: shiftHue("#0142FE", 60),
     fontFamily: "Inter",
     geometry: "rounded",
+    spacing: "default",
     name: "",
   });
+  const [accentAuto, setAccentAuto] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [done, setDone] = useState(false);
   const generateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -140,27 +139,34 @@ export const OnboardingModal: React.FC<Props> = ({ isDarkMode, onClose }) => {
     }
   };
 
-  // Kick off generation when entering the generate phase
+  const setBrandColor = (hex: string) => {
+    setAnswers((prev) => ({
+      ...prev,
+      brandColor: hex,
+      accentColor: accentAuto ? shiftHue(hex, 60) : prev.accentColor,
+    }));
+  };
+
   useEffect(() => {
     if (phase !== "generate" || generating || done) return;
     setGenerating(true);
     generateTimerRef.current = setTimeout(() => {
       const resolvedName = answers.name.trim() || "My Theme";
       const slug = resolvedName.toLowerCase().replace(/\s+/g, "-");
-      importThemes([
+      replaceThemes([
         {
           id: slug,
           name: resolvedName,
           colors: [
             { id: "brand", name: "brand", seed: answers.brandColor },
-            { id: "accent", name: "accent", seed: shiftHue(answers.brandColor, 60) },
+            { id: "accent", name: "accent", seed: answers.accentColor },
           ],
           fontFamily: answers.fontFamily,
           geometry: {
             radiusBase: GEOMETRY_RADIUS[answers.geometry],
             includeRadius: true,
             includeBorders: true,
-            borderWidth: "small",
+            borderWidth: SPACING_BORDER_WIDTH[answers.spacing],
           },
         },
       ]);
@@ -171,7 +177,6 @@ export const OnboardingModal: React.FC<Props> = ({ isDarkMode, onClose }) => {
     };
   }, [phase]);
 
-  // Close after done flash
   useEffect(() => {
     if (!done) return;
     const t = setTimeout(dismiss, 600);
@@ -182,9 +187,20 @@ export const OnboardingModal: React.FC<Props> = ({ isDarkMode, onClose }) => {
     setAnswers((prev) => ({ ...prev, [key]: val }));
 
   const surprise = () => {
-    const current = answers.brandColor;
-    const pool = SURPRISE_COLORS.filter((c) => c !== current);
-    setAnswer("brandColor", pool[Math.floor(Math.random() * pool.length)]);
+    const pool = SURPRISE_COLORS.filter((c) => c !== answers.brandColor);
+    const next = pool[Math.floor(Math.random() * pool.length)];
+    setBrandColor(next);
+  };
+
+  const colorPickerStyle: React.CSSProperties = {
+    flex: 1,
+    padding: "0.75rem 1rem",
+    borderRadius: "8px",
+    border: `1px solid ${BORDER(isDarkMode)}`,
+    background: SURFACE(isDarkMode),
+    color: TEXT(isDarkMode),
+    fontSize: "1rem",
+    fontFamily: "monospace",
   };
 
   // ─── Overlay ──────────────────────────────────────────────────────────────
@@ -210,7 +226,8 @@ export const OnboardingModal: React.FC<Props> = ({ isDarkMode, onClose }) => {
           background: BG(isDarkMode),
           borderRadius: "12px",
           boxShadow: "0 24px 64px rgba(0,0,0,0.25)",
-          overflow: "hidden",
+          // overflow visible so font picker dropdown can escape the card bounds
+          overflow: "visible",
           animation: "fadeIn 0.25s ease",
         }}
       >
@@ -224,6 +241,8 @@ export const OnboardingModal: React.FC<Props> = ({ isDarkMode, onClose }) => {
               flexDirection: "column",
               alignItems: "center",
               gap: "1.25rem",
+              borderRadius: "12px",
+              overflow: "hidden",
             }}
           >
             <div style={{ fontSize: "2rem" }}>🎨</div>
@@ -288,7 +307,7 @@ export const OnboardingModal: React.FC<Props> = ({ isDarkMode, onClose }) => {
 
         {/* ── Steps ───────────────────────────────────────────────── */}
         {phase === "steps" && (
-          <div style={{ padding: "2rem 2.5rem 2.5rem" }}>
+          <div style={{ padding: "2rem 2.5rem 2.5rem", borderRadius: "12px" }}>
             {/* Progress dots */}
             <div
               style={{
@@ -313,7 +332,7 @@ export const OnboardingModal: React.FC<Props> = ({ isDarkMode, onClose }) => {
             </div>
 
             {/* Step heading */}
-            <div style={{ marginBottom: "1.75rem" }}>
+            <div style={{ marginBottom: "1.5rem" }}>
               <h3
                 style={{
                   fontSize: "1.25rem",
@@ -338,114 +357,348 @@ export const OnboardingModal: React.FC<Props> = ({ isDarkMode, onClose }) => {
 
             {/* Step input */}
             <div style={{ marginBottom: "2rem" }}>
+
+              {/* ── Brand color ── */}
               {step.id === "brandColor" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-                  <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
-                    <input
-                      type="color"
-                      value={answers.brandColor}
-                      onChange={(e) => setAnswer("brandColor", e.target.value)}
+                <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+                  {/* Brand row */}
+                  <div>
+                    <div
                       style={{
-                        width: "52px",
-                        height: "52px",
-                        border: "none",
-                        borderRadius: "8px",
-                        cursor: "pointer",
-                        padding: "2px",
-                        background: "none",
-                      }}
-                    />
-                    <input
-                      type="text"
-                      value={answers.brandColor}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        if (/^#[0-9a-fA-F]{0,6}$/.test(v)) setAnswer("brandColor", v);
-                      }}
-                      style={{
-                        flex: 1,
-                        padding: "0.75rem 1rem",
-                        borderRadius: "8px",
-                        border: `1px solid ${BORDER(isDarkMode)}`,
-                        background: SURFACE(isDarkMode),
-                        color: TEXT(isDarkMode),
-                        fontSize: "1rem",
-                        fontFamily: "monospace",
-                      }}
-                    />
-                    <button
-                      onClick={surprise}
-                      title="Surprise me"
-                      style={{
-                        padding: "0.75rem",
-                        borderRadius: "8px",
-                        border: `1px solid ${BORDER(isDarkMode)}`,
-                        background: SURFACE(isDarkMode),
+                        fontSize: "0.75rem",
+                        fontWeight: 600,
                         color: MUTED(isDarkMode),
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        flexShrink: 0,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.05em",
+                        marginBottom: "0.5rem",
                       }}
                     >
-                      <Shuffle size={18} />
-                    </button>
+                      Brand
+                    </div>
+                    <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
+                      <input
+                        type="color"
+                        value={answers.brandColor}
+                        onChange={(e) => setBrandColor(e.target.value)}
+                        style={{
+                          width: "48px",
+                          height: "48px",
+                          border: "none",
+                          borderRadius: "8px",
+                          cursor: "pointer",
+                          padding: "2px",
+                          background: "none",
+                          flexShrink: 0,
+                        }}
+                      />
+                      <input
+                        type="text"
+                        value={answers.brandColor}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          if (/^#[0-9a-fA-F]{0,6}$/.test(v)) setBrandColor(v);
+                        }}
+                        style={colorPickerStyle}
+                      />
+                      <button
+                        onClick={surprise}
+                        title="Surprise me"
+                        style={{
+                          padding: "0.75rem",
+                          borderRadius: "8px",
+                          border: `1px solid ${BORDER(isDarkMode)}`,
+                          background: SURFACE(isDarkMode),
+                          color: MUTED(isDarkMode),
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          flexShrink: 0,
+                        }}
+                      >
+                        <Shuffle size={18} />
+                      </button>
+                    </div>
                   </div>
-                  {/* Accent preview */}
-                  <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+
+                  {/* Accent row */}
+                  <div>
                     <div
                       style={{
-                        width: "28px",
-                        height: "28px",
-                        borderRadius: "50%",
-                        background: answers.brandColor,
-                        flexShrink: 0,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        marginBottom: "0.5rem",
                       }}
-                    />
-                    <div
-                      style={{
-                        width: "28px",
-                        height: "28px",
-                        borderRadius: "50%",
-                        background: shiftHue(answers.brandColor, 60),
-                        flexShrink: 0,
-                      }}
-                    />
-                    <span style={{ fontSize: "0.8125rem", color: MUTED(isDarkMode) }}>
-                      Brand + accent (auto-derived)
-                    </span>
+                    >
+                      <span
+                        style={{
+                          fontSize: "0.75rem",
+                          fontWeight: 600,
+                          color: MUTED(isDarkMode),
+                          textTransform: "uppercase",
+                          letterSpacing: "0.05em",
+                        }}
+                      >
+                        Accent
+                      </span>
+                      <button
+                        onClick={() => {
+                          const next = !accentAuto;
+                          setAccentAuto(next);
+                          if (next) {
+                            setAnswer("accentColor", shiftHue(answers.brandColor, 60));
+                          }
+                        }}
+                        style={{
+                          fontSize: "0.75rem",
+                          padding: "0.2rem 0.6rem",
+                          borderRadius: "20px",
+                          border: `1px solid ${accentAuto ? PRIMARY(isDarkMode) : BORDER(isDarkMode)}`,
+                          background: accentAuto
+                            ? isDarkMode
+                              ? "rgba(195,232,53,0.12)"
+                              : "rgba(1,66,254,0.08)"
+                            : "transparent",
+                          color: accentAuto ? PRIMARY(isDarkMode) : MUTED(isDarkMode),
+                          cursor: "pointer",
+                          fontWeight: 500,
+                        }}
+                      >
+                        {accentAuto ? "Auto" : "Custom"}
+                      </button>
+                    </div>
+                    {accentAuto ? (
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "0.75rem",
+                          padding: "0.75rem 1rem",
+                          borderRadius: "8px",
+                          border: `1px solid ${BORDER(isDarkMode)}`,
+                          background: SURFACE(isDarkMode),
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: "24px",
+                            height: "24px",
+                            borderRadius: "50%",
+                            background: answers.accentColor,
+                            flexShrink: 0,
+                          }}
+                        />
+                        <span
+                          style={{
+                            fontSize: "0.9375rem",
+                            fontFamily: "monospace",
+                            color: TEXT(isDarkMode),
+                          }}
+                        >
+                          {answers.accentColor}
+                        </span>
+                        <span
+                          style={{
+                            marginLeft: "auto",
+                            fontSize: "0.75rem",
+                            color: MUTED(isDarkMode),
+                          }}
+                        >
+                          +60° hue shift
+                        </span>
+                      </div>
+                    ) : (
+                      <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
+                        <input
+                          type="color"
+                          value={answers.accentColor}
+                          onChange={(e) => setAnswer("accentColor", e.target.value)}
+                          style={{
+                            width: "48px",
+                            height: "48px",
+                            border: "none",
+                            borderRadius: "8px",
+                            cursor: "pointer",
+                            padding: "2px",
+                            background: "none",
+                            flexShrink: 0,
+                          }}
+                        />
+                        <input
+                          type="text"
+                          value={answers.accentColor}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            if (/^#[0-9a-fA-F]{0,6}$/.test(v)) setAnswer("accentColor", v);
+                          }}
+                          style={colorPickerStyle}
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
 
+              {/* ── Font family ── */}
               {step.id === "fontFamily" && (
-                <FontPicker
-                  defaultValue={answers.fontFamily}
-                  value={(val: string) => setAnswer("fontFamily", val)}
-                  autoLoad
-                />
-              )}
+                <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+                  {/* Live preview */}
+                  <div
+                    style={{
+                      padding: "1.25rem",
+                      borderRadius: "8px",
+                      border: `1px solid ${BORDER(isDarkMode)}`,
+                      background: SURFACE(isDarkMode),
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "0.25rem",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontFamily: `"${answers.fontFamily}", sans-serif`,
+                        fontSize: "2.25rem",
+                        fontWeight: 700,
+                        lineHeight: 1,
+                        color: TEXT(isDarkMode),
+                      }}
+                    >
+                      Aa
+                    </div>
+                    <div
+                      style={{
+                        fontFamily: `"${answers.fontFamily}", sans-serif`,
+                        fontSize: "0.9375rem",
+                        color: MUTED(isDarkMode),
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      The quick brown fox jumps over the lazy dog.
+                    </div>
+                    <div
+                      style={{
+                        fontFamily: `"${answers.fontFamily}", sans-serif`,
+                        fontSize: "0.75rem",
+                        color: MUTED(isDarkMode),
+                        letterSpacing: "0.05em",
+                        textTransform: "uppercase",
+                        marginTop: "0.25rem",
+                      }}
+                    >
+                      {answers.fontFamily}
+                    </div>
+                  </div>
 
-              {step.id === "geometry" && (
-                <div style={{ display: "flex", gap: "0.75rem" }}>
-                  {(["sharp", "rounded", "pill"] as GeometryStyle[]).map((g) => (
-                    <GeometryTile
-                      key={g}
-                      label={g.charAt(0).toUpperCase() + g.slice(1)}
-                      radius={GEOMETRY_RADIUS[g]}
-                      selected={answers.geometry === g}
-                      isDarkMode={isDarkMode}
-                      onClick={() => setAnswer("geometry", g)}
+                  {/* Picker — overflow visible so dropdown escapes the card */}
+                  <div style={{ position: "relative", zIndex: 10 }}>
+                    <FontPicker
+                      defaultValue={answers.fontFamily}
+                      value={(val: string) => setAnswer("fontFamily", val)}
+                      autoLoad
                     />
-                  ))}
+                  </div>
                 </div>
               )}
 
+              {/* ── Geometry + Spacing ── */}
+              {step.id === "geometry" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+                  {/* Border radius */}
+                  <div>
+                    <div
+                      style={{
+                        fontSize: "0.75rem",
+                        fontWeight: 600,
+                        color: MUTED(isDarkMode),
+                        textTransform: "uppercase",
+                        letterSpacing: "0.05em",
+                        marginBottom: "0.625rem",
+                      }}
+                    >
+                      Corner radius
+                    </div>
+                    <div style={{ display: "flex", gap: "0.625rem" }}>
+                      {(["sharp", "rounded", "pill"] as GeometryStyle[]).map((g) => (
+                        <ChoiceTile
+                          key={g}
+                          label={g.charAt(0).toUpperCase() + g.slice(1)}
+                          selected={answers.geometry === g}
+                          isDarkMode={isDarkMode}
+                          onClick={() => setAnswer("geometry", g)}
+                        >
+                          <div
+                            style={{
+                              padding: "5px 14px",
+                              borderRadius: `${GEOMETRY_RADIUS[g]}px`,
+                              background: PRIMARY(isDarkMode),
+                              color: PRIMARY_TEXT(isDarkMode),
+                              fontSize: "0.75rem",
+                              fontWeight: 600,
+                              userSelect: "none",
+                            }}
+                          >
+                            Button
+                          </div>
+                        </ChoiceTile>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Size scale */}
+                  <div>
+                    <div
+                      style={{
+                        fontSize: "0.75rem",
+                        fontWeight: 600,
+                        color: MUTED(isDarkMode),
+                        textTransform: "uppercase",
+                        letterSpacing: "0.05em",
+                        marginBottom: "0.625rem",
+                      }}
+                    >
+                      Size scale
+                    </div>
+                    <div style={{ display: "flex", gap: "0.625rem" }}>
+                      {(
+                        [
+                          { key: "compact", label: "Compact", padding: "3px 10px", fontSize: "0.6875rem" },
+                          { key: "default", label: "Default", padding: "5px 14px", fontSize: "0.75rem" },
+                          { key: "spacious", label: "Spacious", padding: "8px 20px", fontSize: "0.8125rem" },
+                        ] as const
+                      ).map(({ key, label, padding, fontSize }) => (
+                        <ChoiceTile
+                          key={key}
+                          label={label}
+                          selected={answers.spacing === key}
+                          isDarkMode={isDarkMode}
+                          onClick={() => setAnswer("spacing", key)}
+                        >
+                          <div
+                            style={{
+                              padding,
+                              borderRadius: `${GEOMETRY_RADIUS[answers.geometry]}px`,
+                              border: `1.5px solid ${PRIMARY(isDarkMode)}`,
+                              color: PRIMARY(isDarkMode),
+                              fontSize,
+                              fontWeight: 600,
+                              userSelect: "none",
+                            }}
+                          >
+                            Btn
+                          </div>
+                        </ChoiceTile>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ── Name ── */}
               {step.id === "name" && (
                 <input
                   type="text"
                   value={answers.name}
-                  placeholder={themes[0]?.name || themes[0]?.id || "My Theme"}
+                  placeholder="My Theme"
                   onChange={(e) => setAnswer("name", e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") advance();
@@ -515,6 +768,7 @@ export const OnboardingModal: React.FC<Props> = ({ isDarkMode, onClose }) => {
               flexDirection: "column",
               alignItems: "center",
               gap: "1.5rem",
+              borderRadius: "12px",
             }}
           >
             {done ? (
@@ -545,7 +799,6 @@ export const OnboardingModal: React.FC<Props> = ({ isDarkMode, onClose }) => {
               </>
             ) : (
               <>
-                {/* Summary */}
                 <div
                   style={{
                     display: "flex",
@@ -568,24 +821,39 @@ export const OnboardingModal: React.FC<Props> = ({ isDarkMode, onClose }) => {
                   </h3>
                   {[
                     {
-                      label: "Brand color",
+                      label: "Brand",
                       preview: (
-                        <div
-                          style={{
-                            width: "20px",
-                            height: "20px",
-                            borderRadius: "4px",
-                            background: answers.brandColor,
-                          }}
-                        />
+                        <div style={{ display: "flex", gap: "6px" }}>
+                          <div
+                            style={{
+                              width: "18px",
+                              height: "18px",
+                              borderRadius: "4px",
+                              background: answers.brandColor,
+                            }}
+                          />
+                          <div
+                            style={{
+                              width: "18px",
+                              height: "18px",
+                              borderRadius: "4px",
+                              background: answers.accentColor,
+                            }}
+                          />
+                        </div>
                       ),
-                      value: answers.brandColor,
+                      value: `${answers.brandColor} + ${answers.accentColor}`,
                     },
                     { label: "Typeface", preview: null, value: answers.fontFamily },
                     {
-                      label: "Style",
+                      label: "Corners",
                       preview: null,
                       value: answers.geometry.charAt(0).toUpperCase() + answers.geometry.slice(1),
+                    },
+                    {
+                      label: "Size scale",
+                      preview: null,
+                      value: answers.spacing.charAt(0).toUpperCase() + answers.spacing.slice(1),
                     },
                     { label: "Name", preview: null, value: answers.name.trim() || "My Theme" },
                   ].map(({ label, preview, value }) => (
@@ -600,9 +868,7 @@ export const OnboardingModal: React.FC<Props> = ({ isDarkMode, onClose }) => {
                         borderRadius: "6px",
                       }}
                     >
-                      <span style={{ fontSize: "0.875rem", color: MUTED(isDarkMode) }}>
-                        {label}
-                      </span>
+                      <span style={{ fontSize: "0.875rem", color: MUTED(isDarkMode) }}>{label}</span>
                       <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                         {preview}
                         <span
@@ -615,7 +881,6 @@ export const OnboardingModal: React.FC<Props> = ({ isDarkMode, onClose }) => {
                   ))}
                 </div>
 
-                {/* Progress bar */}
                 <div
                   style={{
                     width: "100%",
@@ -641,11 +906,11 @@ export const OnboardingModal: React.FC<Props> = ({ isDarkMode, onClose }) => {
       </div>
 
       <style>{`
-                @keyframes onboardingProgress {
-                    from { width: 0%; }
-                    to   { width: 100%; }
-                }
-            `}</style>
+        @keyframes onboardingProgress {
+          from { width: 0%; }
+          to   { width: 100%; }
+        }
+      `}</style>
     </div>
   );
 };
