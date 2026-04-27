@@ -236,6 +236,27 @@ export const KitchenSink: React.FC<{
               </button>
 
               <button
+                onClick={() => {
+                  localStorage.removeItem("systemic_onboarding_completed");
+                  onShowOnboarding();
+                }}
+                style={{
+                  padding: "0.5rem 1rem",
+                  fontSize: "1rem",
+                  borderRadius: "0px",
+                  background: "transparent",
+                  color: isDarkMode ? "#94a3b8" : "#64748b",
+                  border: `1px solid ${isDarkMode ? "#334155" : "#e2e8f0"}`,
+                  cursor: "pointer",
+                  fontWeight: 400,
+                  flex: isMobile ? "1 1 auto" : "none",
+                  textAlign: "center",
+                }}
+              >
+                Quick Setup
+              </button>
+
+              <button
                 onClick={() => setIsImportOpen(true)}
                 style={{
                   padding: "0.5rem 1rem",
