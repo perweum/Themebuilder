@@ -15,6 +15,7 @@ export type ThemeGeometryConfig = {
   borderWidth: "small" | "medium" | "large";
   sizeBase?: number;
   includeShadow?: boolean;
+  shadowSize?: "none" | "default" | "large";
 };
 
 export type ThemeConfig = {

@@ -25,9 +25,10 @@ const SIZE_OPTIONS: { id: number; label: string; description: string }[] = [
   { id: 6, label: "Spacious", description: "Open spacing · 6px base" },
 ];
 
-const SHADOW_OPTIONS: { id: "none" | "on"; label: string; description: string }[] = [
+const SHADOW_OPTIONS: { id: "none" | "default" | "large"; label: string; description: string }[] = [
   { id: "none", label: "No shadow", description: "Flat, no elevation" },
-  { id: "on", label: "Shadow", description: "Depth via elevation" },
+  { id: "default", label: "Default", description: "Subtle elevation" },
+  { id: "large", label: "Large", description: "High elevation" },
 ];
 
 function radiusToChoice(px: number): RadiusChoice {
@@ -198,7 +199,7 @@ export const ThemeDrawer: React.FC<{
           };
           const currentRadius = radiusToChoice(geometry.radiusBase ?? 4);
           const currentSizeBase = geometry.sizeBase ?? 4;
-          const hasShadow = geometry.includeShadow !== false;
+          const currentShadowSize = geometry.shadowSize ?? (geometry.includeShadow === false ? "none" : "default");
 
           const applyRadius = (choice: RadiusChoice) => {
             const px = choice === "sharp" ? 0 : choice === "rounded" ? 4 : 20;
@@ -222,7 +223,7 @@ export const ThemeDrawer: React.FC<{
                       key={id}
                       className="drawer-tile"
                       onClick={() => applyRadius(id)}
-                      style={tileBase(currentRadius === id)}
+                      style={{ ...tileBase(currentRadius === id), alignItems: "flex-start", padding: "0.875rem 1rem" }}
                     >
                       <div
                         style={{
@@ -230,12 +231,12 @@ export const ThemeDrawer: React.FC<{
                           height: "28px",
                           border: "2px solid currentColor",
                           borderRadius: `${px}px`,
+                          marginBottom: "0.25rem",
                         }}
                       />
                       <span style={tileLabel}>{label}</span>
                     </button>
                   ))}
-                  <div style={{ flex: 3 }} />
                 </div>
               </section>
 
@@ -264,14 +265,13 @@ export const ThemeDrawer: React.FC<{
                           key={id}
                           className="drawer-tile"
                           onClick={() => updateThemeGeometryValue(theme.id, "borderWidth", id)}
-                          style={tileBase(isActive)}
+                          style={{ ...tileBase(isActive), alignItems: "flex-start", padding: "0.875rem 1rem" }}
                         >
-                          <div style={{ width: "40px", height: `${px * 2}px`, minHeight: "2px", background: "currentColor", borderRadius: "1px" }} />
+                          <div style={{ width: "40px", height: `${px * 2}px`, minHeight: "2px", background: "currentColor", borderRadius: "1px", marginBottom: "0.25rem" }} />
                           <span style={tileLabel}>{label}</span>
                         </button>
                       );
                     })}
-                    <div style={{ flex: 3 }} />
                   </div>
                 ) : (
                   <p style={{ margin: 0, fontSize: "0.875rem", color: mutedFg }}>Borders disabled for this theme.</p>
@@ -322,12 +322,18 @@ export const ThemeDrawer: React.FC<{
                 <h2 style={{ ...sectionHeading, marginBottom: "1rem" }}>Shadow</h2>
                 <div style={{ display: "flex", gap: "0.625rem" }}>
                   {SHADOW_OPTIONS.map(({ id, label, description }) => {
-                    const isActive = id === "none" ? !hasShadow : hasShadow;
+                    const isActive = currentShadowSize === id;
+                    const shadowPreview =
+                      id === "none"
+                        ? "none"
+                        : id === "default"
+                        ? "0 2px 6px rgba(0,0,0,0.12), 0 1px 3px rgba(0,0,0,0.08)"
+                        : "0 8px 20px rgba(0,0,0,0.22), 0 4px 8px rgba(0,0,0,0.14)";
                     return (
                       <button
                         key={id}
                         className="drawer-tile"
-                        onClick={() => updateThemeGeometryValue(theme.id, "includeShadow", id !== "none")}
+                        onClick={() => updateThemeGeometryValue(theme.id, "shadowSize", id)}
                         style={{ ...tileBase(isActive), alignItems: "flex-start", padding: "0.875rem 1rem" }}
                       >
                         <div
@@ -336,10 +342,7 @@ export const ThemeDrawer: React.FC<{
                             height: "24px",
                             background: isDarkMode ? "#333" : "#e5e7eb",
                             borderRadius: "3px",
-                            boxShadow:
-                              id === "on"
-                                ? "0 4px 8px rgba(0,0,0,0.2), 0 1px 3px rgba(0,0,0,0.1)"
-                                : "none",
+                            boxShadow: shadowPreview,
                             marginBottom: "0.25rem",
                           }}
                         />
@@ -348,7 +351,6 @@ export const ThemeDrawer: React.FC<{
                       </button>
                     );
                   })}
-                  <div style={{ flex: 2 }} />
                 </div>
               </section>
             </React.Fragment>

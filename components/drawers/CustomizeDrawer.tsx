@@ -6,16 +6,14 @@ import { ChevronDown, ChevronRight, RotateCcw } from "lucide-react";
 export const CustomizeDrawer: React.FC<{
   isDarkMode: boolean;
 }> = ({ isDarkMode }) => {
-  const { themes, resolvedThemes, resolvedDefaultThemes, updateThemeSemanticOverride } = useTheme();
-  const [expandedCategories, setExpandedCategories] = React.useState<Record<string, boolean>>({});
+  const { themes, globalColors, resolvedThemes, resolvedDefaultThemes, updateThemeSemanticOverride } = useTheme();
 
   const accent = isDarkMode ? "#C3E835" : "#0142FE";
   const fg = isDarkMode ? "#F8F8F8" : "#1F1F1F";
   const bg = isDarkMode ? "#111" : "#fff";
   const borderCol = isDarkMode ? "#2a2a2a" : "#eee";
-  const cardBg = isDarkMode ? "#1a1a1a" : "#f8fafc";
-  const tokenBg = isDarkMode ? "#222" : "#fff";
   const mutedFg = isDarkMode ? "#888" : "#666";
+  const dividerCol = isDarkMode ? "#1f1f1f" : "#f3f4f6";
 
   const activeTheme = themes[0];
   const defaultTheme = resolvedDefaultThemes[0];
@@ -41,8 +39,78 @@ export const CustomizeDrawer: React.FC<{
       }
     };
     flatten(defaultTheme.theme);
+
+    // Build lookup sets for ordering
+    const themeColorNames = new Map(
+      (themes[0]?.colors ?? []).map((c, i) => [c.name.toLowerCase().replace(/\s+/g, "-"), i])
+    );
+    const GLOBAL_PREFERRED = ["neutral", "error", "success", "warning", "info", "caution", "critical"];
+    const globalColorOrder = new Map<string, number>();
+    GLOBAL_PREFERRED.forEach((n, i) => globalColorOrder.set(n, i));
+    globalColors.forEach((gc) => {
+      const key = gc.name.toLowerCase().replace(/\s+/g, "-");
+      if (!globalColorOrder.has(key)) globalColorOrder.set(key, GLOBAL_PREFERRED.length + globalColorOrder.size);
+    });
+
+    for (const cat of Object.keys(cats)) {
+      cats[cat].sort((a, b) => {
+        const aKey = a.split(".")[1] ?? "";
+        const bKey = b.split(".")[1] ?? "";
+        const aThemeIdx = themeColorNames.get(aKey);
+        const bThemeIdx = themeColorNames.get(bKey);
+        const aGlobalIdx = globalColorOrder.get(aKey);
+        const bGlobalIdx = globalColorOrder.get(bKey);
+        // Groups: 0 = structural, 1 = theme colors, 2 = global colors
+        const aGroup = aGlobalIdx !== undefined ? 2 : aThemeIdx !== undefined ? 1 : 0;
+        const bGroup = bGlobalIdx !== undefined ? 2 : bThemeIdx !== undefined ? 1 : 0;
+        if (aGroup !== bGroup) return aGroup - bGroup;
+        if (aGroup === 1) return (aThemeIdx ?? 0) - (bThemeIdx ?? 0);
+        if (aGroup === 2) return (aGlobalIdx ?? 99) - (bGlobalIdx ?? 99);
+        return 0;
+      });
+    }
+
     return cats;
-  }, [defaultTheme]);
+  }, [defaultTheme, themes, globalColors]);
+
+  // First category open by default
+  const categoryKeys = Object.keys(tokenCategories);
+  const [expandedCategories, setExpandedCategories] = React.useState<Record<string, boolean>>(() => {
+    if (categoryKeys.length > 0) return { [categoryKeys[0]]: true };
+    return {};
+  });
+  const categoryRefs = React.useRef<Record<string, HTMLButtonElement | null>>({});
+
+  // Open first category once categories load
+  React.useEffect(() => {
+    const keys = Object.keys(tokenCategories);
+    if (keys.length > 0) {
+      setExpandedCategories((prev) => {
+        const hasAnyOpen = Object.values(prev).some(Boolean);
+        if (hasAnyOpen) return prev;
+        return { ...prev, [keys[0]]: true };
+      });
+    }
+  }, [tokenCategories]);
+
+  const getValueByPath = (obj: any, path: string) => {
+    const parts = path.split(".");
+    let current = obj;
+    for (const part of parts) {
+      if (!current) return null;
+      current = current[part];
+    }
+    return current?.$value || null;
+  };
+
+  const resolveHex = (tokenRef: string | null): string | null => {
+    if (!tokenRef) return null;
+    let val = tokenRef;
+    if (val?.startsWith("{")) {
+      val = getValueByPath(activeThemePayloadWithOptions, val.slice(1, -1)) || val;
+    }
+    return val?.startsWith("#") ? val : null;
+  };
 
   const getValStr = (obj: any, path: string) => {
     let cur = obj;
@@ -53,179 +121,191 @@ export const CustomizeDrawer: React.FC<{
     return cur?.$value || null;
   };
 
+  const renderSelectOptions = () => (
+    <>
+      {Object.keys(activeThemePayloadWithOptions?.color || {}).map((p) => (
+        <optgroup key={p} label={p}>
+          {(p === "white" || p === "black" ? ALPHA_STEPS : COLOR_STEPS).map((s) => (
+            <option key={s} value={`{color.${p}.${s}}`}>
+              {p}-{s}
+            </option>
+          ))}
+        </optgroup>
+      ))}
+    </>
+  );
+
   if (!activeTheme) return null;
 
   return (
-    <div
-      style={{ backgroundColor: bg, color: fg, overflowY: "auto" }}
-      className="no-scrollbar"
-    >
-      <style>{`
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-      `}</style>
-
+    <div style={{ backgroundColor: bg, color: fg }}>
       <div
         style={{
-          maxWidth: "1400px",
+          maxWidth: "1000px",
           margin: "0 auto",
-          padding: "2rem 2.5rem",
+          padding: "2rem 2rem 2.5rem",
+          display: "flex",
+          flexDirection: "column",
+          gap: 0,
         }}
       >
-        <p
-          style={{
-            fontSize: "0.6875rem",
-            fontWeight: 700,
-            letterSpacing: "0.1em",
-            textTransform: "uppercase",
-            color: accent,
-            margin: "0 0 1.5rem 0",
-          }}
-        >
-          Semantic Token Overrides
-        </p>
-
         <p style={{ fontSize: "0.875rem", color: mutedFg, margin: "0 0 1.5rem 0" }}>
           Override specific token mappings for light and dark mode. Resets to default when cleared.
         </p>
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-            gap: "1rem",
-          }}
-        >
-          {Object.entries(tokenCategories).map(([category, paths]) => (
-            <div
-              key={category}
-              style={{
-                background: cardBg,
-                borderRadius: "8px",
-                padding: "1rem",
-                border: `1px solid ${borderCol}`,
-              }}
-            >
-              <button
-                style={{
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.5rem",
-                  background: "none",
-                  border: "none",
-                  color: "inherit",
-                  padding: 0,
-                  width: "100%",
-                  textAlign: "left",
-                }}
-                onClick={() =>
-                  setExpandedCategories((prev) => ({ ...prev, [category]: !prev[category] }))
-                }
-              >
-                {expandedCategories[category] ? (
-                  <ChevronDown size={14} />
-                ) : (
-                  <ChevronRight size={14} />
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          {Object.entries(tokenCategories).map(([category, paths], catIdx) => {
+            const isExpanded = !!expandedCategories[category];
+
+            return (
+              <div key={category}>
+                {catIdx > 0 && (
+                  <div style={{ borderTop: `1px solid ${dividerCol}` }} />
                 )}
-                <span
-                  style={{
-                    fontSize: "0.875rem",
-                    fontWeight: 600,
-                    textTransform: "capitalize",
-                  }}
-                >
-                  {category}
-                </span>
-                <span style={{ fontSize: "0.75rem", color: mutedFg, marginLeft: "auto" }}>
-                  {paths.length}
-                </span>
-              </button>
 
-              {expandedCategories[category] && (
-                <div
+                {/* Category header */}
+                <button
+                  ref={(el) => { categoryRefs.current[category] = el; }}
                   style={{
+                    cursor: "pointer",
                     display: "flex",
-                    flexDirection: "column",
-                    gap: "0.5rem",
-                    marginTop: "0.75rem",
+                    alignItems: "center",
+                    gap: "0.625rem",
+                    background: "none",
+                    border: "none",
+                    color: "inherit",
+                    padding: "1.25rem 0",
+                    width: "100%",
+                    textAlign: "left",
+                  }}
+                  onClick={() => {
+                    const opening = !expandedCategories[category];
+                    setExpandedCategories({ [category]: opening });
+                    if (opening) {
+                      requestAnimationFrame(() =>
+                        categoryRefs.current[category]?.scrollIntoView({ behavior: "smooth", block: "start" })
+                      );
+                    }
                   }}
                 >
-                  {paths.map((path) => {
-                    const darkPath = `darkTheme.${path}`;
-                    const isLightOverridden = activeTheme.semanticOverrides?.[path] !== undefined;
-                    const isDarkOverridden =
-                      activeTheme.semanticOverrides?.[darkPath] !== undefined;
+                  {isExpanded ? (
+                    <ChevronDown size={16} style={{ flexShrink: 0, color: accent }} />
+                  ) : (
+                    <ChevronRight size={16} style={{ flexShrink: 0, color: mutedFg }} />
+                  )}
+                  <span style={{ fontSize: "1rem", fontWeight: 700, textTransform: "capitalize", flex: 1 }}>
+                    {category}
+                  </span>
+                  <span style={{ fontSize: "0.75rem", color: mutedFg }}>{paths.length} tokens</span>
+                </button>
 
-                    const lightVal =
-                      activeTheme.semanticOverrides?.[path] ||
-                      getValStr(defaultTheme?.theme || {}, path);
-                    const darkVal =
-                      activeTheme.semanticOverrides?.[darkPath] ||
-                      getValStr(defaultTheme?.darkTheme || defaultTheme?.theme || {}, path);
+                {isExpanded && (
+                  <div style={{ paddingBottom: "1.5rem", display: "flex", flexDirection: "column", gap: "0.375rem" }}>
+                    {/* Column headers */}
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "1fr 1fr 1fr auto",
+                        gap: "0.75rem",
+                        padding: "0 0 0.5rem 0",
+                        borderBottom: `1px solid ${dividerCol}`,
+                        marginBottom: "0.375rem",
+                      }}
+                    >
+                      {["Token", "Light Mode", "Dark Mode", ""].map((h) => (
+                        <div key={h} style={{ fontSize: "0.8125rem", fontWeight: 700, color: mutedFg, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                          {h}
+                        </div>
+                      ))}
+                    </div>
 
-                    return (
-                      <div
-                        key={path}
-                        style={{
-                          padding: "0.5rem",
-                          background: tokenBg,
-                          borderRadius: "6px",
-                          border: `1px solid ${borderCol}`,
-                        }}
-                      >
+                    {paths.map((path) => {
+                      const darkPath = `darkTheme.${path}`;
+                      const isLightOverridden = activeTheme.semanticOverrides?.[path] !== undefined;
+                      const isDarkOverridden = activeTheme.semanticOverrides?.[darkPath] !== undefined;
+
+                      const lightVal =
+                        activeTheme.semanticOverrides?.[path] ||
+                        getValStr(defaultTheme?.theme || {}, path);
+                      const darkVal =
+                        activeTheme.semanticOverrides?.[darkPath] ||
+                        getValStr(defaultTheme?.darkTheme || defaultTheme?.theme || {}, path);
+
+                      const lightHex = resolveHex(
+                        getValueByPath(activeThemePayloadWithOptions, `theme.${path}`) || lightVal
+                      );
+                      const darkHex = resolveHex(
+                        getValueByPath(activeThemePayloadWithOptions, `darkTheme.${path}`) || darkVal
+                      );
+
+                      const tokenLabel = path.split(".").slice(1).join(" › ");
+
+                      const swatchStyle: React.CSSProperties = {
+                        width: 44,
+                        height: 44,
+                        borderRadius: "6px",
+                        border: `1px solid ${borderCol}`,
+                        flexShrink: 0,
+                      };
+
+                      const selectStyle: React.CSSProperties = {
+                        flex: 1,
+                        fontSize: "0.9375rem",
+                        padding: "0.5rem 0.625rem",
+                        background: isDarkMode ? "#1a1a1a" : "#f8f8f8",
+                        color: "inherit",
+                        border: `1px solid ${borderCol}`,
+                        borderRadius: "6px",
+                        minWidth: 0,
+                        height: "44px",
+                      };
+
+                      return (
                         <div
+                          key={path}
                           style={{
-                            fontWeight: 600,
-                            fontSize: "0.8125rem",
-                            marginBottom: "0.375rem",
-                            color: fg,
+                            display: "grid",
+                            gridTemplateColumns: "1fr 1fr 1fr auto",
+                            gap: "0.75rem",
+                            alignItems: "center",
+                            padding: "0.5rem 0",
                           }}
                         >
-                          {path.split(".").slice(1).join(" › ")}
-                        </div>
-                        <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem" }}>
-                          {/* Light */}
+                          {/* Token name */}
+                          <div style={{ fontSize: "1rem", fontWeight: 600, color: fg, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {tokenLabel}
+                          </div>
+
+                          {/* Light mode */}
                           <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-                            <span
-                              style={{
-                                fontSize: "0.6875rem",
-                                fontWeight: 600,
-                                width: "20px",
-                                color: mutedFg,
-                                textTransform: "uppercase",
-                                letterSpacing: "0.05em",
-                              }}
-                            >
-                              L
-                            </span>
+                            <div style={{ ...swatchStyle, background: lightHex || (isDarkMode ? "#2a2a2a" : "#e5e7eb") }} />
                             <select
                               value={lightVal || ""}
                               onChange={(e) =>
                                 updateThemeSemanticOverride(activeTheme.id, path, e.target.value)
                               }
-                              style={{
-                                flex: 1,
-                                fontSize: "0.75rem",
-                                padding: "2px 4px",
-                                background: isDarkMode ? "#111" : "#fff",
-                                color: "inherit",
-                                border: `1px solid ${borderCol}`,
-                                borderRadius: "3px",
-                              }}
+                              style={selectStyle}
                             >
-                              {Object.keys(activeThemePayloadWithOptions?.color || {}).map((p) => (
-                                <optgroup key={p} label={p}>
-                                  {(p === "white" || p === "black" ? ALPHA_STEPS : COLOR_STEPS).map(
-                                    (s) => (
-                                      <option key={s} value={`{color.${p}.${s}}`}>
-                                        {p}-{s}
-                                      </option>
-                                    ),
-                                  )}
-                                </optgroup>
-                              ))}
+                              {renderSelectOptions()}
                             </select>
+                          </div>
+
+                          {/* Dark mode */}
+                          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                            <div style={{ ...swatchStyle, background: darkHex || (isDarkMode ? "#2a2a2a" : "#e5e7eb") }} />
+                            <select
+                              value={darkVal || ""}
+                              onChange={(e) =>
+                                updateThemeSemanticOverride(activeTheme.id, darkPath, e.target.value)
+                              }
+                              style={selectStyle}
+                            >
+                              {renderSelectOptions()}
+                            </select>
+                          </div>
+
+                          {/* Reset buttons */}
+                          <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
                             {isLightOverridden && (
                               <button
                                 onClick={() =>
@@ -239,58 +319,11 @@ export const CustomizeDrawer: React.FC<{
                                   padding: "2px",
                                   display: "flex",
                                 }}
-                                title="Reset to default"
+                                title="Reset light"
                               >
-                                <RotateCcw size={11} />
+                                <RotateCcw size={14} />
                               </button>
                             )}
-                          </div>
-
-                          {/* Dark */}
-                          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-                            <span
-                              style={{
-                                fontSize: "0.6875rem",
-                                fontWeight: 600,
-                                width: "20px",
-                                color: mutedFg,
-                                textTransform: "uppercase",
-                                letterSpacing: "0.05em",
-                              }}
-                            >
-                              D
-                            </span>
-                            <select
-                              value={darkVal || ""}
-                              onChange={(e) =>
-                                updateThemeSemanticOverride(
-                                  activeTheme.id,
-                                  darkPath,
-                                  e.target.value,
-                                )
-                              }
-                              style={{
-                                flex: 1,
-                                fontSize: "0.75rem",
-                                padding: "2px 4px",
-                                background: isDarkMode ? "#111" : "#fff",
-                                color: "inherit",
-                                border: `1px solid ${borderCol}`,
-                                borderRadius: "3px",
-                              }}
-                            >
-                              {Object.keys(activeThemePayloadWithOptions?.color || {}).map((p) => (
-                                <optgroup key={p} label={p}>
-                                  {(p === "white" || p === "black" ? ALPHA_STEPS : COLOR_STEPS).map(
-                                    (s) => (
-                                      <option key={s} value={`{color.${p}.${s}}`}>
-                                        {p}-{s}
-                                      </option>
-                                    ),
-                                  )}
-                                </optgroup>
-                              ))}
-                            </select>
                             {isDarkOverridden && (
                               <button
                                 onClick={() =>
@@ -304,20 +337,20 @@ export const CustomizeDrawer: React.FC<{
                                   padding: "2px",
                                   display: "flex",
                                 }}
-                                title="Reset to default"
+                                title="Reset dark"
                               >
-                                <RotateCcw size={11} />
+                                <RotateCcw size={14} />
                               </button>
                             )}
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          ))}
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

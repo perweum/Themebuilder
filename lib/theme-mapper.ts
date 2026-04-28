@@ -93,11 +93,13 @@ export function mapTheme(
     borderWidth: "small" | "medium" | "large";
     sizeBase?: number;
     includeShadow?: boolean;
+    shadowSize?: "none" | "default" | "large";
   },
   fontFamily?: string,
 ): ThemeTokensPayload {
   // Geometry config — needed early for conditional skeleton construction
-  const includeShadow = geometryConfig?.includeShadow !== false;
+  const shadowSize = geometryConfig?.shadowSize ?? (geometryConfig?.includeShadow === false ? "none" : "default");
+  const includeShadow = shadowSize !== "none";
 
   // Lookup core semantics by stable ID
   const neutralRamp = globalColors.find((c) => c.id === "neutral");
@@ -235,18 +237,25 @@ export function mapTheme(
         contrast: { $value: `{light.text.neutral.contrast}`, $type: "color" },
       },
     },
-    elevation: includeShadow
+    elevation: shadowSize === "none"
       ? {
-          "1": { $value: `0 1px 2px {color.black.50}, 0 1px 3px {color.black.100}`, $type: "shadow" },
-          "2": { $value: `0 4px 6px {color.black.100}, 0 2px 4px {color.black.50}`, $type: "shadow" },
-          "3": { $value: `0 10px 15px {color.black.100}, 0 4px 6px {color.black.50}`, $type: "shadow" },
-          "4": { $value: `0 20px 25px {color.black.100}, 0 8px 10px {color.black.50}`, $type: "shadow" },
-        }
-      : {
           "1": { $value: "none", $type: "shadow" },
           "2": { $value: "none", $type: "shadow" },
           "3": { $value: "none", $type: "shadow" },
           "4": { $value: "none", $type: "shadow" },
+        }
+      : shadowSize === "large"
+      ? {
+          "1": { $value: `0 2px 4px {color.black.100}, 0 1px 2px {color.black.50}`, $type: "shadow" },
+          "2": { $value: `0 8px 16px {color.black.200}, 0 4px 8px {color.black.100}`, $type: "shadow" },
+          "3": { $value: `0 16px 32px {color.black.200}, 0 8px 16px {color.black.100}`, $type: "shadow" },
+          "4": { $value: `0 24px 48px {color.black.300}, 0 12px 24px {color.black.200}`, $type: "shadow" },
+        }
+      : {
+          "1": { $value: `0 1px 2px {color.black.50}, 0 1px 3px {color.black.100}`, $type: "shadow" },
+          "2": { $value: `0 4px 6px {color.black.100}, 0 2px 4px {color.black.50}`, $type: "shadow" },
+          "3": { $value: `0 10px 15px {color.black.100}, 0 4px 6px {color.black.50}`, $type: "shadow" },
+          "4": { $value: `0 20px 25px {color.black.100}, 0 8px 10px {color.black.50}`, $type: "shadow" },
         },
     overlay: {
       default: { $value: `{color.black.300}`, $type: "color" },
@@ -358,18 +367,25 @@ export function mapTheme(
         contrast: { $value: `{dark.text.neutral.contrast}`, $type: "color" },
       },
     },
-    elevation: includeShadow
+    elevation: shadowSize === "none"
       ? {
-          "1": { $value: `0 1px 2px {color.black.200}, 0 1px 3px {color.black.300}`, $type: "shadow" },
-          "2": { $value: `0 4px 6px {color.black.300}, 0 2px 4px {color.black.200}`, $type: "shadow" },
-          "3": { $value: `0 10px 15px {color.black.300}, 0 4px 6px {color.black.200}`, $type: "shadow" },
-          "4": { $value: `0 20px 25px {color.black.300}, 0 8px 10px {color.black.200}`, $type: "shadow" },
-        }
-      : {
           "1": { $value: "none", $type: "shadow" },
           "2": { $value: "none", $type: "shadow" },
           "3": { $value: "none", $type: "shadow" },
           "4": { $value: "none", $type: "shadow" },
+        }
+      : shadowSize === "large"
+      ? {
+          "1": { $value: `0 2px 4px {color.black.300}, 0 1px 2px {color.black.200}`, $type: "shadow" },
+          "2": { $value: `0 8px 16px {color.black.400}, 0 4px 8px {color.black.300}`, $type: "shadow" },
+          "3": { $value: `0 16px 32px {color.black.400}, 0 8px 16px {color.black.300}`, $type: "shadow" },
+          "4": { $value: `0 24px 48px {color.black.500}, 0 12px 24px {color.black.400}`, $type: "shadow" },
+        }
+      : {
+          "1": { $value: `0 1px 2px {color.black.200}, 0 1px 3px {color.black.300}`, $type: "shadow" },
+          "2": { $value: `0 4px 6px {color.black.300}, 0 2px 4px {color.black.200}`, $type: "shadow" },
+          "3": { $value: `0 10px 15px {color.black.300}, 0 4px 6px {color.black.200}`, $type: "shadow" },
+          "4": { $value: `0 20px 25px {color.black.300}, 0 8px 10px {color.black.200}`, $type: "shadow" },
         },
     overlay: {
       default: { $value: `{color.black.300}`, $type: "color" },

@@ -446,7 +446,11 @@ export const ExportScreen: React.FC<{
       </div>
   );
 
-  if (noModal) return content;
+  if (noModal) return (
+    <div style={{ maxWidth: "1000px", margin: "0 auto", padding: "0 2rem" }}>
+      {content}
+    </div>
+  );
 
 
   return (

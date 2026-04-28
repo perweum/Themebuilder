@@ -145,17 +145,33 @@ export const ColorsTab: React.FC<{ isDarkMode: boolean; isMobile: boolean }> = (
     background: "transparent",
     color: isDarkMode ? "#F8F8F8" : "#1F1F1F",
     border: `1px solid ${isDarkMode ? "#F8F8F8" : "#1F1F1F"}`,
-    padding: "0.5rem",
-    borderRadius: "0px",
+    padding: "0.5rem 1.25rem",
+    borderRadius: "4px",
     cursor: "pointer",
     fontSize: "0.875rem",
     fontWeight: 500,
-    display: "flex",
+    display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
     gap: "0.5rem",
     transition: "all 0.2s ease",
-    width: "100%",
+  };
+
+  const filledBtn: React.CSSProperties = {
+    ...actionBtn,
+    background: isDarkMode ? "#C3E835" : "#0142FE",
+    color: isDarkMode ? "#000" : "#fff",
+    border: "none",
+  };
+
+  const colorCard: React.CSSProperties = {
+    background: isDarkMode ? "#1f1f1f" : "#fff",
+    borderRadius: "8px",
+    padding: "0.75rem",
+    border: `1px solid ${isDarkMode ? "#2a2a2a" : "#e5e7eb"}`,
+    display: "flex",
+    flexDirection: "column",
+    gap: "0.5rem",
   };
 
   const removeBtn: React.CSSProperties = {
@@ -196,33 +212,37 @@ export const ColorsTab: React.FC<{ isDarkMode: boolean; isMobile: boolean }> = (
               </button>
             )}
           </div>
-          {theme.colors.map((color) => (
-            <div key={color.id} style={group}>
-              <label style={label}>
-                {color.name} Color
-                <button
-                  className="btn-remove"
-                  onClick={() => removeThemeColor(theme.id, color.id)}
-                  style={{ ...removeBtn, padding: "0 0.25rem" }}
-                >
-                  ✕
-                </button>
-              </label>
-              <ColorPickerMenu
-                name={color.name}
-                seed={color.seed}
-                isDarkMode={isDarkMode}
-                existingColors={allExistingColors}
-                onUpdate={(newName, newSeed) =>
-                  updateThemeColor(theme.id, color.id, newName, newSeed)
-                }
-              />
-            </div>
-          ))}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.75rem", marginBottom: "1rem" }}>
+            {theme.colors.map((color) => (
+              <div key={color.id} style={colorCard}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: "0.75rem", fontWeight: 600, color: isDarkMode ? "#C3E835" : "#0142FE", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                    {color.name}
+                  </span>
+                  <button
+                    className="btn-remove"
+                    onClick={() => removeThemeColor(theme.id, color.id)}
+                    style={{ ...removeBtn, fontSize: "0.75rem", padding: "0 0.125rem" }}
+                  >
+                    ✕
+                  </button>
+                </div>
+                <ColorPickerMenu
+                  name={color.name}
+                  seed={color.seed}
+                  isDarkMode={isDarkMode}
+                  existingColors={allExistingColors}
+                  onUpdate={(newName, newSeed) =>
+                    updateThemeColor(theme.id, color.id, newName, newSeed)
+                  }
+                />
+              </div>
+            ))}
+          </div>
           <button
             className="btn-action"
             onClick={() => addThemeColor(theme.id)}
-            style={{ ...actionBtn, marginTop: "0.5rem" }}
+            style={actionBtn}
           >
             + Add theme color
           </button>
@@ -231,7 +251,7 @@ export const ColorsTab: React.FC<{ isDarkMode: boolean; isMobile: boolean }> = (
       <button
         className="btn-action"
         onClick={addTheme}
-        style={{ ...actionBtn, marginBottom: "1.5rem" }}
+        style={{ ...filledBtn, marginBottom: "1.5rem" }}
       >
         + Add New Theme
       </button>
@@ -241,34 +261,38 @@ export const ColorsTab: React.FC<{ isDarkMode: boolean; isMobile: boolean }> = (
         <h3 style={{ ...sectionTitle, borderBottom: "none", paddingBottom: 0, marginTop: 0 }}>
           Global States
         </h3>
-        {globalColors.map((color) => (
-          <div key={color.id} style={group}>
-            <label style={label}>
-              {color.name}
-              {!["neutral", "success", "error"].includes(color.id) && (
-                <button
-                  className="btn-remove"
-                  onClick={() => removeGlobalColor(color.id)}
-                  style={removeBtn}
-                >
-                  Remove
-                </button>
-              )}
-            </label>
-            <ColorPickerMenu
-              name={color.name}
-              seed={color.seed}
-              isDarkMode={isDarkMode}
-              existingColors={allExistingColors}
-              onUpdate={(newName, newSeed) => updateGlobalColor(color.id, newName, newSeed)}
-            />
-          </div>
-        ))}
-        <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.75rem", marginBottom: "1rem" }}>
+          {globalColors.map((color) => (
+            <div key={color.id} style={colorCard}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: "0.75rem", fontWeight: 600, color: isDarkMode ? "#C3E835" : "#0142FE", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  {color.name}
+                </span>
+                {!["neutral", "success", "error"].includes(color.id) && (
+                  <button
+                    className="btn-remove"
+                    onClick={() => removeGlobalColor(color.id)}
+                    style={{ ...removeBtn, fontSize: "0.75rem", padding: "0 0.125rem" }}
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+              <ColorPickerMenu
+                name={color.name}
+                seed={color.seed}
+                isDarkMode={isDarkMode}
+                existingColors={allExistingColors}
+                onUpdate={(newName, newSeed) => updateGlobalColor(color.id, newName, newSeed)}
+              />
+            </div>
+          ))}
+        </div>
+        <div style={{ display: "flex", gap: "0.75rem" }}>
           <button
             className="btn-action"
             onClick={addRandomGlobalColor}
-            style={{ ...actionBtn, flex: 1 }}
+            style={actionBtn}
           >
             + Add color
           </button>
@@ -276,7 +300,7 @@ export const ColorsTab: React.FC<{ isDarkMode: boolean; isMobile: boolean }> = (
             <button
               className="btn-action"
               onClick={addGlobalColorsPreset}
-              style={{ ...actionBtn, flex: 2 }}
+              style={actionBtn}
             >
               + Add standard set
             </button>
