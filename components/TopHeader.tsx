@@ -23,6 +23,7 @@ export const TopHeader: React.FC<{
     return (
       <button
         key={d}
+        className={`header-nav-btn${isActive ? " header-nav-btn--active" : ""}`}
         onClick={() => onToggleDrawer(d)}
         style={{
           background: "none",
@@ -31,12 +32,13 @@ export const TopHeader: React.FC<{
           padding: "0 0.875rem",
           height: "100%",
           fontSize: "0.9375rem",
-          fontWeight: isActive ? 600 : 400,
+          fontWeight: 600,
           color: isActive ? accent : fg,
           borderBottom: isActive ? `2px solid ${accent}` : "2px solid transparent",
-          transition: "color 0.15s ease, border-color 0.15s ease",
+          transition: "color 0.15s ease, border-color 0.15s ease, background 0.1s ease",
           letterSpacing: "-0.01em",
           flexShrink: 0,
+          opacity: isActive ? 1 : 0.6,
         }}
       >
         {label}
@@ -45,6 +47,12 @@ export const TopHeader: React.FC<{
   };
 
   return (
+    <>
+    <style>{`
+      .header-nav-btn:hover { opacity: 1 !important; background: ${isDarkMode ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)"} !important; }
+      .header-nav-btn:active { background: ${isDarkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.08)"} !important; }
+      .header-nav-btn--active:hover { background: none !important; }
+    `}</style>
     <header
       style={{
         height: `${height}px`,
@@ -100,5 +108,6 @@ export const TopHeader: React.FC<{
         </div>
       </nav>
     </header>
+    </>
   );
 };

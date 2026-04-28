@@ -6,7 +6,7 @@ import { ChevronDown, ChevronRight, RotateCcw } from "lucide-react";
 export const CustomizeDrawer: React.FC<{
   isDarkMode: boolean;
 }> = ({ isDarkMode }) => {
-  const { themes, globalColors, resolvedThemes, resolvedDefaultThemes, updateThemeSemanticOverride } = useTheme();
+  const { themes, globalColors, resolvedThemes, resolvedDefaultThemes, updateThemeSemanticOverride, clearAllSemanticOverrides } = useTheme();
 
   const accent = isDarkMode ? "#C3E835" : "#0142FE";
   const fg = isDarkMode ? "#F8F8F8" : "#1F1F1F";
@@ -106,8 +106,25 @@ export const CustomizeDrawer: React.FC<{
   const resolveHex = (tokenRef: string | null): string | null => {
     if (!tokenRef) return null;
     let val = tokenRef;
+    // Resolve one level of alias — translate {light.*}/{dark.*} to the payload's theme/darkTheme keys
     if (val?.startsWith("{")) {
-      val = getValueByPath(activeThemePayloadWithOptions, val.slice(1, -1)) || val;
+      const inner = val.slice(1, -1);
+      const mappedPath = inner.startsWith("light.")
+        ? `theme.${inner.slice(6)}`
+        : inner.startsWith("dark.")
+        ? `darkTheme.${inner.slice(5)}`
+        : inner;
+      val = getValueByPath(activeThemePayloadWithOptions, mappedPath) || val;
+    }
+    // One more level in case it resolved to another ref
+    if (val?.startsWith("{")) {
+      const inner = val.slice(1, -1);
+      const mappedPath = inner.startsWith("light.")
+        ? `theme.${inner.slice(6)}`
+        : inner.startsWith("dark.")
+        ? `darkTheme.${inner.slice(5)}`
+        : inner;
+      val = getValueByPath(activeThemePayloadWithOptions, mappedPath) || val;
     }
     return val?.startsWith("#") ? val : null;
   };
@@ -149,9 +166,33 @@ export const CustomizeDrawer: React.FC<{
           gap: 0,
         }}
       >
-        <p style={{ fontSize: "0.875rem", color: mutedFg, margin: "0 0 1.5rem 0" }}>
-          Override specific token mappings for light and dark mode. Resets to default when cleared.
-        </p>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.5rem" }}>
+          <p style={{ fontSize: "0.875rem", color: mutedFg, margin: 0 }}>
+            Override specific token mappings for light and dark mode.
+          </p>
+          {Object.keys(activeTheme.semanticOverrides ?? {}).length > 0 && (
+            <button
+              onClick={() => clearAllSemanticOverrides(activeTheme.id)}
+              style={{
+                background: "none",
+                border: `1px solid ${borderCol}`,
+                borderRadius: "6px",
+                color: "#ef4444",
+                cursor: "pointer",
+                padding: "0.375rem 0.75rem",
+                fontSize: "0.8125rem",
+                fontWeight: 500,
+                display: "flex",
+                alignItems: "center",
+                gap: "0.375rem",
+                flexShrink: 0,
+              }}
+            >
+              <RotateCcw size={13} />
+              Reset all
+            </button>
+          )}
+        </div>
 
         <div style={{ display: "flex", flexDirection: "column" }}>
           {Object.entries(tokenCategories).map(([category, paths], catIdx) => {
@@ -205,15 +246,15 @@ export const CustomizeDrawer: React.FC<{
                     <div
                       style={{
                         display: "grid",
-                        gridTemplateColumns: "1fr 1fr 1fr auto",
+                        gridTemplateColumns: "1fr 1fr auto 1fr auto",
                         gap: "0.75rem",
                         padding: "0 0 0.5rem 0",
                         borderBottom: `1px solid ${dividerCol}`,
                         marginBottom: "0.375rem",
                       }}
                     >
-                      {["Token", "Light Mode", "Dark Mode", ""].map((h) => (
-                        <div key={h} style={{ fontSize: "0.8125rem", fontWeight: 700, color: mutedFg, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                      {["Token", "Light Mode", "", "Dark Mode", ""].map((h, i) => (
+                        <div key={i} style={{ fontSize: "0.8125rem", fontWeight: 700, color: mutedFg, textTransform: "uppercase", letterSpacing: "0.06em" }}>
                           {h}
                         </div>
                       ))}
@@ -260,12 +301,25 @@ export const CustomizeDrawer: React.FC<{
                         height: "44px",
                       };
 
+                      const resetBtnStyle: React.CSSProperties = {
+                        background: "none",
+                        border: "none",
+                        color: "#ef4444",
+                        cursor: "pointer",
+                        padding: "4px",
+                        display: "flex",
+                        alignItems: "center",
+                        flexShrink: 0,
+                        opacity: 1,
+                        width: "24px",
+                      };
+
                       return (
                         <div
                           key={path}
                           style={{
                             display: "grid",
-                            gridTemplateColumns: "1fr 1fr 1fr auto",
+                            gridTemplateColumns: "1fr 1fr auto 1fr auto",
                             gap: "0.75rem",
                             alignItems: "center",
                             padding: "0.5rem 0",
@@ -290,6 +344,19 @@ export const CustomizeDrawer: React.FC<{
                             </select>
                           </div>
 
+                          {/* Light reset */}
+                          <div style={{ width: "24px" }}>
+                            {isLightOverridden && (
+                              <button
+                                onClick={() => updateThemeSemanticOverride(activeTheme.id, path, undefined)}
+                                style={resetBtnStyle}
+                                title="Reset light"
+                              >
+                                <RotateCcw size={14} />
+                              </button>
+                            )}
+                          </div>
+
                           {/* Dark mode */}
                           <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
                             <div style={{ ...swatchStyle, background: darkHex || (isDarkMode ? "#2a2a2a" : "#e5e7eb") }} />
@@ -304,39 +371,12 @@ export const CustomizeDrawer: React.FC<{
                             </select>
                           </div>
 
-                          {/* Reset buttons */}
-                          <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
-                            {isLightOverridden && (
-                              <button
-                                onClick={() =>
-                                  updateThemeSemanticOverride(activeTheme.id, path, undefined)
-                                }
-                                style={{
-                                  background: "none",
-                                  border: "none",
-                                  color: "#ef4444",
-                                  cursor: "pointer",
-                                  padding: "2px",
-                                  display: "flex",
-                                }}
-                                title="Reset light"
-                              >
-                                <RotateCcw size={14} />
-                              </button>
-                            )}
+                          {/* Dark reset */}
+                          <div style={{ width: "24px" }}>
                             {isDarkOverridden && (
                               <button
-                                onClick={() =>
-                                  updateThemeSemanticOverride(activeTheme.id, darkPath, undefined)
-                                }
-                                style={{
-                                  background: "none",
-                                  border: "none",
-                                  color: "#ef4444",
-                                  cursor: "pointer",
-                                  padding: "2px",
-                                  display: "flex",
-                                }}
+                                onClick={() => updateThemeSemanticOverride(activeTheme.id, darkPath, undefined)}
+                                style={resetBtnStyle}
                                 title="Reset dark"
                               >
                                 <RotateCcw size={14} />

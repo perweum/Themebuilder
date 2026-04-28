@@ -64,6 +64,7 @@ interface ThemeContextType {
   addThemeColor: (themeId: string) => void;
   removeThemeColor: (themeId: string, colorId: string) => void;
   updateThemeSemanticOverride: (themeId: string, path: string, value: string | undefined) => void;
+  clearAllSemanticOverrides: (themeId: string) => void;
   updateThemePrimitiveOverride: (themeId: string, path: string, value: string | undefined) => void;
   updateThemeGeometryValue: <K extends keyof ThemeGeometryConfig>(
     themeId: string,
@@ -429,6 +430,16 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     );
   };
 
+  const clearAllSemanticOverrides = (themeId: string) => {
+    saveHistory();
+    setThemes((prev) =>
+      prev.map((t) => {
+        if (t.id === themeId) return { ...t, semanticOverrides: {} };
+        return t;
+      }),
+    );
+  };
+
   const updateThemePrimitiveOverride = (
     themeId: string,
     path: string,
@@ -590,6 +601,7 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     addThemeColor,
     removeThemeColor,
     updateThemeSemanticOverride,
+    clearAllSemanticOverrides,
     updateThemePrimitiveOverride,
     updateThemeGeometryValue,
     updateThemeFont,
