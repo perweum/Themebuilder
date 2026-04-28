@@ -21,7 +21,8 @@ const parseSetFromStorage = (key: string): Set<string> => {
 export const ExportScreen: React.FC<{
   isDarkMode: boolean;
   onClose: () => void;
-}> = ({ isDarkMode, onClose }) => {
+  noModal?: boolean;
+}> = ({ isDarkMode, onClose, noModal }) => {
   const { themes, resolvedThemes, resolvedDefaultThemes, globalColors } = useTheme();
   const activeTheme = themes[0];
   const activeThemePayloadWithOptions = resolvedThemes[0];
@@ -306,15 +307,8 @@ export const ExportScreen: React.FC<{
     </button>
   );
 
-  return (
-    <SystemicModal
-      variant="centered"
-      isDarkMode={isDarkMode}
-      onClose={onClose}
-      maxWidth="800px"
-      noPadding
-    >
-      <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+  const content = (
+    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
         {/* Header & tabs */}
         <div style={{ borderBottom: `1px solid ${isDarkMode ? "#334155" : "#e2e8f0"}` }}>
           <div
@@ -450,6 +444,20 @@ export const ExportScreen: React.FC<{
           </button>
         </div>
       </div>
+  );
+
+  if (noModal) return content;
+
+
+  return (
+    <SystemicModal
+      variant="centered"
+      isDarkMode={isDarkMode}
+      onClose={onClose}
+      maxWidth="800px"
+      noPadding
+    >
+      {content}
     </SystemicModal>
   );
 };

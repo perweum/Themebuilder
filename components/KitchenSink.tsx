@@ -2,12 +2,8 @@ import React from "react";
 import { useTheme, ThemeScope } from "../theme-context";
 import { ThemeBlock } from "./ThemeBlock";
 import { PaletteViz } from "./PaletteViz";
-import { ExportScreen } from "./ExportScreen";
-import { ImportScreen } from "./ImportScreen";
 import { ContrastChecker } from "./ContrastChecker";
 import { TestThemeWebsite } from "./TestThemeWebsite";
-import { ThemeToggle } from "./ThemeToggle";
-import { Menu } from "lucide-react";
 
 export type ThemeMode = "system" | "light" | "dark";
 
@@ -17,7 +13,6 @@ export const KitchenSink: React.FC<{
   setThemeMode: (val: ThemeMode) => void;
   onShowOnboarding: () => void;
   isMobile: boolean;
-  onMenuClick: () => void;
   activeThemeId: string;
   setActiveThemeId: (id: string) => void;
 }> = ({
@@ -26,14 +21,10 @@ export const KitchenSink: React.FC<{
   setThemeMode,
   onShowOnboarding,
   isMobile,
-  onMenuClick,
   activeThemeId,
   setActiveThemeId,
 }) => {
   const { themes, globalColors } = useTheme();
-  const [isExportOpen, setIsExportOpen] = React.useState(false);
-  const [isImportOpen, setIsImportOpen] = React.useState(false);
-  const [isContrastOpen, setIsContrastOpen] = React.useState(false);
   const [isDemoOpen, setIsDemoOpen] = React.useState(false);
 
   React.useEffect(() => {
@@ -46,7 +37,6 @@ export const KitchenSink: React.FC<{
 
   const containerStyle: React.CSSProperties = {
     flex: 1,
-    overflowY: "auto",
     padding: isMobile ? "1.5rem 1rem" : "3rem",
     backgroundColor: "var(--color-background-default, #F8F8F8)",
     color: "var(--color-text-default, #1F1F1F)",
@@ -71,6 +61,16 @@ export const KitchenSink: React.FC<{
     backgroundPositionY: "50%",
   };
 
+  const ghostBtn: React.CSSProperties = {
+    background: "transparent",
+    border: "none",
+    cursor: "pointer",
+    padding: "0.5rem 0.75rem",
+    fontSize: "0.875rem",
+    fontWeight: 400,
+    color: isDarkMode ? "#94a3b8" : "#64748b",
+  };
+
   return (
     <ThemeScope themeConfig={activeTheme} globalColors={globalColors} isDarkMode={isDarkMode}>
       <div style={containerStyle} className={isDarkMode ? "dark-mode" : ""}>
@@ -85,224 +85,70 @@ export const KitchenSink: React.FC<{
           }}
         >
           <style>{`
-                    /* Basic dark mode overrides for un-tokenized elements in Kitchen Sink */
-                    .dark-mode h1, .dark-mode h2, .dark-mode h3, .dark-mode h4 { color: #fff !important; }
-                    .dark-mode p { color: #aaa !important; }
-                    .dark-mode .palette-viz-container { background: #222 !important; box-shadow: var(--color-shadow-3) !important; color: #fff; }
-                    .dark-mode .palette-viz-container h2 { border-bottom-color: #444 !important; }
+            .dark-mode h1, .dark-mode h2, .dark-mode h3, .dark-mode h4 { color: #fff !important; }
+            .dark-mode p { color: #aaa !important; }
+            .dark-mode .palette-viz-container { background: #222 !important; box-shadow: var(--color-shadow-3) !important; color: #fff; }
+            .dark-mode .palette-viz-container h2 { border-bottom-color: #444 !important; }
+            .ks-toolbar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; }
+            .ks-ghost-btn { transition: color 0.15s ease; }
+            .ks-ghost-btn:hover { color: ${isDarkMode ? "#C3E835" : "#0142FE"} !important; }
+            .capitalize { text-transform: capitalize; }
+          `}</style>
 
-                    .theme-header-controls {
-                        display: flex;
-                        justify-content: space-between;
-                        align-items: center;
-                    }
-                    .capitalize { text-transform: capitalize; }
-                    .header-control-select { transition: all 0.2s ease; }
-                    .header-control-select:hover {
-                        border-color: ${isDarkMode ? "#C3E835" : "#0142FE"} !important;
-                        color: ${isDarkMode ? "#C3E835" : "#0142FE"} !important;
-                        background-image: url('data:image/svg+xml;utf8,<svg fill="none" stroke="${isDarkMode ? "%23C3E835" : "%230142FE"}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><polyline points="6 9 12 15 18 9"></polyline></svg>') !important;
-                    }
-                    .header-control-btn { transition: all 0.2s ease; }
-                    .header-control-btn:hover {
-                        border-color: ${isDarkMode ? "#C3E835" : "#0142FE"} !important;
-                        color: ${isDarkMode ? "#C3E835" : "#0142FE"} !important;
-                    }
-                    .header-export-btn { transition: opacity 0.2s ease; }
-                    .header-export-btn:hover { opacity: 0.9 !important; }
-                `}</style>
-
-          {/* Top Controls: Theme Selector (left) & action buttons (right) */}
-          <div
-            className="theme-header-controls"
-            style={{
-              flexDirection: isMobile ? "column" : "row",
-              alignItems: isMobile ? "flex-start" : "center",
-              gap: "1rem",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "1rem",
-                width: isMobile ? "100%" : "auto",
-              }}
-            >
-              {isMobile && !isDemoOpen && (
-                <button
-                  onClick={onMenuClick}
-                  style={{
-                    background: "transparent",
-                    border: "none",
-                    color: isDarkMode ? "#fff" : "#000",
-                    cursor: "pointer",
-                    padding: 0.5,
-                    display: "flex",
-                  }}
+          {/* Toolbar: theme selector + actions */}
+          <div className="ks-toolbar">
+            <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+              {themes.length > 1 ? (
+                <select
+                  value={activeTheme?.id || ""}
+                  onChange={(e) => setActiveThemeId(e.target.value)}
+                  style={selectStyle}
                 >
-                  <Menu size={28} />
-                </button>
+                  {themes.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name || t.id} Components
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <span style={{ fontSize: "1.25rem", fontWeight: 600 }}>
+                  {activeTheme?.name || activeTheme?.id || "Theme"} Components
+                </span>
               )}
-              <div>
-                {themes.length > 1 ? (
-                  <select
-                    className="header-control-select"
-                    value={activeTheme?.id || ""}
-                    onChange={(e) => setActiveThemeId(e.target.value)}
-                    style={selectStyle}
-                  >
-                    {themes.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.name || t.id} Components
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <span style={{ fontSize: "1.25rem", fontWeight: 600 }}>
-                    {activeTheme?.name || activeTheme?.id || "Theme"} Components
-                  </span>
-                )}
-              </div>
             </div>
 
-            <div
-              style={{
-                display: "flex",
-                gap: "1rem",
-                alignItems: "center",
-                flexWrap: "wrap",
-                width: isMobile ? "100%" : "auto",
-              }}
-            >
-              <ThemeToggle
-                isDarkMode={isDarkMode}
-                onChange={(isDark) => setThemeMode(isDark ? "dark" : "light")}
-              />
+            <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
               <button
-                className="header-control-btn"
-                onClick={() => setIsContrastOpen(true)}
-                style={{
-                  padding: "0.5rem 1rem",
-                  fontSize: "1rem",
-                  borderRadius: "0px",
-                  border: `1px solid ${isDarkMode ? "#fff" : "#000"}`,
-                  backgroundColor: "transparent",
-                  color: isDarkMode ? "#fff" : "#000",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.5rem",
-                  flex: isMobile ? "1 1 auto" : "none",
-                  justifyContent: "center",
-                }}
-              >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <circle cx="12" cy="12" r="10"></circle>
-                  <path d="M12 2a10 10 0 0 0 0 20"></path>
-                </svg>
-                Contrast
-              </button>
-
-              <button
-                className="header-control-btn"
+                className="ks-ghost-btn"
                 onClick={() => setIsDemoOpen(true)}
                 style={{
-                  padding: "0.5rem 1rem",
-                  fontSize: "1rem",
-                  borderRadius: "0px",
-                  border: `1px solid ${isDarkMode ? "#C3E835" : "#0142FE"}`,
-                  backgroundColor: "transparent",
+                  ...ghostBtn,
                   color: isDarkMode ? "#C3E835" : "#0142FE",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.5rem",
-                  flex: isMobile ? "1 1 auto" : "none",
-                  justifyContent: "center",
                   fontWeight: 600,
+                  border: `1px solid ${isDarkMode ? "#C3E835" : "#0142FE"}`,
+                  padding: "0.5rem 1rem",
+                  flex: isMobile ? "1 1 auto" : "none",
+                  textAlign: "center",
                 }}
               >
                 Test Theme
               </button>
-
               <button
-                onClick={() => {
-                  localStorage.removeItem("systemic_onboarding_completed");
-                  onShowOnboarding();
-                }}
+                className="ks-ghost-btn"
+                onClick={onShowOnboarding}
                 style={{
-                  padding: "0.5rem 1rem",
-                  fontSize: "1rem",
-                  borderRadius: "0px",
-                  background: "transparent",
-                  color: isDarkMode ? "#94a3b8" : "#64748b",
+                  ...ghostBtn,
                   border: `1px solid ${isDarkMode ? "#334155" : "#e2e8f0"}`,
-                  cursor: "pointer",
-                  fontWeight: 400,
+                  padding: "0.5rem 1rem",
                   flex: isMobile ? "1 1 auto" : "none",
                   textAlign: "center",
                 }}
               >
                 Quick Setup
               </button>
-
-              <button
-                onClick={() => setIsImportOpen(true)}
-                style={{
-                  padding: "0.5rem 1rem",
-                  fontSize: "1rem",
-                  borderRadius: "0px",
-                  background: "transparent",
-                  color: isDarkMode ? "#94a3b8" : "#64748b",
-                  border: `1px solid ${isDarkMode ? "#334155" : "#e2e8f0"}`,
-                  cursor: "pointer",
-                  fontWeight: 400,
-                  flex: isMobile ? "1 1 100%" : "none",
-                  textAlign: "center",
-                }}
-              >
-                Import
-              </button>
-
-              <button
-                className="header-export-btn"
-                onClick={() => setIsExportOpen(true)}
-                style={{
-                  padding: "0.5rem 1rem",
-                  fontSize: "1rem",
-                  borderRadius: "0px",
-                  background: isDarkMode ? "#C3E835" : "#0142FE",
-                  color: isDarkMode ? "#000" : "#fff",
-                  cursor: "pointer",
-                  fontWeight: 400,
-                  flex: isMobile ? "1 1 100%" : "none",
-                  textAlign: "center",
-                }}
-              >
-                Export Theme
-              </button>
             </div>
           </div>
 
-          {isExportOpen && (
-            <ExportScreen isDarkMode={isDarkMode} onClose={() => setIsExportOpen(false)} />
-          )}
-          {isImportOpen && (
-            <ImportScreen isDarkMode={isDarkMode} onClose={() => setIsImportOpen(false)} />
-          )}
-          {isContrastOpen && (
-            <ContrastChecker isDarkMode={isDarkMode} onClose={() => setIsContrastOpen(false)} />
-          )}
           {isDemoOpen && activeTheme && (
             <TestThemeWebsite
               isDarkMode={isDarkMode}
@@ -321,6 +167,8 @@ export const KitchenSink: React.FC<{
           )}
 
           <PaletteViz isDarkMode={isDarkMode} />
+
+          <ContrastChecker isDarkMode={isDarkMode} inline />
         </div>
       </div>
     </ThemeScope>

@@ -1,0 +1,104 @@
+import React from "react";
+import { ThemeToggle } from "./ThemeToggle";
+import type { ThemeMode } from "./KitchenSink";
+
+export type DrawerType = "theme" | "customize" | "import" | "export" | null;
+
+export const TopHeader: React.FC<{
+  isDarkMode: boolean;
+  themeMode: ThemeMode;
+  setThemeMode: (val: ThemeMode) => void;
+  activeDrawer: DrawerType;
+  onToggleDrawer: (d: Exclude<DrawerType, null>) => void;
+  isMobile: boolean;
+  height: number;
+}> = ({ isDarkMode, setThemeMode, activeDrawer, onToggleDrawer, isMobile, height }) => {
+  const accent = isDarkMode ? "#C3E835" : "#0142FE";
+  const fg = isDarkMode ? "#F8F8F8" : "#1F1F1F";
+  const bg = isDarkMode ? "#111" : "#fff";
+  const borderCol = isDarkMode ? "#2a2a2a" : "#eee";
+
+  const ghostBtn = (label: string, d: Exclude<DrawerType, null>) => {
+    const isActive = activeDrawer === d;
+    return (
+      <button
+        key={d}
+        onClick={() => onToggleDrawer(d)}
+        style={{
+          background: "none",
+          border: "none",
+          cursor: "pointer",
+          padding: "0 0.875rem",
+          height: "100%",
+          fontSize: "0.9375rem",
+          fontWeight: isActive ? 600 : 400,
+          color: isActive ? accent : fg,
+          borderBottom: isActive ? `2px solid ${accent}` : "2px solid transparent",
+          transition: "color 0.15s ease, border-color 0.15s ease",
+          letterSpacing: "-0.01em",
+          flexShrink: 0,
+        }}
+      >
+        {label}
+      </button>
+    );
+  };
+
+  return (
+    <header
+      style={{
+        height: `${height}px`,
+        flexShrink: 0,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        padding: isMobile ? "0 1rem" : "0 2rem",
+        backgroundColor: bg,
+        borderBottom: `1px solid ${borderCol}`,
+        position: "relative",
+        zIndex: 100,
+        boxSizing: "border-box",
+      }}
+    >
+      {/* Logo */}
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 626.59 180"
+        style={{ height: "28px", width: "auto", display: "block", flexShrink: 0 }}
+      >
+        <g>
+          <path
+            d="M 91.8 81.6 c 4.9 6 7.3 13.6 7.3 22.8 c 0 6.6 -1.5 12.7 -4.4 18.5 c -3 5.8 -7.9 10.5 -14.8 14.3 c -6.9 3.7 -15.9 5.6 -27.1 5.6 H 0 V 3 h 48.6 c 16.7 0 28.6 3.7 35.8 11 c 7.2 7.3 10.7 16.1 10.7 26.2 c 0 7 -2 13.2 -6 18.7 c -4 5.5 -9.8 9.4 -17.4 11.6 c 8.5 1.4 15.2 5.2 20.1 11.1 Z M 18.7 18.7 v 44.9 h 29.9 c 18.6 0 28 -7.3 28 -22.1 c 0 -6.6 -2.1 -12 -6.2 -16.4 c -4.1 -4.3 -11.4 -6.5 -21.8 -6.5 h -29.9 Z m 33.1 108.3 c 10.1 0 17.4 -2.3 22 -6.9 c 4.5 -4.6 6.8 -10.4 6.8 -17.5 s -2.2 -12.6 -6.6 -16.8 c -4.4 -4.3 -11.1 -6.4 -20.2 -6.4 H 18.7 v 47.7 h 33.1 Z"
+            fill={isDarkMode ? "#F8F8F8" : "#1F1F1F"}
+          />
+          <path
+            d="M 205.3 98.5 h -69.9 c 0.1 9.6 2.9 17.3 8.2 23.1 c 5.3 5.8 12.4 8.8 21.2 8.8 c 6.3 0 11.7 -1.6 16.1 -4.8 c 4.5 -3.2 7.8 -7.8 10.1 -13.9 l 13.8 6.1 c -3.4 8.9 -8.6 15.7 -15.7 20.4 c -7 4.7 -15.5 7 -25.5 7 c -14.2 0 -25.2 -4.4 -33.1 -13.1 c -7.9 -8.7 -11.8 -21.2 -11.8 -37.3 s 3.9 -29.5 11.8 -38.8 c 7.9 -9.3 18.8 -14 32.9 -14 s 23.7 3.8 31 11.4 c 7.3 7.6 10.9 18.7 10.9 33.3 v 11.8 Z m -16.9 -13.6 v -2.2 c 0 -8.9 -2.2 -15.8 -6.6 -20.5 c -4.4 -4.7 -10.7 -7.1 -18.8 -7.1 c -8.5 0 -15.2 2.6 -20 7.9 c -4.8 5.3 -7.3 12.5 -7.6 21.9 h 53 Z"
+            fill={isDarkMode ? "#F8F8F8" : "#1F1F1F"}
+          />
+          <path
+            d="M 316.3 142.8 h -20.7 l -29.7 -48.3 l -17.9 18.1 v 30.1 h -16.7 V 0 h 16.7 v 92.8 l 44.1 -48.5 h 21.9 l -36 38 l 38.4 60.5 Z"
+            fill={isDarkMode ? "#F8F8F8" : "#1F1F1F"}
+          />
+          <path
+            d="M 421.2 142.8 h -20.7 l -29.7 -48.3 l -17.9 18.1 v 30.1 h -16.7 V 0 h 16.7 v 92.8 l 44.1 -48.5 h 21.9 l -36 38 l 38.4 60.5 Z"
+            fill={isDarkMode ? "#F8F8F8" : "#1F1F1F"}
+          />
+        </g>
+      </svg>
+
+      {/* Nav */}
+      <nav style={{ display: "flex", alignItems: "stretch", height: "100%", gap: 0 }}>
+        {!isMobile && ghostBtn("Theme", "theme")}
+        {!isMobile && ghostBtn("Customize", "customize")}
+        {ghostBtn("Import", "import")}
+        {ghostBtn("Export", "export")}
+        <div style={{ display: "flex", alignItems: "center", marginLeft: "1rem" }}>
+          <ThemeToggle
+            isDarkMode={isDarkMode}
+            onChange={(isDark) => setThemeMode(isDark ? "dark" : "light")}
+          />
+        </div>
+      </nav>
+    </header>
+  );
+};

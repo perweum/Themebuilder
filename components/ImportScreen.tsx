@@ -376,10 +376,11 @@ const FORMAT_LABELS: Record<string, string> = {
   generic: "Custom token format",
 };
 
-export const ImportScreen: React.FC<{ isDarkMode: boolean; onClose: () => void }> = ({
-  isDarkMode,
-  onClose,
-}) => {
+export const ImportScreen: React.FC<{
+  isDarkMode: boolean;
+  onClose: () => void;
+  noModal?: boolean;
+}> = ({ isDarkMode, onClose, noModal }) => {
   const { importThemes } = useTheme();
   const [status, setStatus] = useState<"idle" | "parsed" | "error">("idle");
   const [error, setError] = useState("");
@@ -434,15 +435,8 @@ export const ImportScreen: React.FC<{ isDarkMode: boolean; onClose: () => void }
   const chipBg = isDarkMode ? "#1e293b" : "#f1f5f9";
   const accent = isDarkMode ? "#C3E835" : "#0142FE";
 
-  return (
-    <SystemicModal
-      variant="centered"
-      isDarkMode={isDarkMode}
-      onClose={onClose}
-      maxWidth="540px"
-      noPadding
-    >
-      <div style={{ display: "flex", flexDirection: "column" }}>
+  const content = (
+    <div style={{ display: "flex", flexDirection: "column" }}>
         {/* Header */}
         <div
           style={{
@@ -820,6 +814,19 @@ export const ImportScreen: React.FC<{ isDarkMode: boolean; onClose: () => void }
           </div>
         )}
       </div>
+  );
+
+  if (noModal) return content;
+
+  return (
+    <SystemicModal
+      variant="centered"
+      isDarkMode={isDarkMode}
+      onClose={onClose}
+      maxWidth="540px"
+      noPadding
+    >
+      {content}
     </SystemicModal>
   );
 };

@@ -6,8 +6,9 @@ import { useTheme } from "../theme-context";
 import { SystemicModal } from "./SystemicModal";
 
 interface ContrastCheckerProps {
-  onClose: () => void;
+  onClose?: () => void;
   isDarkMode: boolean;
+  inline?: boolean;
 }
 
 const getBlendedContrast = (bgCss: string, fgCss: string, isDarkMode: boolean): number | null => {
@@ -190,7 +191,7 @@ const ContrastRow: React.FC<{
   );
 };
 
-export const ContrastChecker: React.FC<ContrastCheckerProps> = ({ onClose, isDarkMode }) => {
+export const ContrastChecker: React.FC<ContrastCheckerProps> = ({ onClose, isDarkMode, inline }) => {
   const { themes } = useTheme();
   const activeTheme = themes[0];
   const [forceRender, setForceRender] = useState(0);
@@ -201,6 +202,175 @@ export const ContrastChecker: React.FC<ContrastCheckerProps> = ({ onClose, isDar
     return () => clearTimeout(timer);
   }, []);
 
+  const header = (
+    <div
+      style={{
+        padding: "1.5rem 2rem",
+        borderBottom: `1px solid ${isDarkMode ? "#333" : "#eee"}`,
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+      }}
+    >
+      <div>
+        <h2
+          style={{
+            fontSize: "1.25rem",
+            fontWeight: 600,
+            color: "var(--color-text-default)",
+            margin: 0,
+          }}
+        >
+          Contrast Checker
+        </h2>
+        <p
+          style={{
+            margin: "0.25rem 0 0 0",
+            fontSize: "0.875rem",
+            color: "var(--color-text-subtle)",
+          }}
+        >
+          WCAG 2.1 pairings mapped to components
+        </p>
+      </div>
+      {!inline && onClose && (
+        <button
+          onClick={onClose}
+          style={{
+            background: "none",
+            border: "none",
+            color: isDarkMode ? "#94a3b8" : "#64748b",
+            cursor: "pointer",
+          }}
+        >
+          <X size={24} />
+        </button>
+      )}
+    </div>
+  );
+
+  const body = (
+    <div
+      style={{
+        overflow: "auto",
+        maxHeight: inline ? "none" : "70vh",
+        padding: "2rem",
+        display: "flex",
+        flexDirection: "column",
+        gap: "3rem",
+      }}
+    >
+      {activeTheme?.colors.map((color) => {
+        const cName = color.name.toLowerCase().replace(/\s+/g, "-");
+        const pairings = [
+          {
+            label: "Solid Button",
+            bgVar: `--color-base-${cName}-default`,
+            fgVar: `--color-text-${cName}-contrast`,
+          },
+          {
+            label: "Primary Text on Surface",
+            bgVar: `--color-surface-${cName}-default`,
+            fgVar: `--color-text-${cName}-default`,
+          },
+          {
+            label: "Primary Text on Subtle",
+            bgVar: `--color-surface-${cName}-subtle`,
+            fgVar: `--color-text-${cName}-default`,
+          },
+        ];
+
+        return (
+          <div key={color.id}>
+            <h3
+              style={{
+                fontSize: "1.125rem",
+                fontWeight: 600,
+                margin: "0 0 1rem 0",
+                textTransform: "capitalize",
+              }}
+            >
+              {color.name}
+            </h3>
+            <div
+              style={{
+                border: `1px solid ${isDarkMode ? "#333" : "#eee"}`,
+                borderRadius: "8px",
+                background: isDarkMode ? "#1a1a1a" : "#fafafa",
+                overflow: "hidden",
+              }}
+            >
+              {pairings.map((p, i) => (
+                <ContrastRow
+                  key={i}
+                  {...p}
+                  isDarkMode={isDarkMode}
+                  isLast={i === pairings.length - 1}
+                />
+              ))}
+            </div>
+          </div>
+        );
+      })}
+
+      <div>
+        <h3 style={{ fontSize: "1.125rem", fontWeight: 600, margin: "0 0 1rem 0" }}>Global</h3>
+        <div
+          style={{
+            border: `1px solid ${isDarkMode ? "#333" : "#eee"}`,
+            borderRadius: "8px",
+            background: isDarkMode ? "#1a1a1a" : "#fafafa",
+            overflow: "hidden",
+          }}
+        >
+          <ContrastRow
+            label="Canvas bg + Text default"
+            bgVar="--color-background-default"
+            fgVar="--color-text-default"
+            isDarkMode={isDarkMode}
+          />
+          <ContrastRow
+            label="Canvas bg + Text subtle"
+            bgVar="--color-background-default"
+            fgVar="--color-text-subtle"
+            isDarkMode={isDarkMode}
+          />
+          <ContrastRow
+            label="Surface bg + Text default"
+            bgVar="--color-surface-default"
+            fgVar="--color-text-default"
+            isDarkMode={isDarkMode}
+          />
+          <ContrastRow
+            label="Surface bg + Text subtle"
+            bgVar="--color-surface-default"
+            fgVar="--color-text-subtle"
+            isDarkMode={isDarkMode}
+            isLast
+          />
+        </div>
+      </div>
+    </div>
+  );
+
+  if (inline) {
+    return (
+      <div
+        style={{
+          border: `1px solid ${isDarkMode ? "#333" : "#eee"}`,
+          borderRadius: "8px",
+          overflow: "hidden",
+          backgroundColor: isDarkMode ? "#1a1a1a" : "#fff",
+        }}
+      >
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          {header}
+          {body}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <SystemicModal
       variant="centered"
@@ -210,152 +380,8 @@ export const ContrastChecker: React.FC<ContrastCheckerProps> = ({ onClose, isDar
       noPadding
     >
       <div style={{ display: "flex", flexDirection: "column" }}>
-        <div
-          style={{
-            padding: "1.5rem 2rem",
-            borderBottom: `1px solid ${isDarkMode ? "#333" : "#eee"}`,
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <div>
-            <h2
-              style={{
-                fontSize: "1.25rem",
-                fontWeight: 600,
-                color: "var(--color-text-default)",
-                margin: 0,
-              }}
-            >
-              Contrast Checker
-            </h2>
-            <p
-              style={{
-                margin: "0.25rem 0 0 0",
-                fontSize: "0.875rem",
-                color: "var(--color-text-subtle)",
-              }}
-            >
-              WCAG 2.1 pairings mapped to components
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            style={{
-              background: "none",
-              border: "none",
-              color: isDarkMode ? "#94a3b8" : "#64748b",
-              cursor: "pointer",
-            }}
-          >
-            <X size={24} />
-          </button>
-        </div>
-
-        <div
-          style={{
-            overflow: "auto",
-            maxHeight: "70vh",
-            padding: "2rem",
-            display: "flex",
-            flexDirection: "column",
-            gap: "3rem",
-          }}
-        >
-          {/* Theme specific groups */}
-          {activeTheme?.colors.map((color) => {
-            const cName = color.name.toLowerCase().replace(/\s+/g, "-");
-            const pairings = [
-              {
-                label: "Solid Button",
-                bgVar: `--color-base-${cName}-default`,
-                fgVar: `--color-text-${cName}-contrast`,
-              },
-              {
-                label: "Primary Text on Surface",
-                bgVar: `--color-surface-${cName}-default`,
-                fgVar: `--color-text-${cName}-default`,
-              },
-              {
-                label: "Primary Text on Subtle",
-                bgVar: `--color-surface-${cName}-subtle`,
-                fgVar: `--color-text-${cName}-default`,
-              },
-            ];
-
-            return (
-              <div key={color.id}>
-                <h3
-                  style={{
-                    fontSize: "1.125rem",
-                    fontWeight: 600,
-                    margin: "0 0 1rem 0",
-                    textTransform: "capitalize",
-                  }}
-                >
-                  {color.name}
-                </h3>
-                <div
-                  style={{
-                    border: `1px solid ${isDarkMode ? "#333" : "#eee"}`,
-                    borderRadius: "8px",
-                    background: isDarkMode ? "#1a1a1a" : "#fafafa",
-                    overflow: "hidden",
-                  }}
-                >
-                  {pairings.map((p, i) => (
-                    <ContrastRow
-                      key={i}
-                      {...p}
-                      isDarkMode={isDarkMode}
-                      isLast={i === pairings.length - 1}
-                    />
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-
-          {/* Global Group */}
-          <div>
-            <h3 style={{ fontSize: "1.125rem", fontWeight: 600, margin: "0 0 1rem 0" }}>Global</h3>
-            <div
-              style={{
-                border: `1px solid ${isDarkMode ? "#333" : "#eee"}`,
-                borderRadius: "8px",
-                background: isDarkMode ? "#1a1a1a" : "#fafafa",
-                overflow: "hidden",
-              }}
-            >
-              <ContrastRow
-                label="Canvas bg + Text default"
-                bgVar="--color-background-default"
-                fgVar="--color-text-default"
-                isDarkMode={isDarkMode}
-              />
-              <ContrastRow
-                label="Canvas bg + Text subtle"
-                bgVar="--color-background-default"
-                fgVar="--color-text-subtle"
-                isDarkMode={isDarkMode}
-              />
-              <ContrastRow
-                label="Surface bg + Text default"
-                bgVar="--color-surface-default"
-                fgVar="--color-text-default"
-                isDarkMode={isDarkMode}
-              />
-              <ContrastRow
-                label="Surface bg + Text subtle"
-                bgVar="--color-surface-default"
-                fgVar="--color-text-subtle"
-                isDarkMode={isDarkMode}
-                isLast
-              />
-            </div>
-          </div>
-        </div>
+        {header}
+        {body}
       </div>
     </SystemicModal>
   );

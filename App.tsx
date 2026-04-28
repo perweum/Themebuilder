@@ -1,11 +1,18 @@
 import React from "react";
 import { ThemeProvider, useTheme } from "./theme-context";
-import { ThemeControls } from "./components/ThemeControls";
+import { TopHeader } from "./components/TopHeader";
+import type { DrawerType } from "./components/TopHeader";
 import { KitchenSink } from "./components/KitchenSink";
 import { OnboardingModal } from "./components/OnboardingModal";
+import { ThemeDrawer } from "./components/drawers/ThemeDrawer";
+import { CustomizeDrawer } from "./components/drawers/CustomizeDrawer";
+import { ExportScreen } from "./components/ExportScreen";
+import { ImportScreen } from "./components/ImportScreen";
 
 export type { ThemeMode } from "./components/KitchenSink";
 import type { ThemeMode } from "./components/KitchenSink";
+
+const HEADER_HEIGHT = 60;
 
 function useMediaQuery(query: string) {
   const [matches, setMatches] = React.useState(false);
@@ -28,15 +35,11 @@ function useMediaQuery(query: string) {
 
 function AppInner({
   isMobile,
-  isMobileMenuOpen,
-  setIsMobileMenuOpen,
   themeMode,
   setThemeMode,
   systemIsDark,
 }: {
   isMobile: boolean;
-  isMobileMenuOpen: boolean;
-  setIsMobileMenuOpen: (val: boolean) => void;
   themeMode: ThemeMode;
   setThemeMode: (val: ThemeMode) => void;
   systemIsDark: boolean;
@@ -44,6 +47,7 @@ function AppInner({
   const { themes } = useTheme();
   const [activeThemeId, setActiveThemeId] = React.useState("");
   const [showOnboarding, setShowOnboarding] = React.useState(false);
+  const [activeDrawer, setActiveDrawer] = React.useState<DrawerType>(null);
 
   React.useEffect(() => {
     if (!activeThemeId && themes.length > 0) setActiveThemeId(themes[0].id);
@@ -60,87 +64,141 @@ function AppInner({
     localStorage.setItem("systemic_theme_mode", mode);
   };
 
+  const handleToggleDrawer = (d: Exclude<DrawerType, null>) => {
+    setActiveDrawer((prev) => (prev === d ? null : d));
+  };
+
+  React.useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setActiveDrawer(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  const bg = isDarkMode ? "#111" : "#fff";
+  const borderCol = isDarkMode ? "#2a2a2a" : "#eee";
+
   return (
     <div
       style={{
         display: "flex",
+        flexDirection: "column",
         height: "100vh",
         fontFamily: '"GT America", "Arial", sans-serif',
         overflow: "hidden",
         position: "relative",
+        backgroundColor: bg,
       }}
     >
-      {/* Mobile backdrop overlay */}
-      {isMobile && (
-        <div
-          onClick={() => setIsMobileMenuOpen(false)}
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: "rgba(0,0,0,0.5)",
-            zIndex: 40,
-            backdropFilter: "blur(4px)",
-            opacity: isMobileMenuOpen ? 1 : 0,
-            pointerEvents: isMobileMenuOpen ? "auto" : "none",
-            transition: "opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1)",
-          }}
-        />
-      )}
+      <style>{`
+        @keyframes drawerSlideDown {
+          from { opacity: 0; transform: translateY(-8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
 
-      {/* Sidebar */}
-      <div
-        style={{
-          width: isMobile ? "100vw" : "320px",
-          flexShrink: 0,
-          position: isMobile ? "fixed" : "relative",
-          top: 0,
-          bottom: 0,
-          left: 0,
-          transform: isMobile ? (isMobileMenuOpen ? "translateX(0)" : "translateX(-100%)") : "none",
-          zIndex: 50,
-          transition: "transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)",
-          backgroundColor: isDarkMode ? "#1a1f26" : "#ffffff",
-          height: "100vh",
-        }}
-      >
-        <ThemeControls
-          isDarkMode={isDarkMode}
-          isMobile={isMobile}
-          onClose={() => setIsMobileMenuOpen(false)}
-        />
-      </div>
-
-      <KitchenSink
+      {/* Fixed header */}
+      <TopHeader
         isDarkMode={isDarkMode}
         themeMode={themeMode}
         setThemeMode={handleThemeModeChange}
-        onShowOnboarding={() => setShowOnboarding(true)}
+        activeDrawer={activeDrawer}
+        onToggleDrawer={handleToggleDrawer}
         isMobile={isMobile}
-        onMenuClick={() => setIsMobileMenuOpen(true)}
-        activeThemeId={activeThemeId}
-        setActiveThemeId={setActiveThemeId}
+        height={HEADER_HEIGHT}
       />
+
+      {/* Drawer overlay — fixed below header */}
+      {activeDrawer && (
+        <>
+          {/* Transparent backdrop to close drawer */}
+          <div
+            style={{
+              position: "fixed",
+              top: `${HEADER_HEIGHT}px`,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              zIndex: 80,
+            }}
+            onClick={() => setActiveDrawer(null)}
+          />
+          {/* Drawer panel */}
+          <div
+            style={{
+              position: "fixed",
+              top: `${HEADER_HEIGHT}px`,
+              left: 0,
+              right: 0,
+              zIndex: 90,
+              backgroundColor: bg,
+              borderBottom: `1px solid ${borderCol}`,
+              boxShadow: "0 12px 40px rgba(0,0,0,0.15)",
+              maxHeight: `calc(80vh - ${HEADER_HEIGHT}px)`,
+              overflowY: "auto",
+              animation: "drawerSlideDown 0.2s ease",
+            }}
+            className="no-scrollbar"
+          >
+            <style>{`
+              .no-scrollbar::-webkit-scrollbar { display: none; }
+              .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+            `}</style>
+            {activeDrawer === "theme" && (
+              <ThemeDrawer isDarkMode={isDarkMode} isMobile={isMobile} />
+            )}
+            {activeDrawer === "customize" && <CustomizeDrawer isDarkMode={isDarkMode} />}
+            {activeDrawer === "import" && (
+              <ImportScreen
+                isDarkMode={isDarkMode}
+                onClose={() => setActiveDrawer(null)}
+                noModal
+              />
+            )}
+            {activeDrawer === "export" && (
+              <ExportScreen
+                isDarkMode={isDarkMode}
+                onClose={() => setActiveDrawer(null)}
+                noModal
+              />
+            )}
+          </div>
+        </>
+      )}
+
+      {/* Main scrollable content */}
+      <main
+        style={{
+          flex: 1,
+          overflowY: "auto",
+          position: "relative",
+          zIndex: 1,
+        }}
+      >
+        <KitchenSink
+          isDarkMode={isDarkMode}
+          themeMode={themeMode}
+          setThemeMode={handleThemeModeChange}
+          onShowOnboarding={() => {
+            localStorage.removeItem("systemic_onboarding_completed");
+            setShowOnboarding(true);
+          }}
+          isMobile={isMobile}
+          activeThemeId={activeThemeId}
+          setActiveThemeId={setActiveThemeId}
+        />
+      </main>
 
       {showOnboarding && (
         <OnboardingModal isDarkMode={isDarkMode} onClose={() => setShowOnboarding(false)} />
       )}
-
-      <style>{`
-                @keyframes fadeIn {
-                    from { opacity: 0; }
-                    to { opacity: 1; }
-                }
-            `}</style>
     </div>
   );
 }
 
 export default function App() {
   const isMobile = useMediaQuery("(max-width: 860px)");
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
   const [themeMode, setThemeMode] = React.useState<ThemeMode>(() => {
     const stored = localStorage.getItem("systemic_theme_mode");
@@ -168,8 +226,6 @@ export default function App() {
     <ThemeProvider>
       <AppInner
         isMobile={isMobile}
-        isMobileMenuOpen={isMobileMenuOpen}
-        setIsMobileMenuOpen={setIsMobileMenuOpen}
         themeMode={themeMode}
         setThemeMode={setThemeMode}
         systemIsDark={systemIsDark}
