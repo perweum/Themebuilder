@@ -129,6 +129,19 @@ export const CustomizeDrawer: React.FC<{
     return val?.startsWith("#") ? val : null;
   };
 
+  // Resolve {light.*}/{dark.*} refs to the underlying {color.X.N} ref for <select> value matching.
+  const resolveToColorRef = (val: string | null): string | null => {
+    if (!val || !val.startsWith("{")) return val;
+    const inner = val.slice(1, -1);
+    const mappedPath = inner.startsWith("light.")
+      ? `theme.${inner.slice(6)}`
+      : inner.startsWith("dark.")
+      ? `darkTheme.${inner.slice(5)}`
+      : null;
+    if (!mappedPath) return val;
+    return getValueByPath(activeThemePayloadWithOptions, mappedPath) || val;
+  };
+
   const getValStr = (obj: any, path: string) => {
     let cur = obj;
     for (const part of path.split(".")) {
@@ -281,6 +294,10 @@ export const CustomizeDrawer: React.FC<{
 
                       const tokenLabel = path.split(".").slice(1).join(" › ");
 
+                      // Resolve {light.*}/{dark.*} aliases to {color.X.N} so the select value matches an option
+                      const selectLightVal = resolveToColorRef(lightVal);
+                      const selectDarkVal = resolveToColorRef(darkVal);
+
                       const swatchStyle: React.CSSProperties = {
                         width: 44,
                         height: 44,
@@ -334,7 +351,7 @@ export const CustomizeDrawer: React.FC<{
                           <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
                             <div style={{ ...swatchStyle, background: lightHex || (isDarkMode ? "#2a2a2a" : "#e5e7eb") }} />
                             <select
-                              value={lightVal || ""}
+                              value={selectLightVal || ""}
                               onChange={(e) =>
                                 updateThemeSemanticOverride(activeTheme.id, path, e.target.value)
                               }
@@ -361,7 +378,7 @@ export const CustomizeDrawer: React.FC<{
                           <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
                             <div style={{ ...swatchStyle, background: darkHex || (isDarkMode ? "#2a2a2a" : "#e5e7eb") }} />
                             <select
-                              value={darkVal || ""}
+                              value={selectDarkVal || ""}
                               onChange={(e) =>
                                 updateThemeSemanticOverride(activeTheme.id, darkPath, e.target.value)
                               }
