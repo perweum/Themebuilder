@@ -27,6 +27,7 @@ export const ThemeToggle: React.FC<{
         height: "38px",
         padding: "3px",
         border: `1px solid ${borderColor}`,
+        borderRadius: "4px",
         backgroundColor: "transparent",
         cursor: "pointer",
         outline: "none",
@@ -42,6 +43,7 @@ export const ThemeToggle: React.FC<{
           width: "calc(50% - 3px)",
           background: selectedBg,
           border: `1px solid ${borderColor}`,
+          borderRadius: "2px",
           boxSizing: "border-box",
           transition:
             "transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.3s ease",

@@ -91,9 +91,14 @@ export function mapTheme(
     includeRadius: boolean;
     includeBorders: boolean;
     borderWidth: "small" | "medium" | "large";
+    sizeBase?: number;
+    includeShadow?: boolean;
   },
   fontFamily?: string,
 ): ThemeTokensPayload {
+  // Geometry config — needed early for conditional skeleton construction
+  const includeShadow = geometryConfig?.includeShadow !== false;
+
   // Lookup core semantics by stable ID
   const neutralRamp = globalColors.find((c) => c.id === "neutral");
   const successRamp = globalColors.find((c) => c.id === "success");
@@ -230,15 +235,19 @@ export function mapTheme(
         contrast: { $value: `{light.text.neutral.contrast}`, $type: "color" },
       },
     },
-    elevation: {
-      "1": { $value: `0 1px 2px {color.black.50}, 0 1px 3px {color.black.100}`, $type: "shadow" },
-      "2": { $value: `0 4px 6px {color.black.100}, 0 2px 4px {color.black.50}`, $type: "shadow" },
-      "3": { $value: `0 10px 15px {color.black.100}, 0 4px 6px {color.black.50}`, $type: "shadow" },
-      "4": {
-        $value: `0 20px 25px {color.black.100}, 0 8px 10px {color.black.50}`,
-        $type: "shadow",
-      },
-    },
+    elevation: includeShadow
+      ? {
+          "1": { $value: `0 1px 2px {color.black.50}, 0 1px 3px {color.black.100}`, $type: "shadow" },
+          "2": { $value: `0 4px 6px {color.black.100}, 0 2px 4px {color.black.50}`, $type: "shadow" },
+          "3": { $value: `0 10px 15px {color.black.100}, 0 4px 6px {color.black.50}`, $type: "shadow" },
+          "4": { $value: `0 20px 25px {color.black.100}, 0 8px 10px {color.black.50}`, $type: "shadow" },
+        }
+      : {
+          "1": { $value: "none", $type: "shadow" },
+          "2": { $value: "none", $type: "shadow" },
+          "3": { $value: "none", $type: "shadow" },
+          "4": { $value: "none", $type: "shadow" },
+        },
     overlay: {
       default: { $value: `{color.black.300}`, $type: "color" },
     },
@@ -349,18 +358,19 @@ export function mapTheme(
         contrast: { $value: `{dark.text.neutral.contrast}`, $type: "color" },
       },
     },
-    elevation: {
-      "1": { $value: `0 1px 2px {color.black.200}, 0 1px 3px {color.black.300}`, $type: "shadow" },
-      "2": { $value: `0 4px 6px {color.black.300}, 0 2px 4px {color.black.200}`, $type: "shadow" },
-      "3": {
-        $value: `0 10px 15px {color.black.300}, 0 4px 6px {color.black.200}`,
-        $type: "shadow",
-      },
-      "4": {
-        $value: `0 20px 25px {color.black.300}, 0 8px 10px {color.black.200}`,
-        $type: "shadow",
-      },
-    },
+    elevation: includeShadow
+      ? {
+          "1": { $value: `0 1px 2px {color.black.200}, 0 1px 3px {color.black.300}`, $type: "shadow" },
+          "2": { $value: `0 4px 6px {color.black.300}, 0 2px 4px {color.black.200}`, $type: "shadow" },
+          "3": { $value: `0 10px 15px {color.black.300}, 0 4px 6px {color.black.200}`, $type: "shadow" },
+          "4": { $value: `0 20px 25px {color.black.300}, 0 8px 10px {color.black.200}`, $type: "shadow" },
+        }
+      : {
+          "1": { $value: "none", $type: "shadow" },
+          "2": { $value: "none", $type: "shadow" },
+          "3": { $value: "none", $type: "shadow" },
+          "4": { $value: "none", $type: "shadow" },
+        },
     overlay: {
       default: { $value: `{color.black.300}`, $type: "color" },
     },
@@ -606,6 +616,7 @@ export function mapTheme(
   // ---------------------------------------------------------------------------
 
   const radiusBase = geometryConfig?.radiusBase ?? 4;
+  const sizeBase = geometryConfig?.sizeBase ?? 4;
   const borderAlias =
     geometryConfig?.borderWidth === "large"
       ? "thick"
@@ -613,7 +624,7 @@ export function mapTheme(
         ? "medium"
         : "thin";
 
-  // Spacing scale: 4px base × step multipliers matching Token Sync
+  // Spacing scale: sizeBase px × step multipliers matching Token Sync
   const sizeSteps: Array<[string, number]> = [
     ["1", 1],
     ["2", 2],
@@ -632,7 +643,7 @@ export function mapTheme(
 
   payload.geometry = {
     size: Object.fromEntries(
-      sizeSteps.map(([name, mult]) => [name, { $value: `${mult * 4}px`, $type: "dimension" }]),
+      sizeSteps.map(([name, mult]) => [name, { $value: `${mult * sizeBase}px`, $type: "dimension" }]),
     ),
     radius: {
       none: { $value: "0px", $type: "dimension" },

@@ -49,7 +49,7 @@ export const KitchenSink: React.FC<{
   const selectStyle: React.CSSProperties = {
     padding: "0.5rem 2.5rem 0.5rem 1rem",
     fontSize: "1rem",
-    borderRadius: "0px",
+    borderRadius: "4px",
     border: `1px solid ${isDarkMode ? "#fff" : "#000"}`,
     backgroundColor: "transparent",
     color: isDarkMode ? "#fff" : "#000",
@@ -66,6 +66,7 @@ export const KitchenSink: React.FC<{
     border: "none",
     cursor: "pointer",
     padding: "0.5rem 0.75rem",
+    borderRadius: "4px",
     fontSize: "0.875rem",
     fontWeight: 400,
     color: isDarkMode ? "#94a3b8" : "#64748b",
@@ -126,6 +127,7 @@ export const KitchenSink: React.FC<{
                   color: isDarkMode ? "#C3E835" : "#0142FE",
                   fontWeight: 600,
                   border: `1px solid ${isDarkMode ? "#C3E835" : "#0142FE"}`,
+                  borderRadius: "4px",
                   padding: "0.5rem 1rem",
                   flex: isMobile ? "1 1 auto" : "none",
                   textAlign: "center",
@@ -139,6 +141,7 @@ export const KitchenSink: React.FC<{
                 style={{
                   ...ghostBtn,
                   border: `1px solid ${isDarkMode ? "#334155" : "#e2e8f0"}`,
+                  borderRadius: "4px",
                   padding: "0.5rem 1rem",
                   flex: isMobile ? "1 1 auto" : "none",
                   textAlign: "center",

@@ -13,6 +13,8 @@ export type ThemeGeometryConfig = {
   includeRadius: boolean;
   includeBorders: boolean;
   borderWidth: "small" | "medium" | "large";
+  sizeBase?: number;
+  includeShadow?: boolean;
 };
 
 export type ThemeConfig = {

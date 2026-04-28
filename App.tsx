@@ -13,6 +13,7 @@ export type { ThemeMode } from "./components/KitchenSink";
 import type { ThemeMode } from "./components/KitchenSink";
 
 const HEADER_HEIGHT = 60;
+const DRAWER_ANIM_MS = 320;
 
 function useMediaQuery(query: string) {
   const [matches, setMatches] = React.useState(false);
@@ -47,7 +48,18 @@ function AppInner({
   const { themes } = useTheme();
   const [activeThemeId, setActiveThemeId] = React.useState("");
   const [showOnboarding, setShowOnboarding] = React.useState(false);
+
+  // Drawer state: activeDrawer = logically active (controls header highlight)
+  // renderedDrawer = what's in DOM (persists during close animation)
+  // drawerOpen = CSS transition flag
   const [activeDrawer, setActiveDrawer] = React.useState<DrawerType>(null);
+  const [renderedDrawer, setRenderedDrawer] = React.useState<DrawerType>(null);
+  const [drawerOpen, setDrawerOpen] = React.useState(false);
+  const closeTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Scroll indicator state
+  const drawerScrollRef = React.useRef<HTMLDivElement>(null);
+  const [showScrollIndicator, setShowScrollIndicator] = React.useState(false);
 
   React.useEffect(() => {
     if (!activeThemeId && themes.length > 0) setActiveThemeId(themes[0].id);
@@ -64,20 +76,92 @@ function AppInner({
     localStorage.setItem("systemic_theme_mode", mode);
   };
 
+  const clearCloseTimer = () => {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+  };
+
+  const openDrawer = (d: Exclude<DrawerType, null>) => {
+    clearCloseTimer();
+    setActiveDrawer(d);
+    setRenderedDrawer(d);
+    setShowScrollIndicator(false);
+    // Double rAF so the DOM is painted before we trigger the transition
+    requestAnimationFrame(() => requestAnimationFrame(() => setDrawerOpen(true)));
+  };
+
+  const closeDrawer = () => {
+    setActiveDrawer(null);
+    setDrawerOpen(false);
+    closeTimerRef.current = setTimeout(() => {
+      setRenderedDrawer(null);
+      setShowScrollIndicator(false);
+    }, DRAWER_ANIM_MS);
+  };
+
   const handleToggleDrawer = (d: Exclude<DrawerType, null>) => {
-    setActiveDrawer((prev) => (prev === d ? null : d));
+    if (activeDrawer === d) {
+      closeDrawer();
+    } else if (activeDrawer !== null) {
+      // Switch between drawers: swap content instantly (drawer stays open)
+      setActiveDrawer(d);
+      setRenderedDrawer(d);
+      setShowScrollIndicator(false);
+    } else {
+      openDrawer(d);
+    }
   };
 
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setActiveDrawer(null);
+      if (e.key === "Escape" && activeDrawer) closeDrawer();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [activeDrawer]);
+
+  // Check scroll indicator whenever drawer opens or content changes
+  React.useEffect(() => {
+    if (!drawerOpen || !renderedDrawer) {
+      setShowScrollIndicator(false);
+      return;
+    }
+    const el = drawerScrollRef.current;
+    if (!el) return;
+    const check = () =>
+      setShowScrollIndicator(el.scrollHeight - el.scrollTop - el.clientHeight > 20);
+    check();
+    el.addEventListener("scroll", check);
+    window.addEventListener("resize", check);
+    return () => {
+      el.removeEventListener("scroll", check);
+      window.removeEventListener("resize", check);
+    };
+  }, [drawerOpen, renderedDrawer]);
 
   const bg = isDarkMode ? "#111" : "#fff";
   const borderCol = isDarkMode ? "#2a2a2a" : "#eee";
+
+  const scrollbarCss = `
+    .drawer-scroll::-webkit-scrollbar { width: 6px; }
+    .drawer-scroll::-webkit-scrollbar-track { background: transparent; }
+    .drawer-scroll::-webkit-scrollbar-thumb {
+      background: ${isDarkMode ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.15)"};
+      border-radius: 3px;
+    }
+    .drawer-scroll::-webkit-scrollbar-thumb:hover {
+      background: ${isDarkMode ? "rgba(255,255,255,0.35)" : "rgba(0,0,0,0.28)"};
+    }
+    .btn-remove { transition: color 0.2s ease; color: inherit !important; }
+    .btn-remove:hover { color: #ef4444 !important; }
+    .btn-action { transition: all 0.2s ease; }
+    .btn-action:hover {
+      border-color: ${isDarkMode ? "#C3E835" : "#0142FE"} !important;
+      color: ${isDarkMode ? "#C3E835" : "#0142FE"} !important;
+    }
+  `;
 
   return (
     <div
@@ -91,14 +175,9 @@ function AppInner({
         backgroundColor: bg,
       }}
     >
-      <style>{`
-        @keyframes drawerSlideDown {
-          from { opacity: 0; transform: translateY(-8px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
+      <style>{scrollbarCss}</style>
 
-      {/* Fixed header */}
+      {/* Header */}
       <TopHeader
         isDarkMode={isDarkMode}
         themeMode={themeMode}
@@ -109,73 +188,91 @@ function AppInner({
         height={HEADER_HEIGHT}
       />
 
-      {/* Drawer overlay — fixed below header */}
-      {activeDrawer && (
-        <>
-          {/* Transparent backdrop to close drawer */}
+      {/* Backdrop overlay — fades in/out */}
+      {renderedDrawer && (
+        <div
+          style={{
+            position: "fixed",
+            top: `${HEADER_HEIGHT}px`,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 80,
+            backgroundColor: "rgba(0,0,0,0.45)",
+            opacity: drawerOpen ? 1 : 0,
+            transition: `opacity ${DRAWER_ANIM_MS}ms ease`,
+          }}
+          onClick={closeDrawer}
+        />
+      )}
+
+      {/* Drawer panel — slides down */}
+      {renderedDrawer && (
+        <div
+          style={{
+            position: "fixed",
+            top: `${HEADER_HEIGHT}px`,
+            left: 0,
+            right: 0,
+            zIndex: 90,
+            transform: drawerOpen ? "translateY(0)" : "translateY(-100%)",
+            opacity: drawerOpen ? 1 : 0,
+            transition: `transform ${DRAWER_ANIM_MS}ms cubic-bezier(0.16, 1, 0.3, 1), opacity ${DRAWER_ANIM_MS * 0.75}ms ease`,
+            display: "flex",
+            flexDirection: "column",
+            backgroundColor: bg,
+            borderBottom: `1px solid ${borderCol}`,
+            boxShadow: "0 16px 48px rgba(0,0,0,0.18)",
+            maxHeight: "75vh",
+            overflow: "hidden",
+          }}
+        >
+          {/* Scrollable drawer content */}
           <div
-            style={{
-              position: "fixed",
-              top: `${HEADER_HEIGHT}px`,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              zIndex: 80,
-            }}
-            onClick={() => setActiveDrawer(null)}
-          />
-          {/* Drawer panel */}
-          <div
-            style={{
-              position: "fixed",
-              top: `${HEADER_HEIGHT}px`,
-              left: 0,
-              right: 0,
-              zIndex: 90,
-              backgroundColor: bg,
-              borderBottom: `1px solid ${borderCol}`,
-              boxShadow: "0 12px 40px rgba(0,0,0,0.15)",
-              maxHeight: `calc(80vh - ${HEADER_HEIGHT}px)`,
-              overflowY: "auto",
-              animation: "drawerSlideDown 0.2s ease",
-            }}
-            className="no-scrollbar"
+            ref={drawerScrollRef}
+            className="drawer-scroll"
+            style={{ overflowY: "auto", flex: 1 }}
           >
-            <style>{`
-              .no-scrollbar::-webkit-scrollbar { display: none; }
-              .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-            `}</style>
-            {activeDrawer === "theme" && (
+            {renderedDrawer === "theme" && (
               <ThemeDrawer isDarkMode={isDarkMode} isMobile={isMobile} />
             )}
-            {activeDrawer === "customize" && <CustomizeDrawer isDarkMode={isDarkMode} />}
-            {activeDrawer === "import" && (
+            {renderedDrawer === "customize" && <CustomizeDrawer isDarkMode={isDarkMode} />}
+            {renderedDrawer === "import" && (
               <ImportScreen
                 isDarkMode={isDarkMode}
-                onClose={() => setActiveDrawer(null)}
+                onClose={closeDrawer}
                 noModal
               />
             )}
-            {activeDrawer === "export" && (
+            {renderedDrawer === "export" && (
               <ExportScreen
                 isDarkMode={isDarkMode}
-                onClose={() => setActiveDrawer(null)}
+                onClose={closeDrawer}
                 noModal
               />
             )}
           </div>
-        </>
+
+          {/* Scroll indicator gradient */}
+          {showScrollIndicator && (
+            <div
+              style={{
+                position: "absolute",
+                bottom: 0,
+                left: 0,
+                right: 0,
+                height: "72px",
+                background: `linear-gradient(to top, ${bg} 0%, transparent 100%)`,
+                pointerEvents: "none",
+                zIndex: 1,
+              }}
+            />
+          )}
+        </div>
       )}
 
       {/* Main scrollable content */}
-      <main
-        style={{
-          flex: 1,
-          overflowY: "auto",
-          position: "relative",
-          zIndex: 1,
-        }}
-      >
+      <main style={{ flex: 1, overflowY: "auto", position: "relative", zIndex: 1 }}>
         <KitchenSink
           isDarkMode={isDarkMode}
           themeMode={themeMode}
