@@ -166,7 +166,7 @@ export function mapTheme(
     },
     border: {
       subtle: { $value: `{color.${neutralKey}.100}`, $type: "color" },
-      default: { $value: `{color.${neutralKey}.200}`, $type: "color" },
+      default: { $value: `{color.${neutralKey}.300}`, $type: "color" },
       strong: { $value: `{color.${neutralKey}.400}`, $type: "color" },
       disabled: { $value: `{color.${neutralKey}.200}`, $type: "color" },
       focus: {}, // set below
@@ -202,7 +202,7 @@ export function mapTheme(
       },
     },
     text: {
-      default: { $value: `{color.${neutralKey}.950}`, $type: "color" },
+      default: { $value: `{color.${neutralKey}.800}`, $type: "color" },
       subtle: { $value: `{color.${neutralKey}.600}`, $type: "color" },
       disabled: { $value: `{color.${neutralKey}.400}`, $type: "color" },
       inverse: { $value: `{color.white.950}`, $type: "color" },
@@ -296,7 +296,7 @@ export function mapTheme(
     },
     border: {
       subtle: { $value: `{color.${neutralKey}.800}`, $type: "color" },
-      default: { $value: `{color.${neutralKey}.700}`, $type: "color" },
+      default: { $value: `{color.${neutralKey}.600}`, $type: "color" },
       strong: { $value: `{color.${neutralKey}.500}`, $type: "color" },
       disabled: { $value: `{color.${neutralKey}.700}`, $type: "color" },
       focus: {}, // set below
@@ -332,7 +332,7 @@ export function mapTheme(
       },
     },
     text: {
-      default: { $value: `{color.${neutralKey}.50}`, $type: "color" },
+      default: { $value: `{color.${neutralKey}.200}`, $type: "color" },
       subtle: { $value: `{color.${neutralKey}.400}`, $type: "color" },
       disabled: { $value: `{color.${neutralKey}.600}`, $type: "color" },
       inverse: { $value: `{color.${neutralKey}.950}`, $type: "color" },
@@ -454,8 +454,9 @@ export function mapTheme(
     const preferredLightStep = Math.max(rest, 200) as ColorStep;
     const lightBaseAccess = getAccessibleBaseStep(gen.ramp, preferredLightStep);
     const lightBaseStep = lightBaseAccess.bgStep;
-    const hover = getOffsetStep(lightBaseStep, lightBaseStep >= 600 ? -1 : 1);
-    const press = getOffsetStep(lightBaseStep, lightBaseStep >= 600 ? -2 : 2);
+    const lightHoverOffset = lightBaseStep >= 600 ? -1 : 1;
+    const hover = getOffsetStep(lightBaseStep, lightHoverOffset);
+    const press = getOffsetStep(hover, -lightHoverOffset * 2);
 
     // First theme color overrides the focus ring
     if (themeColors.indexOf(config) === 0) {
@@ -492,7 +493,7 @@ export function mapTheme(
     const darkBaseAccess = getAccessibleBaseStep(gen.ramp, 300);
     const darkBaseStep = darkBaseAccess.bgStep;
     const darkHover = getOffsetStep(darkBaseStep, -1);
-    const darkPress = getOffsetStep(darkBaseStep, -2);
+    const darkPress = getOffsetStep(darkHover, 2); // opposite direction: hover lightens, press darkens
 
     darkTheme.background[cName] = { $value: `{color.${aliasName}.950}`, $type: "color" };
     darkTheme.surface[cName] = {
@@ -541,8 +542,9 @@ export function mapTheme(
 
     const lightBaseAccess = getAccessibleBaseStep(gen.ramp, rest);
     const lightBaseStep = lightBaseAccess.bgStep;
-    const hover = getOffsetStep(lightBaseStep, lightBaseStep >= 600 ? -1 : 1);
-    const press = getOffsetStep(lightBaseStep, lightBaseStep >= 600 ? -2 : 2);
+    const lightHoverOffset = lightBaseStep >= 600 ? -1 : 1;
+    const hover = getOffsetStep(lightBaseStep, lightHoverOffset);
+    const press = getOffsetStep(hover, -lightHoverOffset * 2);
 
     // ── Light ──────────────────────────────────────────────────────────────
     theme.background[safeName] = { $value: `{color.${aliasName}.25}`, $type: "color" };
@@ -575,7 +577,7 @@ export function mapTheme(
     const darkBaseAccess = getAccessibleBaseStep(gen.ramp, 300);
     const darkBaseStep = darkBaseAccess.bgStep;
     const darkHover = getOffsetStep(darkBaseStep, -1);
-    const darkPress = getOffsetStep(darkBaseStep, -2);
+    const darkPress = getOffsetStep(darkHover, 2); // opposite direction: hover lightens, press darkens
 
     darkTheme.background[safeName] = { $value: `{color.${aliasName}.900}`, $type: "color" };
     darkTheme.surface[safeName] = {

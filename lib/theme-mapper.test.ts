@@ -84,12 +84,12 @@ describe("mapTheme — semantic token categories", () => {
     });
   }
 
-  it("theme.text.default has $value ref to neutral.950", () => {
-    expect(theme.text.default.$value).toBe("{color.neutral.950}");
+  it("theme.text.default has $value ref to neutral.800", () => {
+    expect(theme.text.default.$value).toBe("{color.neutral.800}");
   });
 
-  it("darkTheme.text.default has $value ref to neutral.50", () => {
-    expect(darkTheme.text.default.$value).toBe("{color.neutral.50}");
+  it("darkTheme.text.default has $value ref to neutral.200", () => {
+    expect(darkTheme.text.default.$value).toBe("{color.neutral.200}");
   });
 
   it("theme.surface.default is white", () => {
