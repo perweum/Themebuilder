@@ -132,26 +132,33 @@ export function generateRamp(seedHex: string): GeneratedRamp {
     }
   });
 
-  // 2. Calculate peak chroma based on where the seed landed to preserve saturation
-  let peakChroma = seedChroma;
-  if (closestIndex < 6) {
-    const multiplier = 0.2 + 0.8 * (closestIndex / 6);
-    peakChroma = seedChroma / multiplier;
-  } else if (closestIndex > 6) {
-    const multiplier = 1 - 0.8 * ((closestIndex - 6) / 5);
-    peakChroma = seedChroma / multiplier;
-  }
+  // 2. Generate chroma curve anchored at the seed's position.
+  //
+  // The old approach extrapolated a "peak at step 500" from wherever the seed landed,
+  // which produced unrealistically high peakChroma for light, saturated seeds like yellow
+  // (e.g. C=0.398 when the sRGB gamut only supports ~0.15 at L=0.5). Every dark step
+  // then hit the gamut ceiling, making the ramp look flat — no chroma variation, just
+  // luminosity variation. Adjacent steps also had jarring chroma jumps around the seed.
+  //
+  // New approach: the seed IS the chroma peak. Both lighter and darker steps scale
+  // proportionally down toward a minimum of 20% seedChroma at the extremes (25 and 950).
+  // For seeds at step 500 (index 6) this is mathematically identical to the old formula.
+  const lastIndex = COLOR_STEPS.length - 1; // 11
 
   // 3. Generate Base Steps
   COLOR_STEPS.forEach((step, index) => {
     const targetL = LUMINOSITY_TARGETS[step];
-    let targetC = peakChroma;
+    let targetC: number;
 
-    // Middle step is conceptually index 6 (500)
-    if (index < 6) {
-      targetC = peakChroma * (0.2 + 0.8 * (index / 6));
-    } else if (index > 6) {
-      targetC = peakChroma * (1 - 0.8 * ((index - 6) / 5));
+    if (index <= closestIndex) {
+      // Lighter-or-equal side: ramp from 0.2×C at index 0 up to 1.0×C at closestIndex
+      const ratio = closestIndex > 0 ? index / closestIndex : 1;
+      targetC = seedChroma * (0.2 + 0.8 * ratio);
+    } else {
+      // Darker side: ramp from 1.0×C at closestIndex down to 0.2×C at index 11
+      const remaining = lastIndex - closestIndex;
+      const ratio = remaining > 0 ? (index - closestIndex) / remaining : 1;
+      targetC = seedChroma * (1 - 0.8 * ratio);
     }
 
     const color: Oklch = {
