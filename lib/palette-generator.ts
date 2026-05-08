@@ -3,6 +3,40 @@ import { oklch, formatHex, wcagContrast, Oklch, modeOklch, useMode } from "culor
 // Initializing OKLCH mode
 useMode(modeOklch);
 
+/**
+ * Maps an OKLCH color into the sRGB gamut by binary-searching on chroma.
+ * Gamut check: if formatHex clips the color, the round-trip hue (via oklch())
+ * will diverge from the input hue. We reduce chroma until the hue is stable.
+ * This preserves hue fidelity — unlike formatHex's raw RGB clamp, which causes
+ * yellow to drift orange/red at dark luminosity values.
+ */
+function mapToGamut(color: Oklch): Oklch {
+  if (color.h === undefined) return color;
+
+  const hueDiff = (a: number, b: number) => {
+    const d = Math.abs(a - b);
+    return d > 180 ? 360 - d : d;
+  };
+
+  const isInGamut = (c: Oklch): boolean => {
+    const rt = oklch(formatHex(c));
+    if (!rt || rt.h === undefined) return false;
+    return hueDiff(color.h as number, rt.h) < 1;
+  };
+
+  if (isInGamut(color)) return color;
+
+  let lo = 0;
+  let hi = color.c;
+  for (let i = 0; i < 20; i++) {
+    const mid = (lo + hi) / 2;
+    const candidate: Oklch = { ...color, c: mid };
+    if (isInGamut(candidate)) lo = mid;
+    else hi = mid;
+  }
+  return { ...color, c: lo };
+}
+
 export type ColorStep = 25 | 50 | 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900 | 950;
 export const COLOR_STEPS: ColorStep[] = [25, 50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950];
 
@@ -109,7 +143,7 @@ export function generateRamp(seedHex: string): GeneratedRamp {
       h: hue,
     };
 
-    ramp[step] = formatHex(color);
+    ramp[step] = formatHex(mapToGamut(color));
   });
 
   ramp[closestStep] = seedHex; // Overwrite the exact closest step with the *true* exact seed color
