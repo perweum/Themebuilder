@@ -4,34 +4,52 @@ import { oklch, formatHex, wcagContrast, Oklch, modeOklch, useMode } from "culor
 useMode(modeOklch);
 
 /**
+ * Converts OKLCH → linear sRGB using the standard OKLab matrices.
+ * Returns [r, g, b] in linear light (before gamma). No culori import needed.
+ */
+function oklchToLinearRgb(color: Oklch): [number, number, number] {
+  const rad = ((color.h ?? 0) * Math.PI) / 180;
+  const a = color.c * Math.cos(rad);
+  const b = color.c * Math.sin(rad);
+  const L = color.l;
+
+  const l_ = L + 0.3963377774 * a + 0.2158037573 * b;
+  const m_ = L - 0.1055613458 * a - 0.0638541728 * b;
+  const s_ = L - 0.0894841775 * a - 1.2914855480 * b;
+
+  const l = l_ * l_ * l_;
+  const m = m_ * m_ * m_;
+  const s = s_ * s_ * s_;
+
+  return [
+    +4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+    -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+    -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s,
+  ];
+}
+
+/**
  * Maps an OKLCH color into the sRGB gamut by binary-searching on chroma.
- * Gamut check: if formatHex clips the color, the round-trip hue (via oklch())
- * will diverge from the input hue. We reduce chroma until the hue is stable.
+ * Gamut check uses direct RGB channel bounds — more reliable than a hue
+ * round-trip (which drifts at very low chroma / high luminosity).
  * This preserves hue fidelity — unlike formatHex's raw RGB clamp, which causes
  * yellow to drift orange/red at dark luminosity values.
  */
 function mapToGamut(color: Oklch): Oklch {
-  if (color.h === undefined) return color;
-
-  const hueDiff = (a: number, b: number) => {
-    const d = Math.abs(a - b);
-    return d > 180 ? 360 - d : d;
+  const EPS = 0.001;
+  const inGamut = (c: Oklch) => {
+    const [r, g, b] = oklchToLinearRgb(c);
+    return r >= -EPS && r <= 1 + EPS && g >= -EPS && g <= 1 + EPS && b >= -EPS && b <= 1 + EPS;
   };
 
-  const isInGamut = (c: Oklch): boolean => {
-    const rt = oklch(formatHex(c));
-    if (!rt || rt.h === undefined) return false;
-    return hueDiff(color.h as number, rt.h) < 1;
-  };
-
-  if (isInGamut(color)) return color;
+  if (inGamut(color)) return color;
 
   let lo = 0;
   let hi = color.c;
   for (let i = 0; i < 20; i++) {
     const mid = (lo + hi) / 2;
     const candidate: Oklch = { ...color, c: mid };
-    if (isInGamut(candidate)) lo = mid;
+    if (inGamut(candidate)) lo = mid;
     else hi = mid;
   }
   return { ...color, c: lo };
