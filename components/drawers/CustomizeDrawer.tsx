@@ -6,7 +6,14 @@ import { ChevronDown, ChevronRight, RotateCcw } from "lucide-react";
 export const CustomizeDrawer: React.FC<{
   isDarkMode: boolean;
 }> = ({ isDarkMode }) => {
-  const { themes, globalColors, resolvedThemes, resolvedDefaultThemes, updateThemeSemanticOverride, clearAllSemanticOverrides } = useTheme();
+  const {
+    themes,
+    globalColors,
+    resolvedThemes,
+    resolvedDefaultThemes,
+    updateThemeSemanticOverride,
+    clearAllSemanticOverrides,
+  } = useTheme();
 
   const accent = isDarkMode ? "#C3E835" : "#0142FE";
   const fg = isDarkMode ? "#F8F8F8" : "#1F1F1F";
@@ -42,14 +49,23 @@ export const CustomizeDrawer: React.FC<{
 
     // Build lookup sets for ordering
     const themeColorNames = new Map(
-      (themes[0]?.colors ?? []).map((c, i) => [c.name.toLowerCase().replace(/\s+/g, "-"), i])
+      (themes[0]?.colors ?? []).map((c, i) => [c.name.toLowerCase().replace(/\s+/g, "-"), i]),
     );
-    const GLOBAL_PREFERRED = ["neutral", "error", "success", "warning", "info", "caution", "critical"];
+    const GLOBAL_PREFERRED = [
+      "neutral",
+      "error",
+      "success",
+      "warning",
+      "info",
+      "caution",
+      "critical",
+    ];
     const globalColorOrder = new Map<string, number>();
     GLOBAL_PREFERRED.forEach((n, i) => globalColorOrder.set(n, i));
     globalColors.forEach((gc) => {
       const key = gc.name.toLowerCase().replace(/\s+/g, "-");
-      if (!globalColorOrder.has(key)) globalColorOrder.set(key, GLOBAL_PREFERRED.length + globalColorOrder.size);
+      if (!globalColorOrder.has(key))
+        globalColorOrder.set(key, GLOBAL_PREFERRED.length + globalColorOrder.size);
     });
 
     for (const cat of Object.keys(cats)) {
@@ -75,10 +91,12 @@ export const CustomizeDrawer: React.FC<{
 
   // First category open by default
   const categoryKeys = Object.keys(tokenCategories);
-  const [expandedCategories, setExpandedCategories] = React.useState<Record<string, boolean>>(() => {
-    if (categoryKeys.length > 0) return { [categoryKeys[0]]: true };
-    return {};
-  });
+  const [expandedCategories, setExpandedCategories] = React.useState<Record<string, boolean>>(
+    () => {
+      if (categoryKeys.length > 0) return { [categoryKeys[0]]: true };
+      return {};
+    },
+  );
   const categoryRefs = React.useRef<Record<string, HTMLButtonElement | null>>({});
 
   // Open first category once categories load
@@ -112,8 +130,8 @@ export const CustomizeDrawer: React.FC<{
       const mappedPath = inner.startsWith("light.")
         ? `theme.${inner.slice(6)}`
         : inner.startsWith("dark.")
-        ? `darkTheme.${inner.slice(5)}`
-        : inner;
+          ? `darkTheme.${inner.slice(5)}`
+          : inner;
       val = getValueByPath(activeThemePayloadWithOptions, mappedPath) || val;
     }
     // One more level in case it resolved to another ref
@@ -122,8 +140,8 @@ export const CustomizeDrawer: React.FC<{
       const mappedPath = inner.startsWith("light.")
         ? `theme.${inner.slice(6)}`
         : inner.startsWith("dark.")
-        ? `darkTheme.${inner.slice(5)}`
-        : inner;
+          ? `darkTheme.${inner.slice(5)}`
+          : inner;
       val = getValueByPath(activeThemePayloadWithOptions, mappedPath) || val;
     }
     return val?.startsWith("#") ? val : null;
@@ -136,8 +154,8 @@ export const CustomizeDrawer: React.FC<{
     const mappedPath = inner.startsWith("light.")
       ? `theme.${inner.slice(6)}`
       : inner.startsWith("dark.")
-      ? `darkTheme.${inner.slice(5)}`
-      : null;
+        ? `darkTheme.${inner.slice(5)}`
+        : null;
     if (!mappedPath) return val;
     return getValueByPath(activeThemePayloadWithOptions, mappedPath) || val;
   };
@@ -179,7 +197,14 @@ export const CustomizeDrawer: React.FC<{
           gap: 0,
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.5rem" }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: "1.5rem",
+          }}
+        >
           <p style={{ fontSize: "0.875rem", color: mutedFg, margin: 0 }}>
             Override specific token mappings for light and dark mode.
           </p>
@@ -213,13 +238,13 @@ export const CustomizeDrawer: React.FC<{
 
             return (
               <div key={category}>
-                {catIdx > 0 && (
-                  <div style={{ borderTop: `1px solid ${dividerCol}` }} />
-                )}
+                {catIdx > 0 && <div style={{ borderTop: `1px solid ${dividerCol}` }} />}
 
                 {/* Category header */}
                 <button
-                  ref={(el) => { categoryRefs.current[category] = el; }}
+                  ref={(el) => {
+                    categoryRefs.current[category] = el;
+                  }}
                   style={{
                     cursor: "pointer",
                     display: "flex",
@@ -237,7 +262,10 @@ export const CustomizeDrawer: React.FC<{
                     setExpandedCategories({ [category]: opening });
                     if (opening) {
                       requestAnimationFrame(() =>
-                        categoryRefs.current[category]?.scrollIntoView({ behavior: "smooth", block: "start" })
+                        categoryRefs.current[category]?.scrollIntoView({
+                          behavior: "smooth",
+                          block: "start",
+                        }),
                       );
                     }
                   }}
@@ -247,14 +275,28 @@ export const CustomizeDrawer: React.FC<{
                   ) : (
                     <ChevronRight size={16} style={{ flexShrink: 0, color: mutedFg }} />
                   )}
-                  <span style={{ fontSize: "1rem", fontWeight: 700, textTransform: "capitalize", flex: 1 }}>
+                  <span
+                    style={{
+                      fontSize: "1rem",
+                      fontWeight: 700,
+                      textTransform: "capitalize",
+                      flex: 1,
+                    }}
+                  >
                     {category}
                   </span>
                   <span style={{ fontSize: "0.75rem", color: mutedFg }}>{paths.length} tokens</span>
                 </button>
 
                 {isExpanded && (
-                  <div style={{ paddingBottom: "1.5rem", display: "flex", flexDirection: "column", gap: "0.375rem" }}>
+                  <div
+                    style={{
+                      paddingBottom: "1.5rem",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "0.375rem",
+                    }}
+                  >
                     {/* Column headers */}
                     <div
                       style={{
@@ -267,7 +309,16 @@ export const CustomizeDrawer: React.FC<{
                       }}
                     >
                       {["Token", "Light Mode", "", "Dark Mode", ""].map((h, i) => (
-                        <div key={i} style={{ fontSize: "0.8125rem", fontWeight: 700, color: mutedFg, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                        <div
+                          key={i}
+                          style={{
+                            fontSize: "0.8125rem",
+                            fontWeight: 700,
+                            color: mutedFg,
+                            textTransform: "uppercase",
+                            letterSpacing: "0.06em",
+                          }}
+                        >
                           {h}
                         </div>
                       ))}
@@ -276,7 +327,8 @@ export const CustomizeDrawer: React.FC<{
                     {paths.map((path) => {
                       const darkPath = `darkTheme.${path}`;
                       const isLightOverridden = activeTheme.semanticOverrides?.[path] !== undefined;
-                      const isDarkOverridden = activeTheme.semanticOverrides?.[darkPath] !== undefined;
+                      const isDarkOverridden =
+                        activeTheme.semanticOverrides?.[darkPath] !== undefined;
 
                       const lightVal =
                         activeTheme.semanticOverrides?.[path] ||
@@ -286,10 +338,11 @@ export const CustomizeDrawer: React.FC<{
                         getValStr(defaultTheme?.darkTheme || defaultTheme?.theme || {}, path);
 
                       const lightHex = resolveHex(
-                        getValueByPath(activeThemePayloadWithOptions, `theme.${path}`) || lightVal
+                        getValueByPath(activeThemePayloadWithOptions, `theme.${path}`) || lightVal,
                       );
                       const darkHex = resolveHex(
-                        getValueByPath(activeThemePayloadWithOptions, `darkTheme.${path}`) || darkVal
+                        getValueByPath(activeThemePayloadWithOptions, `darkTheme.${path}`) ||
+                          darkVal,
                       );
 
                       const tokenLabel = path.split(".").slice(1).join(" › ");
@@ -343,13 +396,28 @@ export const CustomizeDrawer: React.FC<{
                           }}
                         >
                           {/* Token name */}
-                          <div style={{ fontSize: "1rem", fontWeight: 600, color: fg, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          <div
+                            style={{
+                              fontSize: "1rem",
+                              fontWeight: 600,
+                              color: fg,
+                              minWidth: 0,
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
                             {tokenLabel}
                           </div>
 
                           {/* Light mode */}
                           <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-                            <div style={{ ...swatchStyle, background: lightHex || (isDarkMode ? "#2a2a2a" : "#e5e7eb") }} />
+                            <div
+                              style={{
+                                ...swatchStyle,
+                                background: lightHex || (isDarkMode ? "#2a2a2a" : "#e5e7eb"),
+                              }}
+                            />
                             <select
                               value={selectLightVal || ""}
                               onChange={(e) =>
@@ -365,7 +433,9 @@ export const CustomizeDrawer: React.FC<{
                           <div style={{ width: "24px" }}>
                             {isLightOverridden && (
                               <button
-                                onClick={() => updateThemeSemanticOverride(activeTheme.id, path, undefined)}
+                                onClick={() =>
+                                  updateThemeSemanticOverride(activeTheme.id, path, undefined)
+                                }
                                 style={resetBtnStyle}
                                 title="Reset light"
                               >
@@ -376,11 +446,20 @@ export const CustomizeDrawer: React.FC<{
 
                           {/* Dark mode */}
                           <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-                            <div style={{ ...swatchStyle, background: darkHex || (isDarkMode ? "#2a2a2a" : "#e5e7eb") }} />
+                            <div
+                              style={{
+                                ...swatchStyle,
+                                background: darkHex || (isDarkMode ? "#2a2a2a" : "#e5e7eb"),
+                              }}
+                            />
                             <select
                               value={selectDarkVal || ""}
                               onChange={(e) =>
-                                updateThemeSemanticOverride(activeTheme.id, darkPath, e.target.value)
+                                updateThemeSemanticOverride(
+                                  activeTheme.id,
+                                  darkPath,
+                                  e.target.value,
+                                )
                               }
                               style={selectStyle}
                             >
@@ -392,7 +471,9 @@ export const CustomizeDrawer: React.FC<{
                           <div style={{ width: "24px" }}>
                             {isDarkOverridden && (
                               <button
-                                onClick={() => updateThemeSemanticOverride(activeTheme.id, darkPath, undefined)}
+                                onClick={() =>
+                                  updateThemeSemanticOverride(activeTheme.id, darkPath, undefined)
+                                }
                                 style={resetBtnStyle}
                                 title="Reset dark"
                               >

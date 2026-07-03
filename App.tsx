@@ -238,18 +238,10 @@ function AppInner({
             )}
             {renderedDrawer === "customize" && <CustomizeDrawer isDarkMode={isDarkMode} />}
             {renderedDrawer === "import" && (
-              <ImportScreen
-                isDarkMode={isDarkMode}
-                onClose={closeDrawer}
-                noModal
-              />
+              <ImportScreen isDarkMode={isDarkMode} onClose={closeDrawer} noModal />
             )}
             {renderedDrawer === "export" && (
-              <ExportScreen
-                isDarkMode={isDarkMode}
-                onClose={closeDrawer}
-                noModal
-              />
+              <ExportScreen isDarkMode={isDarkMode} onClose={closeDrawer} noModal />
             )}
           </div>
 

@@ -13,3 +13,4 @@ declare module "culori" {
 }
 
 declare module "*.png";
+declare module "*.css";

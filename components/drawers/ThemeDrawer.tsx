@@ -125,11 +125,26 @@ export const ThemeDrawer: React.FC<{
           {themes.map((theme) => (
             <div key={`font-${theme.id}`} style={{ marginBottom: themes.length > 1 ? "2rem" : 0 }}>
               {themes.length > 1 && (
-                <div style={{ fontSize: "0.8125rem", fontWeight: 600, color: mutedFg, marginBottom: "0.75rem" }}>
+                <div
+                  style={{
+                    fontSize: "0.8125rem",
+                    fontWeight: 600,
+                    color: mutedFg,
+                    marginBottom: "0.75rem",
+                  }}
+                >
                   {theme.name || theme.id}
                 </div>
               )}
-              <div style={{ display: "flex", alignItems: "flex-end", gap: "2rem", flexWrap: "wrap", marginBottom: "1rem" }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "flex-end",
+                  gap: "2rem",
+                  flexWrap: "wrap",
+                  marginBottom: "1rem",
+                }}
+              >
                 <div
                   style={{
                     fontFamily: `"${theme.fontFamily || "Inter"}", sans-serif`,
@@ -199,7 +214,8 @@ export const ThemeDrawer: React.FC<{
           };
           const currentRadius = radiusToChoice(geometry.radiusBase ?? 4);
           const currentSizeBase = geometry.sizeBase ?? 4;
-          const currentShadowSize = geometry.shadowSize ?? (geometry.includeShadow === false ? "none" : "default");
+          const currentShadowSize =
+            geometry.shadowSize ?? (geometry.includeShadow === false ? "none" : "default");
 
           const applyRadius = (choice: RadiusChoice) => {
             const px = choice === "sharp" ? 0 : choice === "rounded" ? 4 : 20;
@@ -212,7 +228,14 @@ export const ThemeDrawer: React.FC<{
               {/* Corner Radius */}
               <section style={{ padding: "2rem 0" }}>
                 {themes.length > 1 && ti === 0 && (
-                  <div style={{ fontSize: "0.8125rem", fontWeight: 600, color: mutedFg, marginBottom: "0.5rem" }}>
+                  <div
+                    style={{
+                      fontSize: "0.8125rem",
+                      fontWeight: 600,
+                      color: mutedFg,
+                      marginBottom: "0.5rem",
+                    }}
+                  >
                     {theme.name || theme.id}
                   </div>
                 )}
@@ -223,7 +246,11 @@ export const ThemeDrawer: React.FC<{
                       key={id}
                       className="drawer-tile"
                       onClick={() => applyRadius(id)}
-                      style={{ ...tileBase(currentRadius === id), alignItems: "flex-start", padding: "0.875rem 1rem" }}
+                      style={{
+                        ...tileBase(currentRadius === id),
+                        alignItems: "flex-start",
+                        padding: "0.875rem 1rem",
+                      }}
                     >
                       <div
                         style={{
@@ -244,13 +271,31 @@ export const ThemeDrawer: React.FC<{
 
               {/* Border Width */}
               <section style={{ padding: "2rem 0" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "1rem" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "1rem",
+                    marginBottom: "1rem",
+                  }}
+                >
                   <h2 style={sectionHeading}>Border Width</h2>
-                  <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer", fontSize: "0.875rem", color: mutedFg }}>
+                  <label
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                      cursor: "pointer",
+                      fontSize: "0.875rem",
+                      color: mutedFg,
+                    }}
+                  >
                     <input
                       type="checkbox"
                       checked={geometry.includeBorders}
-                      onChange={(e) => updateThemeGeometryValue(theme.id, "includeBorders", e.target.checked)}
+                      onChange={(e) =>
+                        updateThemeGeometryValue(theme.id, "includeBorders", e.target.checked)
+                      }
                       style={{ accentColor: accent }}
                     />
                     Include borders
@@ -265,16 +310,31 @@ export const ThemeDrawer: React.FC<{
                           key={id}
                           className="drawer-tile"
                           onClick={() => updateThemeGeometryValue(theme.id, "borderWidth", id)}
-                          style={{ ...tileBase(isActive), alignItems: "flex-start", padding: "0.875rem 1rem" }}
+                          style={{
+                            ...tileBase(isActive),
+                            alignItems: "flex-start",
+                            padding: "0.875rem 1rem",
+                          }}
                         >
-                          <div style={{ width: "40px", height: `${px * 2}px`, minHeight: "2px", background: "currentColor", borderRadius: "1px", marginBottom: "0.25rem" }} />
+                          <div
+                            style={{
+                              width: "40px",
+                              height: `${px * 2}px`,
+                              minHeight: "2px",
+                              background: "currentColor",
+                              borderRadius: "1px",
+                              marginBottom: "0.25rem",
+                            }}
+                          />
                           <span style={tileLabel}>{label}</span>
                         </button>
                       );
                     })}
                   </div>
                 ) : (
-                  <p style={{ margin: 0, fontSize: "0.875rem", color: mutedFg }}>Borders disabled for this theme.</p>
+                  <p style={{ margin: 0, fontSize: "0.875rem", color: mutedFg }}>
+                    Borders disabled for this theme.
+                  </p>
                 )}
               </section>
 
@@ -291,9 +351,21 @@ export const ThemeDrawer: React.FC<{
                         key={id}
                         className="drawer-tile"
                         onClick={() => updateThemeGeometryValue(theme.id, "sizeBase", id)}
-                        style={{ ...tileBase(isActive), alignItems: "flex-start", padding: "0.875rem 1rem" }}
+                        style={{
+                          ...tileBase(isActive),
+                          alignItems: "flex-start",
+                          padding: "0.875rem 1rem",
+                        }}
                       >
-                        <div style={{ display: "flex", gap: "3px", alignItems: "flex-end", height: "20px", marginBottom: "0.25rem" }}>
+                        <div
+                          style={{
+                            display: "flex",
+                            gap: "3px",
+                            alignItems: "flex-end",
+                            height: "20px",
+                            marginBottom: "0.25rem",
+                          }}
+                        >
                           {[1, 2, 3].map((n) => (
                             <div
                               key={n}
@@ -327,14 +399,18 @@ export const ThemeDrawer: React.FC<{
                       id === "none"
                         ? "none"
                         : id === "default"
-                        ? "0 2px 6px rgba(0,0,0,0.12), 0 1px 3px rgba(0,0,0,0.08)"
-                        : "0 8px 20px rgba(0,0,0,0.22), 0 4px 8px rgba(0,0,0,0.14)";
+                          ? "0 2px 6px rgba(0,0,0,0.12), 0 1px 3px rgba(0,0,0,0.08)"
+                          : "0 8px 20px rgba(0,0,0,0.22), 0 4px 8px rgba(0,0,0,0.14)";
                     return (
                       <button
                         key={id}
                         className="drawer-tile"
                         onClick={() => updateThemeGeometryValue(theme.id, "shadowSize", id)}
-                        style={{ ...tileBase(isActive), alignItems: "flex-start", padding: "0.875rem 1rem" }}
+                        style={{
+                          ...tileBase(isActive),
+                          alignItems: "flex-start",
+                          padding: "0.875rem 1rem",
+                        }}
                       >
                         <div
                           style={{

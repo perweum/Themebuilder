@@ -11,7 +11,6 @@ import {
   SURPRISE_COLORS,
   type OnboardingAnswers,
   type GeometryStyle,
-  type SpacingStyle,
 } from "../lib/onboarding-steps";
 
 interface Props {
@@ -358,7 +357,6 @@ export const OnboardingModal: React.FC<Props> = ({ isDarkMode, onClose }) => {
 
             {/* Step input */}
             <div style={{ marginBottom: "2rem" }}>
-
               {/* ── Brand color ── */}
               {step.id === "brandColor" && (
                 <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
@@ -604,9 +602,24 @@ export const OnboardingModal: React.FC<Props> = ({ isDarkMode, onClose }) => {
                     <div style={{ display: "flex", gap: "0.625rem" }}>
                       {(
                         [
-                          { key: "compact", label: "Compact", padding: "3px 10px", fontSize: "0.6875rem" },
-                          { key: "default", label: "Default", padding: "5px 14px", fontSize: "0.75rem" },
-                          { key: "spacious", label: "Spacious", padding: "8px 20px", fontSize: "0.8125rem" },
+                          {
+                            key: "compact",
+                            label: "Compact",
+                            padding: "3px 10px",
+                            fontSize: "0.6875rem",
+                          },
+                          {
+                            key: "default",
+                            label: "Default",
+                            padding: "5px 14px",
+                            fontSize: "0.75rem",
+                          },
+                          {
+                            key: "spacious",
+                            label: "Spacious",
+                            padding: "8px 20px",
+                            fontSize: "0.8125rem",
+                          },
                         ] as const
                       ).map(({ key, label, padding, fontSize }) => (
                         <ChoiceTile
@@ -811,7 +824,9 @@ export const OnboardingModal: React.FC<Props> = ({ isDarkMode, onClose }) => {
                         borderRadius: "6px",
                       }}
                     >
-                      <span style={{ fontSize: "0.875rem", color: MUTED(isDarkMode) }}>{label}</span>
+                      <span style={{ fontSize: "0.875rem", color: MUTED(isDarkMode) }}>
+                        {label}
+                      </span>
                       <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                         {preview}
                         <span

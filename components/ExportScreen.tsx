@@ -309,149 +309,145 @@ export const ExportScreen: React.FC<{
 
   const content = (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-        {/* Header & tabs */}
-        <div style={{ borderBottom: `1px solid ${isDarkMode ? "#334155" : "#e2e8f0"}` }}>
-          <div
-            style={{
-              padding: "1.5rem 1.5rem 0 1.5rem",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "flex-start",
-            }}
-          >
-            <div>
-              <h2
-                style={{
-                  fontSize: "1.25rem",
-                  fontWeight: 600,
-                  margin: 0,
-                  color: isDarkMode ? "#f8fafc" : "#0f172a",
-                }}
-              >
-                Theme Export
-              </h2>
-              <p
-                style={{
-                  margin: "0.25rem 0 1rem 0",
-                  fontSize: "0.875rem",
-                  color: isDarkMode ? "#94a3b8" : "#64748b",
-                }}
-              >
-                Review primitive colors or override specific semantic mappings before downloading.
-              </p>
-            </div>
-            <button
-              onClick={onClose}
-              style={{
-                background: "none",
-                border: "none",
-                color: isDarkMode ? "#94a3b8" : "#64748b",
-                cursor: "pointer",
-              }}
-            >
-              <X size={24} />
-            </button>
-          </div>
-          <div style={{ display: "flex", gap: "3rem", padding: "0 1.5rem" }}>
-            {tabBtn("semantic", "Semantic Tokens")}
-            {tabBtn("primitive", "Primitive Tokens")}
-            {tabBtn("geometry", "Geometry Tokens")}
-          </div>
-        </div>
-
-        {/* Tab body */}
+      {/* Header & tabs */}
+      <div style={{ borderBottom: `1px solid ${isDarkMode ? "#334155" : "#e2e8f0"}` }}>
         <div
           style={{
-            flex: 1,
-            overflowY: "auto",
-            padding: "1rem 1.5rem",
-            display: "flex",
-            flexDirection: "column",
-            gap: "1.5rem",
-          }}
-          className="no-scrollbar"
-        >
-          {activeTab === "semantic" && (
-            <SemanticTokensTab
-              isDarkMode={isDarkMode}
-              excludedSemanticCategories={excludedSemanticCategories}
-              setExcludedSemanticCategories={setExcludedSemanticCategories}
-              excludedSemanticTokens={excludedSemanticTokens}
-              setExcludedSemanticTokens={setExcludedSemanticTokens}
-            />
-          )}
-          {activeTab === "primitive" && (
-            <PrimitiveTokensTab
-              isDarkMode={isDarkMode}
-              excludedPalettes={excludedPalettes}
-              setExcludedPalettes={setExcludedPalettes}
-            />
-          )}
-          {activeTab === "geometry" && (
-            <GeometryTokensTab
-              isDarkMode={isDarkMode}
-              excludedGeometry={excludedGeometry}
-              setExcludedGeometry={setExcludedGeometry}
-            />
-          )}
-        </div>
-
-        {/* Footer: format selector + download */}
-        <div
-          style={{
-            padding: "1.5rem",
-            borderTop: `1px solid ${isDarkMode ? "#334155" : "#e2e8f0"}`,
+            padding: "1.5rem 1.5rem 0 1.5rem",
             display: "flex",
             justifyContent: "space-between",
-            alignItems: "center",
-            background: isDarkMode ? "#1e293b" : "#f8fafc",
+            alignItems: "flex-start",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-            <span style={{ fontSize: "0.875rem", fontWeight: 500 }}>Format:</span>
-            <select
-              value={exportFormat}
-              onChange={(e: any) => setExportFormat(e.target.value)}
+          <div>
+            <h2
               style={{
-                padding: "0.5rem 1rem",
-                borderRadius: "4px",
-                border: `1px solid ${isDarkMode ? "#334155" : "#e2e8f0"}`,
-                background: isDarkMode ? "#0f172a" : "#fff",
-                color: "inherit",
+                fontSize: "1.25rem",
+                fontWeight: 600,
+                margin: 0,
+                color: isDarkMode ? "#f8fafc" : "#0f172a",
               }}
             >
-              <option value="tokensync">Token Sync (ZIP)</option>
-              <option value="figma">Figma Variables (Tokens Studio)</option>
-              <option value="json">Clean JSON (Standard)</option>
-            </select>
+              Theme Export
+            </h2>
+            <p
+              style={{
+                margin: "0.25rem 0 1rem 0",
+                fontSize: "0.875rem",
+                color: isDarkMode ? "#94a3b8" : "#64748b",
+              }}
+            >
+              Review primitive colors or override specific semantic mappings before downloading.
+            </p>
           </div>
           <button
-            onClick={handleExport}
+            onClick={onClose}
             style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "0.5rem",
-              padding: "0.75rem 1.5rem",
-              backgroundColor: isDarkMode ? "#C3E835" : "#0142FE",
-              color: isDarkMode ? "#000" : "#fff",
+              background: "none",
               border: "none",
-              borderRadius: "4px",
-              fontWeight: 600,
+              color: isDarkMode ? "#94a3b8" : "#64748b",
               cursor: "pointer",
             }}
           >
-            <Download size={18} /> Download
+            <X size={24} />
           </button>
         </div>
+        <div style={{ display: "flex", gap: "3rem", padding: "0 1.5rem" }}>
+          {tabBtn("semantic", "Semantic Tokens")}
+          {tabBtn("primitive", "Primitive Tokens")}
+          {tabBtn("geometry", "Geometry Tokens")}
+        </div>
       </div>
-  );
 
-  if (noModal) return (
-    <div style={{ maxWidth: "1000px", margin: "0 auto", padding: "0 2rem" }}>
-      {content}
+      {/* Tab body */}
+      <div
+        style={{
+          flex: 1,
+          overflowY: "auto",
+          padding: "1rem 1.5rem",
+          display: "flex",
+          flexDirection: "column",
+          gap: "1.5rem",
+        }}
+        className="no-scrollbar"
+      >
+        {activeTab === "semantic" && (
+          <SemanticTokensTab
+            isDarkMode={isDarkMode}
+            excludedSemanticCategories={excludedSemanticCategories}
+            setExcludedSemanticCategories={setExcludedSemanticCategories}
+            excludedSemanticTokens={excludedSemanticTokens}
+            setExcludedSemanticTokens={setExcludedSemanticTokens}
+          />
+        )}
+        {activeTab === "primitive" && (
+          <PrimitiveTokensTab
+            isDarkMode={isDarkMode}
+            excludedPalettes={excludedPalettes}
+            setExcludedPalettes={setExcludedPalettes}
+          />
+        )}
+        {activeTab === "geometry" && (
+          <GeometryTokensTab
+            isDarkMode={isDarkMode}
+            excludedGeometry={excludedGeometry}
+            setExcludedGeometry={setExcludedGeometry}
+          />
+        )}
+      </div>
+
+      {/* Footer: format selector + download */}
+      <div
+        style={{
+          padding: "1.5rem",
+          borderTop: `1px solid ${isDarkMode ? "#334155" : "#e2e8f0"}`,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          background: isDarkMode ? "#1e293b" : "#f8fafc",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+          <span style={{ fontSize: "0.875rem", fontWeight: 500 }}>Format:</span>
+          <select
+            value={exportFormat}
+            onChange={(e: any) => setExportFormat(e.target.value)}
+            style={{
+              padding: "0.5rem 1rem",
+              borderRadius: "4px",
+              border: `1px solid ${isDarkMode ? "#334155" : "#e2e8f0"}`,
+              background: isDarkMode ? "#0f172a" : "#fff",
+              color: "inherit",
+            }}
+          >
+            <option value="tokensync">Token Sync (ZIP)</option>
+            <option value="figma">Figma Variables (Tokens Studio)</option>
+            <option value="json">Clean JSON (Standard)</option>
+          </select>
+        </div>
+        <button
+          onClick={handleExport}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "0.5rem",
+            padding: "0.75rem 1.5rem",
+            backgroundColor: isDarkMode ? "#C3E835" : "#0142FE",
+            color: isDarkMode ? "#000" : "#fff",
+            border: "none",
+            borderRadius: "4px",
+            fontWeight: 600,
+            cursor: "pointer",
+          }}
+        >
+          <Download size={18} /> Download
+        </button>
+      </div>
     </div>
   );
 
+  if (noModal)
+    return <div style={{ maxWidth: "1000px", margin: "0 auto", padding: "0 2rem" }}>{content}</div>;
 
   return (
     <SystemicModal

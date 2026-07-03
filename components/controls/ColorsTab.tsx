@@ -212,11 +212,28 @@ export const ColorsTab: React.FC<{ isDarkMode: boolean; isMobile: boolean }> = (
               </button>
             )}
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.75rem", marginBottom: "1rem" }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(3, 1fr)",
+              gap: "0.75rem",
+              marginBottom: "1rem",
+            }}
+          >
             {theme.colors.map((color) => (
               <div key={color.id} style={colorCard}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: "0.75rem", fontWeight: 600, color: isDarkMode ? "#C3E835" : "#0142FE", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                <div
+                  style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
+                >
+                  <span
+                    style={{
+                      fontSize: "0.75rem",
+                      fontWeight: 600,
+                      color: isDarkMode ? "#C3E835" : "#0142FE",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                    }}
+                  >
                     {color.name}
                   </span>
                   <button
@@ -239,11 +256,7 @@ export const ColorsTab: React.FC<{ isDarkMode: boolean; isMobile: boolean }> = (
               </div>
             ))}
           </div>
-          <button
-            className="btn-action"
-            onClick={() => addThemeColor(theme.id)}
-            style={actionBtn}
-          >
+          <button className="btn-action" onClick={() => addThemeColor(theme.id)} style={actionBtn}>
             + Add theme color
           </button>
         </div>
@@ -261,11 +274,28 @@ export const ColorsTab: React.FC<{ isDarkMode: boolean; isMobile: boolean }> = (
         <h3 style={{ ...sectionTitle, borderBottom: "none", paddingBottom: 0, marginTop: 0 }}>
           Global States
         </h3>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.75rem", marginBottom: "1rem" }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(3, 1fr)",
+            gap: "0.75rem",
+            marginBottom: "1rem",
+          }}
+        >
           {globalColors.map((color) => (
             <div key={color.id} style={colorCard}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: "0.75rem", fontWeight: 600, color: isDarkMode ? "#C3E835" : "#0142FE", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              <div
+                style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
+              >
+                <span
+                  style={{
+                    fontSize: "0.75rem",
+                    fontWeight: 600,
+                    color: isDarkMode ? "#C3E835" : "#0142FE",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em",
+                  }}
+                >
                   {color.name}
                 </span>
                 {!["neutral", "success", "error"].includes(color.id) && (
@@ -289,19 +319,11 @@ export const ColorsTab: React.FC<{ isDarkMode: boolean; isMobile: boolean }> = (
           ))}
         </div>
         <div style={{ display: "flex", gap: "0.75rem" }}>
-          <button
-            className="btn-action"
-            onClick={addRandomGlobalColor}
-            style={actionBtn}
-          >
+          <button className="btn-action" onClick={addRandomGlobalColor} style={actionBtn}>
             + Add color
           </button>
           {!hasAllPresets && (
-            <button
-              className="btn-action"
-              onClick={addGlobalColorsPreset}
-              style={actionBtn}
-            >
+            <button className="btn-action" onClick={addGlobalColorsPreset} style={actionBtn}>
               + Add standard set
             </button>
           )}

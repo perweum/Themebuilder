@@ -116,7 +116,7 @@ export const ThemeScope: React.FC<ThemeScopeProps> = ({
   style,
 }) => {
   const scopeRef = React.useRef<HTMLDivElement>(null);
-  const [warnings, setWarnings] = useState<string[]>([]);
+  const [warnings] = useState<string[]>([]);
 
   useEffect(() => {
     if (!scopeRef.current) return;

@@ -437,390 +437,387 @@ export const ImportScreen: React.FC<{
 
   const content = (
     <div style={{ display: "flex", flexDirection: "column" }}>
-        {/* Header */}
-        <div
+      {/* Header */}
+      <div
+        style={{
+          padding: "1.5rem",
+          borderBottom: `1px solid ${border}`,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+        }}
+      >
+        <div>
+          <h2 style={{ fontSize: "1.25rem", fontWeight: 600, margin: 0, color: fg }}>
+            Import Theme
+          </h2>
+          <p style={{ margin: "0.25rem 0 0", fontSize: "0.875rem", color: subtle }}>
+            Load a Themebuilder or Token Studio JSON file
+          </p>
+        </div>
+        <button
+          onClick={onClose}
           style={{
-            padding: "1.5rem",
-            borderBottom: `1px solid ${border}`,
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
+            background: "none",
+            border: "none",
+            color: subtle,
+            cursor: "pointer",
+            padding: "0.25rem",
           }}
         >
-          <div>
-            <h2 style={{ fontSize: "1.25rem", fontWeight: 600, margin: 0, color: fg }}>
-              Import Theme
-            </h2>
-            <p style={{ margin: "0.25rem 0 0", fontSize: "0.875rem", color: subtle }}>
-              Load a Themebuilder or Token Studio JSON file
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            style={{
-              background: "none",
-              border: "none",
-              color: subtle,
-              cursor: "pointer",
-              padding: "0.25rem",
-            }}
-          >
-            <X size={20} />
-          </button>
-        </div>
+          <X size={20} />
+        </button>
+      </div>
 
-        {/* Body */}
-        <div style={{ padding: "1.5rem" }}>
-          {status !== "parsed" ? (
-            <>
-              {/* Drop zone */}
+      {/* Body */}
+      <div style={{ padding: "1.5rem" }}>
+        {status !== "parsed" ? (
+          <>
+            {/* Drop zone */}
+            <div
+              onDrop={handleDrop}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setIsDragging(true);
+              }}
+              onDragLeave={() => setIsDragging(false)}
+              onClick={() => fileInputRef.current?.click()}
+              style={{
+                border: `2px dashed ${isDragging ? accent : border}`,
+                borderRadius: "8px",
+                padding: "3rem 2rem",
+                textAlign: "center",
+                cursor: "pointer",
+                background: isDragging
+                  ? isDarkMode
+                    ? "rgba(195,232,53,0.05)"
+                    : "rgba(1,66,254,0.03)"
+                  : "transparent",
+                transition: "all 0.15s",
+              }}
+            >
+              <Upload size={28} style={{ color: subtle, marginBottom: "0.75rem" }} />
+              <p style={{ margin: 0, fontWeight: 600, color: fg, fontSize: "0.9375rem" }}>
+                Drop a JSON file here
+              </p>
+              <p style={{ margin: "0.375rem 0 0", fontSize: "0.875rem", color: subtle }}>
+                or click to browse
+              </p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".json,.tokens,.tokens.json"
+                onChange={handleFileChange}
+                style={{ display: "none" }}
+              />
+            </div>
+
+            {status === "error" && (
               <div
-                onDrop={handleDrop}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  setIsDragging(true);
-                }}
-                onDragLeave={() => setIsDragging(false)}
-                onClick={() => fileInputRef.current?.click()}
                 style={{
-                  border: `2px dashed ${isDragging ? accent : border}`,
-                  borderRadius: "8px",
-                  padding: "3rem 2rem",
-                  textAlign: "center",
-                  cursor: "pointer",
-                  background: isDragging
-                    ? isDarkMode
-                      ? "rgba(195,232,53,0.05)"
-                      : "rgba(1,66,254,0.03)"
-                    : "transparent",
-                  transition: "all 0.15s",
+                  marginTop: "1rem",
+                  padding: "0.75rem 1rem",
+                  background: isDarkMode ? "rgba(239,68,68,0.15)" : "#fee2e2",
+                  borderRadius: "6px",
+                  color: isDarkMode ? "#fca5a5" : "#b91c1c",
+                  fontSize: "0.875rem",
+                  display: "flex",
+                  gap: "0.5rem",
+                  alignItems: "flex-start",
                 }}
               >
-                <Upload size={28} style={{ color: subtle, marginBottom: "0.75rem" }} />
-                <p style={{ margin: 0, fontWeight: 600, color: fg, fontSize: "0.9375rem" }}>
-                  Drop a JSON file here
-                </p>
-                <p style={{ margin: "0.375rem 0 0", fontSize: "0.875rem", color: subtle }}>
-                  or click to browse
-                </p>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".json,.tokens,.tokens.json"
-                  onChange={handleFileChange}
-                  style={{ display: "none" }}
-                />
+                <AlertCircle size={16} style={{ flexShrink: 0, marginTop: "0.1rem" }} />
+                {error}
+              </div>
+            )}
+
+            <div style={{ marginTop: "1.5rem" }}>
+              <p
+                style={{
+                  fontSize: "0.75rem",
+                  fontWeight: 600,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                  color: subtle,
+                  margin: "0 0 0.625rem 0",
+                }}
+              >
+                Supported formats
+              </p>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                {[
+                  {
+                    label: "Themebuilder JSON",
+                    desc: "Any JSON exported from this app — seeds preserved exactly",
+                  },
+                  {
+                    label: "Token Studio / Figma Tokens",
+                    desc: "Files from the Token Studio or Figma Tokens plugin",
+                  },
+                  {
+                    label: "Style Dictionary, Tailwind, or custom",
+                    desc: "Any JSON with named color scales or hex values",
+                  },
+                ].map((item) => (
+                  <div
+                    key={item.label}
+                    style={{
+                      padding: "0.75rem 1rem",
+                      background: cardBg,
+                      border: `1px solid ${border}`,
+                      borderRadius: "6px",
+                    }}
+                  >
+                    <div style={{ fontWeight: 600, fontSize: "0.875rem", color: fg }}>
+                      {item.label}
+                    </div>
+                    <div style={{ fontSize: "0.8125rem", color: subtle, marginTop: "0.125rem" }}>
+                      {item.desc}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </>
+        ) : (
+          parseResult && (
+            <div>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                  marginBottom: "1.25rem",
+                }}
+              >
+                <CheckCircle size={17} color="#22c55e" />
+                <span style={{ fontWeight: 600, color: fg }}>Parsed successfully</span>
+                <span style={{ fontSize: "0.8125rem", color: subtle }}>
+                  — {FORMAT_LABELS[parseResult.format] ?? parseResult.format}
+                </span>
               </div>
 
-              {status === "error" && (
+              {parseResult.themeConfigs.map((theme) => (
+                <div
+                  key={theme.id}
+                  style={{
+                    padding: "1rem",
+                    background: cardBg,
+                    border: `1px solid ${border}`,
+                    borderRadius: "6px",
+                    marginBottom: "0.875rem",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontWeight: 600,
+                      color: fg,
+                      marginBottom: "0.25rem",
+                      fontSize: "0.9375rem",
+                    }}
+                  >
+                    {theme.name}
+                  </div>
+                  <div style={{ fontSize: "0.75rem", color: subtle, marginBottom: "0.75rem" }}>
+                    A new 12-step ramp will be generated from each extracted seed color
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                    {theme.colors.map((c) => (
+                      <div
+                        key={c.id}
+                        style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}
+                      >
+                        {/* Seed swatch */}
+                        <span
+                          style={{
+                            width: 28,
+                            height: 28,
+                            borderRadius: "4px",
+                            background: c.seed,
+                            display: "inline-block",
+                            flexShrink: 0,
+                            border: `1px solid rgba(0,0,0,0.12)`,
+                          }}
+                        />
+                        {/* Mini generated ramp preview */}
+                        <div style={{ display: "flex", gap: 2, flex: 1 }}>
+                          {[10, 20, 30, 40, 50, 60, 70, 80, 90].map((pct) => (
+                            <span
+                              key={pct}
+                              style={{
+                                flex: 1,
+                                height: 14,
+                                borderRadius: "2px",
+                                background: `color-mix(in oklch, ${c.seed} ${pct}%, white)`,
+                                display: "inline-block",
+                              }}
+                            />
+                          ))}
+                        </div>
+                        {/* Name + seed hex */}
+                        <div style={{ flexShrink: 0, textAlign: "right" }}>
+                          <div style={{ fontWeight: 600, fontSize: "0.8125rem", color: fg }}>
+                            {c.name}
+                          </div>
+                          <div
+                            style={{
+                              fontSize: "0.75rem",
+                              color: subtle,
+                              fontFamily: "monospace",
+                            }}
+                          >
+                            {c.seed}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+
+              {parseResult.globalColors.length > 0 && (
+                <div style={{ marginBottom: "0.875rem" }}>
+                  <p
+                    style={{
+                      fontSize: "0.75rem",
+                      fontWeight: 600,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                      color: subtle,
+                      margin: "0 0 0.5rem 0",
+                    }}
+                  >
+                    Global colors to merge
+                  </p>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "0.375rem" }}>
+                    {parseResult.globalColors.map((c) => (
+                      <div
+                        key={c.id}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "0.375rem",
+                          padding: "0.3125rem 0.625rem",
+                          background: chipBg,
+                          borderRadius: "99px",
+                          fontSize: "0.8125rem",
+                        }}
+                      >
+                        <span
+                          style={{
+                            width: 11,
+                            height: 11,
+                            borderRadius: "50%",
+                            background: c.seed,
+                            display: "inline-block",
+                            flexShrink: 0,
+                            border: `1px solid rgba(0,0,0,0.1)`,
+                          }}
+                        />
+                        <span style={{ color: fg }}>{c.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {parseResult.warnings.length > 0 && (
                 <div
                   style={{
-                    marginTop: "1rem",
+                    marginBottom: "0.875rem",
                     padding: "0.75rem 1rem",
-                    background: isDarkMode ? "rgba(239,68,68,0.15)" : "#fee2e2",
+                    background: isDarkMode ? "rgba(234,179,8,0.12)" : "#fef9c3",
                     borderRadius: "6px",
-                    color: isDarkMode ? "#fca5a5" : "#b91c1c",
-                    fontSize: "0.875rem",
+                    color: isDarkMode ? "#fbbf24" : "#92400e",
+                    fontSize: "0.8125rem",
                     display: "flex",
                     gap: "0.5rem",
                     alignItems: "flex-start",
                   }}
                 >
-                  <AlertCircle size={16} style={{ flexShrink: 0, marginTop: "0.1rem" }} />
-                  {error}
+                  <AlertCircle size={15} style={{ flexShrink: 0, marginTop: "0.1rem" }} />
+                  <div>{parseResult.warnings.join(" ")}</div>
                 </div>
               )}
 
-              <div style={{ marginTop: "1.5rem" }}>
-                <p
-                  style={{
-                    fontSize: "0.75rem",
-                    fontWeight: 600,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.05em",
-                    color: subtle,
-                    margin: "0 0 0.625rem 0",
-                  }}
-                >
-                  Supported formats
-                </p>
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                  {[
-                    {
-                      label: "Themebuilder JSON",
-                      desc: "Any JSON exported from this app — seeds preserved exactly",
-                    },
-                    {
-                      label: "Token Studio / Figma Tokens",
-                      desc: "Files from the Token Studio or Figma Tokens plugin",
-                    },
-                    {
-                      label: "Style Dictionary, Tailwind, or custom",
-                      desc: "Any JSON with named color scales or hex values",
-                    },
-                  ].map((item) => (
-                    <div
-                      key={item.label}
-                      style={{
-                        padding: "0.75rem 1rem",
-                        background: cardBg,
-                        border: `1px solid ${border}`,
-                        borderRadius: "6px",
-                      }}
-                    >
-                      <div style={{ fontWeight: 600, fontSize: "0.875rem", color: fg }}>
-                        {item.label}
-                      </div>
-                      <div style={{ fontSize: "0.8125rem", color: subtle, marginTop: "0.125rem" }}>
-                        {item.desc}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </>
-          ) : (
-            parseResult && (
-              <div>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.5rem",
-                    marginBottom: "1.25rem",
-                  }}
-                >
-                  <CheckCircle size={17} color="#22c55e" />
-                  <span style={{ fontWeight: 600, color: fg }}>Parsed successfully</span>
-                  <span style={{ fontSize: "0.8125rem", color: subtle }}>
-                    — {FORMAT_LABELS[parseResult.format] ?? parseResult.format}
-                  </span>
-                </div>
-
-                {parseResult.themeConfigs.map((theme) => (
-                  <div
-                    key={theme.id}
-                    style={{
-                      padding: "1rem",
-                      background: cardBg,
-                      border: `1px solid ${border}`,
-                      borderRadius: "6px",
-                      marginBottom: "0.875rem",
-                    }}
-                  >
-                    <div
-                      style={{
-                        fontWeight: 600,
-                        color: fg,
-                        marginBottom: "0.25rem",
-                        fontSize: "0.9375rem",
-                      }}
-                    >
-                      {theme.name}
-                    </div>
-                    <div style={{ fontSize: "0.75rem", color: subtle, marginBottom: "0.75rem" }}>
-                      A new 12-step ramp will be generated from each extracted seed color
-                    </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                      {theme.colors.map((c) => (
-                        <div
-                          key={c.id}
-                          style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}
-                        >
-                          {/* Seed swatch */}
-                          <span
-                            style={{
-                              width: 28,
-                              height: 28,
-                              borderRadius: "4px",
-                              background: c.seed,
-                              display: "inline-block",
-                              flexShrink: 0,
-                              border: `1px solid rgba(0,0,0,0.12)`,
-                            }}
-                          />
-                          {/* Mini generated ramp preview */}
-                          <div style={{ display: "flex", gap: 2, flex: 1 }}>
-                            {[10, 20, 30, 40, 50, 60, 70, 80, 90].map((pct) => (
-                              <span
-                                key={pct}
-                                style={{
-                                  flex: 1,
-                                  height: 14,
-                                  borderRadius: "2px",
-                                  background: `color-mix(in oklch, ${c.seed} ${pct}%, white)`,
-                                  display: "inline-block",
-                                }}
-                              />
-                            ))}
-                          </div>
-                          {/* Name + seed hex */}
-                          <div style={{ flexShrink: 0, textAlign: "right" }}>
-                            <div style={{ fontWeight: 600, fontSize: "0.8125rem", color: fg }}>
-                              {c.name}
-                            </div>
-                            <div
-                              style={{
-                                fontSize: "0.75rem",
-                                color: subtle,
-                                fontFamily: "monospace",
-                              }}
-                            >
-                              {c.seed}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-
-                {parseResult.globalColors.length > 0 && (
-                  <div style={{ marginBottom: "0.875rem" }}>
-                    <p
-                      style={{
-                        fontSize: "0.75rem",
-                        fontWeight: 600,
-                        textTransform: "uppercase",
-                        letterSpacing: "0.05em",
-                        color: subtle,
-                        margin: "0 0 0.5rem 0",
-                      }}
-                    >
-                      Global colors to merge
-                    </p>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: "0.375rem" }}>
-                      {parseResult.globalColors.map((c) => (
-                        <div
-                          key={c.id}
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "0.375rem",
-                            padding: "0.3125rem 0.625rem",
-                            background: chipBg,
-                            borderRadius: "99px",
-                            fontSize: "0.8125rem",
-                          }}
-                        >
-                          <span
-                            style={{
-                              width: 11,
-                              height: 11,
-                              borderRadius: "50%",
-                              background: c.seed,
-                              display: "inline-block",
-                              flexShrink: 0,
-                              border: `1px solid rgba(0,0,0,0.1)`,
-                            }}
-                          />
-                          <span style={{ color: fg }}>{c.name}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {parseResult.warnings.length > 0 && (
-                  <div
-                    style={{
-                      marginBottom: "0.875rem",
-                      padding: "0.75rem 1rem",
-                      background: isDarkMode ? "rgba(234,179,8,0.12)" : "#fef9c3",
-                      borderRadius: "6px",
-                      color: isDarkMode ? "#fbbf24" : "#92400e",
-                      fontSize: "0.8125rem",
-                      display: "flex",
-                      gap: "0.5rem",
-                      alignItems: "flex-start",
-                    }}
-                  >
-                    <AlertCircle size={15} style={{ flexShrink: 0, marginTop: "0.1rem" }} />
-                    <div>{parseResult.warnings.join(" ")}</div>
-                  </div>
-                )}
-
-                <button
-                  onClick={() => {
-                    setStatus("idle");
-                    setParseResult(null);
-                    setError("");
-                  }}
-                  style={{
-                    background: "none",
-                    border: `1px solid ${border}`,
-                    color: subtle,
-                    padding: "0.5rem 1rem",
-                    borderRadius: "4px",
-                    cursor: "pointer",
-                    fontSize: "0.875rem",
-                  }}
-                >
-                  Choose a different file
-                </button>
-              </div>
-            )
-          )}
-        </div>
-
-        {/* Footer */}
-        {status === "parsed" && parseResult && (
-          <div
-            style={{
-              padding: "1.25rem 1.5rem",
-              borderTop: `1px solid ${border}`,
-              display: "flex",
-              justifyContent: "flex-end",
-              gap: "0.75rem",
-              background: isDarkMode ? "#1e293b" : "#f8fafc",
-            }}
-          >
-            <button
-              onClick={onClose}
-              style={{
-                background: "none",
-                border: `1px solid ${border}`,
-                color: fg,
-                padding: "0.625rem 1.25rem",
-                borderRadius: "4px",
-                cursor: "pointer",
-                fontWeight: 500,
-                fontSize: "0.875rem",
-              }}
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleImport}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "0.5rem",
-                padding: "0.625rem 1.5rem",
-                backgroundColor: accent,
-                color: isDarkMode ? "#000" : "#fff",
-                border: "none",
-                borderRadius: "4px",
-                fontWeight: 600,
-                cursor: "pointer",
-                fontSize: "0.875rem",
-              }}
-            >
-              Import{" "}
-              {parseResult.themeConfigs.length > 1
-                ? `${parseResult.themeConfigs.length} Themes`
-                : "Theme"}
-            </button>
-          </div>
+              <button
+                onClick={() => {
+                  setStatus("idle");
+                  setParseResult(null);
+                  setError("");
+                }}
+                style={{
+                  background: "none",
+                  border: `1px solid ${border}`,
+                  color: subtle,
+                  padding: "0.5rem 1rem",
+                  borderRadius: "4px",
+                  cursor: "pointer",
+                  fontSize: "0.875rem",
+                }}
+              >
+                Choose a different file
+              </button>
+            </div>
+          )
         )}
       </div>
-  );
 
-  if (noModal) return (
-    <div style={{ maxWidth: "1000px", margin: "0 auto", padding: "0 2rem" }}>
-      {content}
+      {/* Footer */}
+      {status === "parsed" && parseResult && (
+        <div
+          style={{
+            padding: "1.25rem 1.5rem",
+            borderTop: `1px solid ${border}`,
+            display: "flex",
+            justifyContent: "flex-end",
+            gap: "0.75rem",
+            background: isDarkMode ? "#1e293b" : "#f8fafc",
+          }}
+        >
+          <button
+            onClick={onClose}
+            style={{
+              background: "none",
+              border: `1px solid ${border}`,
+              color: fg,
+              padding: "0.625rem 1.25rem",
+              borderRadius: "4px",
+              cursor: "pointer",
+              fontWeight: 500,
+              fontSize: "0.875rem",
+            }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleImport}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.5rem",
+              padding: "0.625rem 1.5rem",
+              backgroundColor: accent,
+              color: isDarkMode ? "#000" : "#fff",
+              border: "none",
+              borderRadius: "4px",
+              fontWeight: 600,
+              cursor: "pointer",
+              fontSize: "0.875rem",
+            }}
+          >
+            Import{" "}
+            {parseResult.themeConfigs.length > 1
+              ? `${parseResult.themeConfigs.length} Themes`
+              : "Theme"}
+          </button>
+        </div>
+      )}
     </div>
   );
+
+  if (noModal)
+    return <div style={{ maxWidth: "1000px", margin: "0 auto", padding: "0 2rem" }}>{content}</div>;
 
   return (
     <SystemicModal

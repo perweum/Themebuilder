@@ -191,7 +191,11 @@ const ContrastRow: React.FC<{
   );
 };
 
-export const ContrastChecker: React.FC<ContrastCheckerProps> = ({ onClose, isDarkMode, inline }) => {
+export const ContrastChecker: React.FC<ContrastCheckerProps> = ({
+  onClose,
+  isDarkMode,
+  inline,
+}) => {
   const { themes } = useTheme();
   const activeTheme = themes[0];
   const [forceRender, setForceRender] = useState(0);
